@@ -40,6 +40,10 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(compose.materialIconsExtended)
+
+            implementation("io.insert-koin:koin-core:3.5.3")
+            implementation("io.insert-koin:koin-compose:1.1.2")
+            implementation("io.insert-koin:koin-android:3.5.3")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

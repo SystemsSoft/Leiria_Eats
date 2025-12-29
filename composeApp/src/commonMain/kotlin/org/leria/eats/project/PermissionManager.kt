@@ -1,14 +1,15 @@
-package org.leria.eats.project
+package org.leria.eats.project.permissions
 
-// shared/src/commonMain/kotlin/.../PermissionManager.kt
 import kotlinx.coroutines.flow.StateFlow
 
 enum class PermissionStatus {
-    GRANTED, DENIED, NOT_DETERMINED
+    GRANTED,
+    DENIED,
+    IDLE
 }
 
-interface MicrophonePermission {
+interface PermissionManager {
     val status: StateFlow<PermissionStatus>
-    fun requestPermission()
-    fun openSettings() // Opcional: para mandar o usuário para as configs se ele negar
+    fun askForPermission()
+    fun openSettings()
 }
