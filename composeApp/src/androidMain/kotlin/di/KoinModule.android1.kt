@@ -1,6 +1,5 @@
 package org.leria.eats.project.di
 
-import org.koin.core.module.Module
 import org.koin.dsl.module
 import org.leria.eats.project.permissions.AndroidPermissionManager
 import org.leria.eats.project.permissions.PermissionManager

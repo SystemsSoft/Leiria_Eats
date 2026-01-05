@@ -20,10 +20,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -34,6 +35,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,46 +47,50 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import org.leria.eats.project.data.LeriaApiClient
 import org.leria.eats.project.permissions.PermissionManager
 import org.leria.eats.project.permissions.PermissionStatus
 import org.leria.eats.project.voice.VoiceRecognizer
 
 @Composable
 fun MainScreenWithAI(permissionManager: PermissionManager) {
-    // 1. Injeção de Dependências
+    // 1. INJEÇÃO DE DEPENDÊNCIAS
     val voiceRecognizer = koinInject<VoiceRecognizer>()
+    val apiClient = koinInject<LeriaApiClient>()
 
-    // 2. Coleta de Estados (Observables)
+    // 2. COLETA DE ESTADOS
     val status by permissionManager.status.collectAsState()
     val recognizedText by voiceRecognizer.results.collectAsState()
     val isListening by voiceRecognizer.isListening.collectAsState()
     val error by voiceRecognizer.error.collectAsState()
 
-    // 3. Estado Local para Edição Manual
+    // 3. ESTADOS DA TELA
     var textInput by remember { mutableStateOf("") }
+    var aiReply by remember { mutableStateOf("Olá! O que vamos comer hoje?") }
+    var isLoading by remember { mutableStateOf(false) }
 
-    // Efeito: Atualiza o campo de texto enquanto a voz é reconhecida
+    val scope = rememberCoroutineScope()
+
+    // --- SINCRONIZAÇÃO VOZ -> TEXTO ---
     LaunchedEffect(recognizedText) {
-        if (isListening) {
+        // Só atualiza se estiver ouvindo e tiver texto novo
+        if (isListening && recognizedText.isNotEmpty()) {
             textInput = recognizedText
         }
     }
 
-    // Efeito: Se perder a permissão, para de ouvir
+    // Se perder permissão, para tudo
     LaunchedEffect(status) {
         if (status != PermissionStatus.GRANTED) {
             voiceRecognizer.stopListening()
         }
     }
 
-    // Design: Fundo Gradiente
+    // Fundo Gradiente
     val backgroundBrush = Brush.verticalGradient(
-        colors = listOf(
-            Color(0xFF1A1A2E), // Dark Blue
-            Color(0xFF16213E), // Night Blue
-            Color(0xFF0F3460)  // Deep Blue
-        )
+        colors = listOf(Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460))
     )
 
     Column(
@@ -95,7 +101,7 @@ fun MainScreenWithAI(permissionManager: PermissionManager) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // --- CABEÇALHO ---
+        // Título
         Text(
             text = "Leria AI Assistant",
             style = MaterialTheme.typography.headlineMedium,
@@ -103,15 +109,18 @@ fun MainScreenWithAI(permissionManager: PermissionManager) {
             fontWeight = FontWeight.Bold
         )
 
+        // Resposta do Garçom (IA)
         Text(
-            text = if (isListening) "Ouvindo você..." else "O que você quer comer hoje?",
-            style = MaterialTheme.typography.bodyLarge,
-            color = if (isListening) Color(0xFF4CB5F5) else Color.LightGray.copy(alpha = 0.7f)
+            text = aiReply,
+            style = MaterialTheme.typography.headlineSmall,
+            color = Color(0xFF4CB5F5),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(vertical = 24.dp)
         )
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // --- BOTÃO CENTRAL ANIMADO ---
+        // --- BOTÃO CENTRAL (GRAVAR / PAUSAR) ---
         CentralMicButton(
             status = status,
             isRecording = isListening,
@@ -121,8 +130,11 @@ fun MainScreenWithAI(permissionManager: PermissionManager) {
                     PermissionStatus.DENIED -> permissionManager.openSettings()
                     PermissionStatus.GRANTED -> {
                         if (isListening) {
+                            // AÇÃO DE PAUSE: Para de ouvir, mas mantém o texto
                             voiceRecognizer.stopListening()
                         } else {
+                            // AÇÃO DE INICIAR: Limpa o campo e começa a ouvir
+                            textInput = ""
                             voiceRecognizer.startListening()
                         }
                     }
@@ -132,41 +144,67 @@ fun MainScreenWithAI(permissionManager: PermissionManager) {
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        // --- CAMPO DE TEXTO (Resultado + Edição) ---
+        // --- CAMPO DE TEXTO + BOTÃO ENVIAR ---
         OutlinedTextField(
             value = textInput,
-            onValueChange = { textInput = it }, // Permite editar o texto da IA
+            onValueChange = { textInput = it }, // Permite editar manualmente
             label = { Text("Seu pedido", color = Color.White.copy(alpha = 0.8f)) },
-            placeholder = { Text("Fale ou digite aqui...", color = Color.Gray) },
-            enabled = status == PermissionStatus.GRANTED,
+            placeholder = { Text(if (isListening) "Ouvindo..." else "Fale ou digite...", color = Color.Gray) },
+            enabled = status == PermissionStatus.GRANTED && !isLoading,
             maxLines = 3,
+            trailingIcon = {
+                // Botão de Enviar (Aviãozinho)
+                IconButton(
+                    onClick = {
+                        if (textInput.isNotBlank()) {
+                            // Garante que parou de ouvir antes de enviar
+                            if (isListening) voiceRecognizer.stopListening()
+
+                            scope.launch {
+                                isLoading = true
+                                try {
+                                    val response = apiClient.sendChat(textInput)
+                                    aiReply = response.reply
+                                    textInput = "" // Limpa após enviar com sucesso
+                                } catch (e: Exception) {
+                                    aiReply = "Erro: ${e.message}"
+                                } finally {
+                                    isLoading = false
+                                }
+                            }
+                        }
+                    },
+                    enabled = textInput.isNotBlank() && !isLoading
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Send,
+                        contentDescription = "Enviar",
+                        tint = if (textInput.isNotBlank()) Color(0xFFE94560) else Color.Gray
+                    )
+                }
+            },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
                 cursorColor = Color(0xFFE94560),
-                focusedBorderColor = Color(0xFFE94560), // Borda Vermelha Neon quando focado
+                focusedBorderColor = Color(0xFFE94560),
                 unfocusedBorderColor = Color(0xFF0F3460),
                 disabledBorderColor = Color.Gray.copy(alpha = 0.3f),
                 disabledTextColor = Color.Gray
             ),
-            modifier = Modifier
-                .fillMaxWidth()
+            modifier = Modifier.fillMaxWidth()
         )
 
-        // Exibe erro caso ocorra (ex: sem internet ou API indisponível)
+        // Exibe erro do reconhecedor se houver
         if (error != null) {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = error ?: "",
-                color = Color(0xFFEF5350),
-                fontSize = 12.sp
-            )
+            Text(text = error ?: "", color = Color(0xFFEF5350), fontSize = 12.sp)
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // --- RODAPÉ ---
-        StatusText(status, isListening)
+        // Texto de Status no rodapé
+        StatusText(status, isListening, isLoading)
     }
 }
 
@@ -176,7 +214,7 @@ fun CentralMicButton(
     isRecording: Boolean,
     onClick: () -> Unit
 ) {
-    // Animação de Pulso (Scale)
+    // Animação de Pulso
     val infiniteTransition = rememberInfiniteTransition()
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -187,20 +225,20 @@ fun CentralMicButton(
         )
     )
 
-    // Cores baseadas no estado
+    // Cores
     val targetColor = when {
-        status == PermissionStatus.DENIED -> Color(0xFF53354A) // Roxo Escuro (Erro)
-        isRecording -> Color(0xFFE94560)                       // Vermelho Neon (Gravando)
+        status == PermissionStatus.DENIED -> Color(0xFF53354A) // Roxo Escuro
+        isRecording -> Color(0xFFE94560)                       // Vermelho (Gravando)
         status == PermissionStatus.GRANTED -> Color(0xFF4CAF50)// Verde (Pronto)
-        else -> Color(0xFF0F3460)                              // Azul (Idle)
+        else -> Color(0xFF0F3460)
     }
 
     val animatedColor by animateColorAsState(targetColor)
 
-    // Ícone baseado no estado
+    // ÍCONES: Aqui mudamos para PAUSE quando estiver gravando
     val icon = when {
         status == PermissionStatus.DENIED -> Icons.Default.Settings
-        isRecording -> Icons.Default.Stop
+        isRecording -> Icons.Default.Pause // <--- ÍCONE DE PAUSE
         else -> Icons.Default.Mic
     }
 
@@ -208,18 +246,18 @@ fun CentralMicButton(
         contentAlignment = Alignment.Center,
         modifier = Modifier.size(140.dp)
     ) {
-        // Camada de Brilho/Sombra pulsante
+        // Efeito de onda
         if (isRecording) {
             Box(
                 modifier = Modifier
                     .size(100.dp)
                     .scale(scale)
                     .clip(CircleShape)
-                    .background(Color(0x66E94560)) // Transparente do vermelho
+                    .background(Color(0x66E94560))
             )
         }
 
-        // O Botão físico
+        // Botão Físico
         Box(
             modifier = Modifier
                 .size(100.dp)
@@ -230,7 +268,7 @@ fun CentralMicButton(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = "Microfone",
+                contentDescription = if (isRecording) "Pausar" else "Gravar",
                 tint = Color.White,
                 modifier = Modifier.size(48.dp)
             )
@@ -239,12 +277,13 @@ fun CentralMicButton(
 }
 
 @Composable
-fun StatusText(status: PermissionStatus, isRecording: Boolean) {
+fun StatusText(status: PermissionStatus, isRecording: Boolean, isLoading: Boolean) {
     val (text, color) = when {
-        status == PermissionStatus.DENIED -> "Permissão negada. Toque para abrir ajustes." to Color(0xFFEF5350)
-        isRecording -> "Toque novamente para finalizar" to Color(0xFFE94560)
-        status == PermissionStatus.GRANTED -> "Toque no microfone para falar" to Color(0xFF4CAF50)
-        else -> "Toque para ativar o assistente" to Color.White
+        isLoading -> "Processando com IA..." to Color(0xFF4CB5F5)
+        status == PermissionStatus.DENIED -> "Permissão negada." to Color(0xFFEF5350)
+        isRecording -> "Toque para pausar" to Color(0xFFE94560) // Texto atualizado
+        status == PermissionStatus.GRANTED -> "Toque para falar" to Color(0xFF4CAF50)
+        else -> "Toque para ativar" to Color.White
     }
 
     Text(

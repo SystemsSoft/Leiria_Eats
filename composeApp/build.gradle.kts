@@ -1,20 +1,17 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+
+    // Plugin de Serialização (Garante o JSON)
+    kotlin("plugin.serialization") version "1.9.23"
 }
 
 kotlin {
-    androidTarget {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
-        }
-    }
-    
+
+    androidTarget()
+
     listOf(
         iosArm64(),
         iosSimulatorArm64()
@@ -24,12 +21,25 @@ kotlin {
             isStatic = true
         }
     }
-    
+
     sourceSets {
+
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+
+            // Ktor Engine para Android (OkHttp)
+            implementation("io.ktor:ktor-client-okhttp:2.3.7")
+
+            // Koin para Android
+            implementation("io.insert-koin:koin-android:3.5.3")
         }
+
+        iosMain.dependencies {
+            // Ktor Engine para iOS (Darwin)
+            implementation("io.ktor:ktor-client-darwin:2.3.7")
+        }
+
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
@@ -41,10 +51,19 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(compose.materialIconsExtended)
 
+            // Koin Core (Injeção de Dependência)
             implementation("io.insert-koin:koin-core:3.5.3")
             implementation("io.insert-koin:koin-compose:1.1.2")
-            implementation("io.insert-koin:koin-android:3.5.3")
+
+            // Ktor Core (Rede)
+            implementation("io.ktor:ktor-client-core:2.3.7")
+            implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+            implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+
+            // Serialização JSON (Essencial para o erro anterior)
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
         }
+
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
@@ -81,4 +100,3 @@ android {
 dependencies {
     debugImplementation(compose.uiTooling)
 }
-
