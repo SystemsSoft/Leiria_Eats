@@ -11,17 +11,19 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
 class LeriaApiClient {
-
-    // Configura o Ktor
     private val client = HttpClient {
         install(ContentNegotiation) {
-            json(Json { ignoreUnknownKeys = true })
+            json(Json {
+                prettyPrint = true
+                isLenient = true
+                ignoreUnknownKeys = true
+            })
         }
     }
 
     private val baseUrl = "http://192.168.29.45:8000"
 
-    suspend fun sendChat(text: String): AIResponse {
+    suspend fun sendChat(text: String): SearchResponse {
         val response = client.post("$baseUrl/chat") {
             contentType(ContentType.Application.Json)
             setBody(UserRequest(text = text))

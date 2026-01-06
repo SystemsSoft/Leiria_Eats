@@ -164,8 +164,16 @@ fun MainScreenWithAI(permissionManager: PermissionManager) {
                                 isLoading = true
                                 try {
                                     val response = apiClient.sendChat(textInput)
-                                    aiReply = response.reply
-                                    textInput = "" // Limpa após enviar com sucesso
+
+                                    val nomesRestaurantes = response.results.joinToString { it.name }
+
+                                    if (response.results.isNotEmpty()) {
+                                        aiReply = "${response.reply}\n(Encontrados: $nomesRestaurantes)"
+                                    } else {
+                                        aiReply = response.reply
+                                    }
+
+                                    textInput = ""
                                 } catch (e: Exception) {
                                     aiReply = "Erro: ${e.message}"
                                 } finally {
