@@ -85,7 +85,7 @@ fun MainScreenWithAI(
         // Aqui entraremos com os Cards visuais no próximo passo
         Box(
             modifier = Modifier
-                .weight(1f) // Ocupa todo o espaço livre no meio da tela
+                .weight(1f)
                 .fillMaxWidth()
         ) {
             if (uiState.restaurants.isNotEmpty()) {
