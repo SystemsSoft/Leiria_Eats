@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.leria.eats.project.data.LeriaApiClient
+import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 
 class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
@@ -68,4 +69,30 @@ class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
             }
         }
     }
+
+    fun addToCart(product: Product) {
+        _uiState.update { currentState ->
+            currentState.copy(
+                cartItems = currentState.cartItems + product
+            )
+        }
+    }
+
+    // REMOVER DO CARRINHO (Apenas 1 unidade daquele produto)
+    fun removeFromCart(product: Product) {
+        _uiState.update { currentState ->
+            val currentList = currentState.cartItems.toMutableList()
+            // Remove a primeira ocorrência desse produto na lista
+            currentList.remove(product)
+            currentState.copy(cartItems = currentList)
+        }
+    }
+
+    // (Opcional) LIMPAR CARRINHO SE MUDAR DE RESTAURANTE
+    // Você pode chamar isso dentro do selectRestaurant se quiser impedir mistura
+    fun clearCart() {
+        _uiState.update { it.copy(cartItems = emptyList()) }
+    }
+
+
 }

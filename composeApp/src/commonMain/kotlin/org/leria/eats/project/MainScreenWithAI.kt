@@ -54,7 +54,10 @@ fun MainScreenWithAI(
 
         RestaurantDetailScreen(
             restaurant = uiState.selectedRestaurant!!,
-            onBack = { viewModel.clearSelection() } // Esse botão continua funcionando
+            cartItems = uiState.cartItems,
+            onBack = { viewModel.clearSelection() },
+            onAdd = { product -> viewModel.addToCart(product) },       // <--- Conectamos o Add
+            onRemove = { product -> viewModel.removeFromCart(product) } // <--- Conectamos o Remove
         )
 
     } else {
