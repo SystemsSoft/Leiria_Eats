@@ -15,11 +15,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import org.koin.compose.koinInject // Para o VoiceRecognizer que é hardware
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.leria.eats.project.permissions.PermissionManager
 import org.leria.eats.project.permissions.PermissionStatus
+import org.leria.eats.project.presentation.RestaurantDetailScreen
 import org.leria.eats.project.presentation.SearchViewModel
 import org.leria.eats.project.presentation.components.CentralMicButton
 import org.leria.eats.project.presentation.components.RestaurantCard
@@ -28,146 +28,150 @@ import org.leria.eats.project.voice.VoiceRecognizer
 @Composable
 fun MainScreenWithAI(
     permissionManager: PermissionManager,
-    // Injetamos o ViewModel aqui automaticamente
     viewModel: SearchViewModel = koinViewModel()
 ) {
-    // 1. Estados
     val uiState by viewModel.uiState.collectAsState()
-
-    // VoiceRecognizer continua aqui pois lida com Hardware/Permissões da Activity
     val voiceRecognizer = koinInject<VoiceRecognizer>()
     val voiceText by voiceRecognizer.results.collectAsState()
     val isListening by voiceRecognizer.isListening.collectAsState()
     val permissionStatus by permissionManager.status.collectAsState()
 
-    // 2. Sincronização Voz -> ViewModel
     LaunchedEffect(voiceText) {
         if (isListening && voiceText.isNotEmpty()) {
             viewModel.updateInputFromVoice(voiceText)
         }
     }
 
-    // Se perder permissão, para de ouvir
     LaunchedEffect(permissionStatus) {
         if (permissionStatus != PermissionStatus.GRANTED) voiceRecognizer.stopListening()
     }
 
-    val backgroundBrush = Brush.verticalGradient(
-        colors = listOf(Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460))
-    )
+    // --- LÓGICA DE NAVEGAÇÃO ---
+    if (uiState.selectedRestaurant != null) {
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundBrush)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // Título
-        Text(
-            text = "Leria Eats AI",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color.White,
-            fontWeight = FontWeight.Bold
+        // CÓDIGO REMOVIDO: BackHandler { ... }
+        // Agora confiamos apenas no botão visual da tela de detalhes
+
+        RestaurantDetailScreen(
+            restaurant = uiState.selectedRestaurant!!,
+            onBack = { viewModel.clearSelection() } // Esse botão continua funcionando
         )
 
-        // Resposta da IA
-        Text(
-            text = uiState.aiReply,
-            style = MaterialTheme.typography.headlineSmall,
-            color = Color(0xFF4CB5F5),
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(vertical = 24.dp)
+    } else {
+        // --- TELA DE BUSCA ---
+        val backgroundBrush = Brush.verticalGradient(
+            colors = listOf(Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460))
         )
 
-        // --- LISTA DE RESTAURANTES (Temporária: Mostra apenas nomes) ---
-        // Aqui entraremos com os Cards visuais no próximo passo
-        Box(
+        Column(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
+                .fillMaxSize()
+                .background(backgroundBrush)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            if (uiState.restaurants.isNotEmpty()) {
-                LazyColumn(
-                    contentPadding = PaddingValues(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp) // Espaço entre cards
-                ) {
-                    items(uiState.restaurants) { restaurant ->
-                        RestaurantCard(restaurant = restaurant)
+            Text(
+                text = "Leria Eats AI",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = uiState.aiReply,
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color(0xFF4CB5F5),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(vertical = 24.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                if (uiState.restaurants.isNotEmpty()) {
+                    LazyColumn(
+                        contentPadding = PaddingValues(vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(uiState.restaurants) { restaurant ->
+                            RestaurantCard(
+                                restaurant = restaurant,
+                                onClick = { viewModel.selectRestaurant(restaurant) }
+                            )
+                        }
+                    }
+                } else if (!uiState.isLoading && uiState.textInput.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Toque no microfone para pedir", color = Color.Gray)
                     }
                 }
-            } else if (!uiState.isLoading && uiState.textInput.isEmpty()) {
-                // Opcional: Mostra algo quando está vazio (ex: dicas)
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Toque no microfone para pedir", color = Color.Gray)
-                }
             }
-        }
-        Spacer(modifier = Modifier.height(20.dp))
 
-        // Botão do Microfone (Hardware)
-        CentralMicButton(
-            status = permissionStatus,
-            isRecording = isListening,
-            onClick = {
-                when (permissionStatus) {
-                    PermissionStatus.IDLE -> permissionManager.askForPermission()
-                    PermissionStatus.DENIED -> permissionManager.openSettings()
-                    PermissionStatus.GRANTED -> {
-                        if (isListening) voiceRecognizer.stopListening()
-                        else {
-                            viewModel.onQueryChange("") // Limpa texto antigo
-                            voiceRecognizer.startListening()
+            Spacer(modifier = Modifier.height(20.dp))
+
+            CentralMicButton(
+                status = permissionStatus,
+                isRecording = isListening,
+                onClick = {
+                    when (permissionStatus) {
+                        PermissionStatus.IDLE -> permissionManager.askForPermission()
+                        PermissionStatus.DENIED -> permissionManager.openSettings()
+                        PermissionStatus.GRANTED -> {
+                            if (isListening) voiceRecognizer.stopListening()
+                            else {
+                                viewModel.onQueryChange("")
+                                voiceRecognizer.startListening()
+                            }
                         }
                     }
                 }
+            )
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            OutlinedTextField(
+                value = uiState.textInput,
+                onValueChange = { viewModel.onQueryChange(it) },
+                label = { Text("Seu pedido", color = Color.White.copy(0.8f)) },
+                placeholder = { Text(if (isListening) "Ouvindo..." else "Digite...", color = Color.Gray) },
+                enabled = !uiState.isLoading,
+                trailingIcon = {
+                    IconButton(
+                        onClick = {
+                            if (isListening) voiceRecognizer.stopListening()
+                            viewModel.sendSearch()
+                        },
+                        enabled = uiState.textInput.isNotBlank() && !uiState.isLoading
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Send,
+                            contentDescription = "Enviar",
+                            tint = if (uiState.textInput.isNotBlank()) Color(0xFFE94560) else Color.Gray
+                        )
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = Color(0xFFE94560),
+                    focusedBorderColor = Color(0xFFE94560),
+                    unfocusedBorderColor = Color(0xFF0F3460)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (uiState.isLoading) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text("Processando IA...", color = Color(0xFF4CB5F5))
             }
-        )
 
-        Spacer(modifier = Modifier.height(40.dp))
-
-        // Campo de Texto
-        OutlinedTextField(
-            value = uiState.textInput,
-            onValueChange = { viewModel.onQueryChange(it) },
-            label = { Text("Seu pedido", color = Color.White.copy(0.8f)) },
-            placeholder = { Text(if (isListening) "Ouvindo..." else "Digite...", color = Color.Gray) },
-            enabled = !uiState.isLoading,
-            trailingIcon = {
-                IconButton(
-                    onClick = {
-                        if (isListening) voiceRecognizer.stopListening()
-                        viewModel.sendSearch()
-                    },
-                    enabled = uiState.textInput.isNotBlank() && !uiState.isLoading
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Send,
-                        contentDescription = "Enviar",
-                        tint = if (uiState.textInput.isNotBlank()) Color(0xFFE94560) else Color.Gray
-                    )
-                }
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                cursorColor = Color(0xFFE94560),
-                focusedBorderColor = Color(0xFFE94560),
-                unfocusedBorderColor = Color(0xFF0F3460)
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        // Mensagens de Status/Erro
-        if (uiState.isLoading) {
-            Spacer(modifier = Modifier.height(10.dp))
-            Text("Processando IA...", color = Color(0xFF4CB5F5))
-        }
-
-        if (uiState.error != null) {
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(uiState.error!!, color = Color.Red)
+            if (uiState.error != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(uiState.error!!, color = Color.Red)
+            }
         }
     }
 }

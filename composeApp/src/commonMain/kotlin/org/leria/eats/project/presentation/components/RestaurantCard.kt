@@ -2,6 +2,7 @@ package org.leria.eats.project.presentation.components
 
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,11 +20,15 @@ import androidx.compose.ui.unit.sp
 import org.leria.eats.project.data.Restaurant
 
 @Composable
-fun RestaurantCard(restaurant: Restaurant) {
+fun RestaurantCard(
+    restaurant: Restaurant,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp),
+            .height(100.dp)
+            .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF16213E) // Fundo azul escuro elegante

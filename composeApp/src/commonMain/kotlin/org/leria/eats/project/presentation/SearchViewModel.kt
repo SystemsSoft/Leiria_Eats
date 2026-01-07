@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.leria.eats.project.data.LeriaApiClient
+import org.leria.eats.project.data.Restaurant
 
 class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
 
@@ -26,6 +27,15 @@ class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
         if (text.isNotBlank()) {
             _uiState.update { it.copy(textInput = text) }
         }
+    }
+
+    fun selectRestaurant(restaurant: Restaurant) {
+        _uiState.update { it.copy(selectedRestaurant = restaurant) }
+    }
+
+    // Função chamada ao clicar em Voltar
+    fun clearSelection() {
+        _uiState.update { it.copy(selectedRestaurant = null) }
     }
 
     // A Lógica de Busca (que estava na tela antes)
