@@ -54,6 +54,7 @@ kotlin {
             // Koin Core (Injeção de Dependência)
             implementation("io.insert-koin:koin-core:3.5.3")
             implementation("io.insert-koin:koin-compose:1.1.2")
+            implementation("io.insert-koin:koin-compose-viewmodel:4.0.0")
 
             // Ktor Core (Rede)
             implementation("io.ktor:ktor-client-core:2.3.7")
