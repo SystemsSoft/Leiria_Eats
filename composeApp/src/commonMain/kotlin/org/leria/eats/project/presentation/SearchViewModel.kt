@@ -94,5 +94,8 @@ class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
         _uiState.update { it.copy(cartItems = emptyList()) }
     }
 
+    fun onTabSelected(tab: MainTab) {
+        _uiState.update { it.copy(currentTab = tab) }
+    }
 
 }

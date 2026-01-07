@@ -1,6 +1,12 @@
 package org.leria.eats.project.presentation
-import org.leria.eats.project.data.Restaurant
+
 import org.leria.eats.project.data.Product
+import org.leria.eats.project.data.Restaurant
+
+enum class MainTab {
+    HOME,
+    CART
+}
 
 data class SearchUiState(
     val isLoading: Boolean = false,
@@ -9,12 +15,11 @@ data class SearchUiState(
     val restaurants: List<Restaurant> = emptyList(),
     val error: String? = null,
     val selectedRestaurant: Restaurant? = null,
+    val cartItems: List<Product> = emptyList(),
 
-    // --- NOVO: O CARRINHO ---
-    // Guardamos a lista simples. Se tiver 2 pizzas, ela aparece 2 vezes na lista.
-    val cartItems: List<Product> = emptyList()
+    // 2. Adicione o campo da aba atual
+    val currentTab: MainTab = MainTab.HOME
 ) {
-    // Helper para calcular o total rapidinho na UI
     val cartTotal: Double
         get() = cartItems.sumOf { it.price }
 

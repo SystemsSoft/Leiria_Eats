@@ -31,7 +31,8 @@ fun RestaurantDetailScreen(
     cartItems: List<Product>, // Recebe o carrinho atual
     onBack: () -> Unit,
     onAdd: (Product) -> Unit,    // Ação de adicionar
-    onRemove: (Product) -> Unit  // Ação de remover
+    onRemove: (Product) -> Unit,  // Ação de remover
+    onViewCart: () -> Unit // <--- 1. NOVO PARÂMETRO
 ) {
     // Calcula totais para exibir na barra inferior
     val totalParams = cartItems.sumOf { it.price }
@@ -119,7 +120,7 @@ fun RestaurantDetailScreen(
                         .padding(16.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(Color(0xFFE94560)) // Vermelho/Rosa destaque
-                        .clickable { /* Ação de Finalizar Pedido Futura */ }
+                        .clickable { onViewCart() }
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
