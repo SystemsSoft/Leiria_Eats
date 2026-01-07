@@ -2,6 +2,8 @@ package org.leria.eats.project
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
@@ -20,6 +22,7 @@ import org.leria.eats.project.permissions.PermissionManager
 import org.leria.eats.project.permissions.PermissionStatus
 import org.leria.eats.project.presentation.SearchViewModel
 import org.leria.eats.project.presentation.components.CentralMicButton
+import org.leria.eats.project.presentation.components.RestaurantCard
 import org.leria.eats.project.voice.VoiceRecognizer
 
 @Composable
@@ -80,15 +83,27 @@ fun MainScreenWithAI(
 
         // --- LISTA DE RESTAURANTES (Temporária: Mostra apenas nomes) ---
         // Aqui entraremos com os Cards visuais no próximo passo
-        if (uiState.restaurants.isNotEmpty()) {
-            Text(
-                text = "Encontrados: ${uiState.restaurants.joinToString { it.name }}",
-                color = Color.Green,
-                fontSize = 14.sp
-            )
-            Spacer(modifier = Modifier.height(10.dp))
+        Box(
+            modifier = Modifier
+                .weight(1f) // Ocupa todo o espaço livre no meio da tela
+                .fillMaxWidth()
+        ) {
+            if (uiState.restaurants.isNotEmpty()) {
+                LazyColumn(
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp) // Espaço entre cards
+                ) {
+                    items(uiState.restaurants) { restaurant ->
+                        RestaurantCard(restaurant = restaurant)
+                    }
+                }
+            } else if (!uiState.isLoading && uiState.textInput.isEmpty()) {
+                // Opcional: Mostra algo quando está vazio (ex: dicas)
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Toque no microfone para pedir", color = Color.Gray)
+                }
+            }
         }
-
         Spacer(modifier = Modifier.height(20.dp))
 
         // Botão do Microfone (Hardware)
