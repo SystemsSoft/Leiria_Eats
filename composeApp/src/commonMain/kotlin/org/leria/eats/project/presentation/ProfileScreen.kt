@@ -1,9 +1,11 @@
 package org.leria.eats.project.presentation
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
@@ -20,11 +22,13 @@ import org.leria.eats.project.data.UserProfile
 @Composable
 fun ProfileScreen(
     userProfile: UserProfile,
-    onSave: (String, String, String) -> Unit
+    onSave: (String, String, String) -> Unit,
+    onGetLocation: ( (String) -> Unit ) -> Unit
 ) {
     var name by remember { mutableStateOf(userProfile.name) }
     var phone by remember { mutableStateOf(userProfile.phone) }
     var address by remember { mutableStateOf(userProfile.address) }
+    var isLocating by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -77,12 +81,52 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        ProfileTextField(
+
+        OutlinedTextField(
             value = address,
             onValueChange = { address = it },
-            label = "Endereço de Entrega",
-            icon = Icons.Default.Home
+            label = { Text("Endereço de Entrega", color = Color.Gray) },
+            leadingIcon = { Icon(Icons.Default.Home, contentDescription = null, tint = Color(0xFF4CB5F5)) },
+            trailingIcon = {
+                IconButton(
+                    onClick = {
+                        isLocating = true
+                        onGetLocation { foundAddress ->
+                            isLocating = false
+                            if (foundAddress.isNotEmpty()) {
+                                address = foundAddress
+                            }
+                        }
+                    },
+                    enabled = !isLocating
+                ) {
+                    if (isLocating) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color(0xFFE94560),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.LocationOn,
+                            contentDescription = "Usar localização atual",
+                            tint = Color(0xFFE94560)
+                        )
+                    }
+                }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                cursorColor = Color(0xFFE94560),
+                focusedBorderColor = Color(0xFFE94560),
+                unfocusedBorderColor = Color(0xFF0F3460),
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+            ),
+            modifier = Modifier.fillMaxWidth()
         )
+        // ---------------------------------------------
 
         Spacer(modifier = Modifier.weight(1f))
 

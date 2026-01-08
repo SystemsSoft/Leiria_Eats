@@ -28,15 +28,13 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
 
-            // Ktor Engine para Android (OkHttp)
             implementation("io.ktor:ktor-client-okhttp:2.3.7")
-
-            // Koin para Android
             implementation("io.insert-koin:koin-android:3.5.3")
+
+            implementation("com.google.android.gms:play-services-location:21.0.1")
         }
 
         iosMain.dependencies {
-            // Ktor Engine para iOS (Darwin)
             implementation("io.ktor:ktor-client-darwin:2.3.7")
         }
 

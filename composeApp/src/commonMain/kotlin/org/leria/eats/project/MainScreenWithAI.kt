@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.leria.eats.project.permissions.PermissionManager
@@ -21,13 +22,16 @@ import org.leria.eats.project.presentation.OrdersScreen // <--- Nova tela
 import org.leria.eats.project.presentation.ProfileScreen
 import org.leria.eats.project.presentation.RestaurantDetailScreen
 import org.leria.eats.project.presentation.SearchViewModel
+import org.leria.eats.project.service.LocationService
 import org.leria.eats.project.voice.VoiceRecognizer
 
 @Composable
 fun MainScreenWithAI(
     permissionManager: PermissionManager,
-    viewModel: SearchViewModel = koinViewModel()
+    viewModel: SearchViewModel = koinViewModel(),
+    locationService: LocationService = koinInject()
 ) {
+    val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
     val voiceRecognizer = koinInject<VoiceRecognizer>()
     val voiceText by voiceRecognizer.results.collectAsState()
@@ -181,6 +185,17 @@ fun MainScreenWithAI(
                             userProfile = uiState.userProfile,
                             onSave = { name, phone, address ->
                                 viewModel.updateUserProfile(name, phone, address)
+                            },
+                            onGetLocation = { callbackUpdateAddress ->
+                                if (permissionStatus == PermissionStatus.GRANTED) {
+                                    scope.launch {
+                                        val addressFound = locationService.getCurrentAddress()
+                                        callbackUpdateAddress(addressFound ?: "Localização não encontrada")
+                                    }
+                                } else {
+                                    permissionManager.askForPermission()
+                                    callbackUpdateAddress("")
+                                }
                             }
                         )
                     }
