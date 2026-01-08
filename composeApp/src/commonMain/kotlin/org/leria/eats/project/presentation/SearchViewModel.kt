@@ -9,21 +9,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.leria.eats.project.data.LeriaApiClient
+import org.leria.eats.project.data.Order
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 
 class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
 
-    // O Estado único da tela (Carregando, Lista, Erros, etc)
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
-    // Função chamada quando o usuário digita
     fun onQueryChange(text: String) {
         _uiState.update { it.copy(textInput = text) }
     }
 
-    // Função chamada quando a Voz atualiza o texto
     fun updateInputFromVoice(text: String) {
         if (text.isNotBlank()) {
             _uiState.update { it.copy(textInput = text) }
@@ -34,17 +32,14 @@ class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
         _uiState.update { it.copy(selectedRestaurant = restaurant) }
     }
 
-    // Função chamada ao clicar em Voltar
     fun clearSelection() {
         _uiState.update { it.copy(selectedRestaurant = null) }
     }
 
-    // A Lógica de Busca (que estava na tela antes)
     fun sendSearch() {
         val currentQuery = _uiState.value.textInput
         if (currentQuery.isBlank()) return
 
-        // Inicia o carregamento
         _uiState.update { it.copy(isLoading = true, error = null) }
 
         viewModelScope.launch {
@@ -78,24 +73,41 @@ class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
         }
     }
 
-    // REMOVER DO CARRINHO (Apenas 1 unidade daquele produto)
     fun removeFromCart(product: Product) {
         _uiState.update { currentState ->
             val currentList = currentState.cartItems.toMutableList()
-            // Remove a primeira ocorrência desse produto na lista
             currentList.remove(product)
             currentState.copy(cartItems = currentList)
         }
     }
 
-    // (Opcional) LIMPAR CARRINHO SE MUDAR DE RESTAURANTE
-    // Você pode chamar isso dentro do selectRestaurant se quiser impedir mistura
+
     fun clearCart() {
         _uiState.update { it.copy(cartItems = emptyList()) }
     }
 
     fun onTabSelected(tab: MainTab) {
         _uiState.update { it.copy(currentTab = tab) }
+    }
+
+
+    fun checkout() {
+        _uiState.update { currentState ->
+            if (currentState.cartItems.isEmpty()) return@update currentState
+
+            val newOrder = Order(
+                id = "#${(1000..9999).random()}", // Gera um ID simples
+                items = currentState.cartItems,
+                total = currentState.cartTotal,
+                status = "Em preparo"
+            )
+
+            currentState.copy(
+                orderHistory = currentState.orderHistory + newOrder,
+                cartItems = emptyList(), // Esvazia a sacola
+                currentTab = MainTab.ORDERS // Leva para a tela de pedidos
+            )
+        }
     }
 
 }

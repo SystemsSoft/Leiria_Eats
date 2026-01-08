@@ -3,6 +3,7 @@ package org.leria.eats.project
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,8 +14,9 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.leria.eats.project.permissions.PermissionManager
 import org.leria.eats.project.permissions.PermissionStatus
 import org.leria.eats.project.presentation.CartScreen
-import org.leria.eats.project.presentation.HomeScreen // <--- Importamos o novo arquivo
+import org.leria.eats.project.presentation.HomeScreen
 import org.leria.eats.project.presentation.MainTab
+import org.leria.eats.project.presentation.OrdersScreen // <--- Nova tela
 import org.leria.eats.project.presentation.RestaurantDetailScreen
 import org.leria.eats.project.presentation.SearchViewModel
 import org.leria.eats.project.voice.VoiceRecognizer
@@ -24,14 +26,12 @@ fun MainScreenWithAI(
     permissionManager: PermissionManager,
     viewModel: SearchViewModel = koinViewModel()
 ) {
-    // 1. Estados Globais
     val uiState by viewModel.uiState.collectAsState()
     val voiceRecognizer = koinInject<VoiceRecognizer>()
     val voiceText by voiceRecognizer.results.collectAsState()
     val isListening by voiceRecognizer.isListening.collectAsState()
     val permissionStatus by permissionManager.status.collectAsState()
 
-    // 2. Efeitos Colaterais (Voz)
     LaunchedEffect(voiceText) {
         if (isListening && voiceText.isNotEmpty()) {
             viewModel.updateInputFromVoice(voiceText)
@@ -41,10 +41,7 @@ fun MainScreenWithAI(
         if (permissionStatus != PermissionStatus.GRANTED) voiceRecognizer.stopListening()
     }
 
-    // 3. Roteamento de Telas
 
-
-    // ROTA A: Tela Cheia (Detalhes do Restaurante)
     if (uiState.selectedRestaurant != null) {
         RestaurantDetailScreen(
             restaurant = uiState.selectedRestaurant!!,
@@ -58,7 +55,6 @@ fun MainScreenWithAI(
             }
         )
     }
-    // ROTA B: Navegação Principal (Bottom Bar)
     else {
         Scaffold(
             bottomBar = {
@@ -66,7 +62,6 @@ fun MainScreenWithAI(
                     containerColor = Color(0xFF16213E),
                     contentColor = Color.White
                 ) {
-                    // Aba INÍCIO
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Home, contentDescription = "Início") },
                         label = { Text("Início") },
@@ -81,7 +76,6 @@ fun MainScreenWithAI(
                         )
                     )
 
-                    // Aba SACOLA
                     NavigationBarItem(
                         icon = {
                             BadgedBox(
@@ -105,6 +99,20 @@ fun MainScreenWithAI(
                             unselectedTextColor = Color.Gray
                         )
                     )
+
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.List, contentDescription = "Pedidos") },
+                        label = { Text("Pedidos") },
+                        selected = uiState.currentTab == MainTab.ORDERS,
+                        onClick = { viewModel.onTabSelected(MainTab.ORDERS) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.White,
+                            selectedTextColor = Color.White,
+                            indicatorColor = Color(0xFFE94560),
+                            unselectedIconColor = Color.Gray,
+                            unselectedTextColor = Color.Gray
+                        )
+                    )
                 }
             }
         ) { paddingValues ->
@@ -115,7 +123,6 @@ fun MainScreenWithAI(
             ) {
                 when (uiState.currentTab) {
                     MainTab.HOME -> {
-                        // Chamada limpa para a nova tela
                         HomeScreen(
                             uiState = uiState,
                             isListening = isListening,
@@ -145,8 +152,12 @@ fun MainScreenWithAI(
                         CartScreen(
                             cartItems = uiState.cartItems,
                             onRemoveItem = { product -> viewModel.removeFromCart(product) },
-                            onCheckout = { /* Futuro: Finalizar */ }
+                            // Aqui conectamos a ação de finalizar o pedido
+                            onCheckout = { viewModel.checkout() }
                         )
+                    }
+                    MainTab.ORDERS -> {
+                        OrdersScreen(orders = uiState.orderHistory)
                     }
                 }
             }
