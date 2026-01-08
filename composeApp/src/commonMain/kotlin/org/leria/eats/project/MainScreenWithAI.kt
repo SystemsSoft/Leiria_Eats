@@ -43,6 +43,7 @@ fun MainScreenWithAI(
 
     // 3. Roteamento de Telas
 
+
     // ROTA A: Tela Cheia (Detalhes do Restaurante)
     if (uiState.selectedRestaurant != null) {
         RestaurantDetailScreen(
