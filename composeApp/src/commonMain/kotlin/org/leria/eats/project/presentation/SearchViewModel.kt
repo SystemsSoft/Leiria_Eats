@@ -12,6 +12,7 @@ import org.leria.eats.project.data.LeriaApiClient
 import org.leria.eats.project.data.Order
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
+import org.leria.eats.project.data.UserProfile
 
 class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
 
@@ -104,8 +105,22 @@ class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
 
             currentState.copy(
                 orderHistory = currentState.orderHistory + newOrder,
-                cartItems = emptyList(), // Esvazia a sacola
-                currentTab = MainTab.ORDERS // Leva para a tela de pedidos
+                cartItems = emptyList(),
+                currentTab = MainTab.ORDERS
+            )
+        }
+    }
+
+    // ... outras funções ...
+
+    fun updateUserProfile(name: String, phone: String, address: String) {
+        _uiState.update { currentState ->
+            currentState.copy(
+                userProfile = UserProfile(
+                    name = name,
+                    phone = phone,
+                    address = address
+                )
             )
         }
     }

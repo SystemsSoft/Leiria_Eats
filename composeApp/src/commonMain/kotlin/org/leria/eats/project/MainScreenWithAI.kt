@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,6 +18,7 @@ import org.leria.eats.project.presentation.CartScreen
 import org.leria.eats.project.presentation.HomeScreen
 import org.leria.eats.project.presentation.MainTab
 import org.leria.eats.project.presentation.OrdersScreen // <--- Nova tela
+import org.leria.eats.project.presentation.ProfileScreen
 import org.leria.eats.project.presentation.RestaurantDetailScreen
 import org.leria.eats.project.presentation.SearchViewModel
 import org.leria.eats.project.voice.VoiceRecognizer
@@ -113,6 +115,20 @@ fun MainScreenWithAI(
                             unselectedTextColor = Color.Gray
                         )
                     )
+
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
+                        label = { Text("Perfil") },
+                        selected = uiState.currentTab == MainTab.PROFILE,
+                        onClick = { viewModel.onTabSelected(MainTab.PROFILE) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.White,
+                            selectedTextColor = Color.White,
+                            indicatorColor = Color(0xFFE94560),
+                            unselectedIconColor = Color.Gray,
+                            unselectedTextColor = Color.Gray
+                        )
+                    )
                 }
             }
         ) { paddingValues ->
@@ -158,6 +174,15 @@ fun MainScreenWithAI(
                     }
                     MainTab.ORDERS -> {
                         OrdersScreen(orders = uiState.orderHistory)
+                    }
+
+                    MainTab.PROFILE -> {
+                        ProfileScreen(
+                            userProfile = uiState.userProfile,
+                            onSave = { name, phone, address ->
+                                viewModel.updateUserProfile(name, phone, address)
+                            }
+                        )
                     }
                 }
             }
