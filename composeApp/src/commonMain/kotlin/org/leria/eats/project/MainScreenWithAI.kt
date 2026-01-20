@@ -18,7 +18,7 @@ import org.leria.eats.project.permissions.PermissionStatus
 import org.leria.eats.project.presentation.CartScreen
 import org.leria.eats.project.presentation.HomeScreen
 import org.leria.eats.project.presentation.MainTab
-import org.leria.eats.project.presentation.OrdersScreen // <--- Nova tela
+import org.leria.eats.project.presentation.OrdersScreen
 import org.leria.eats.project.presentation.ProfileScreen
 import org.leria.eats.project.presentation.RestaurantDetailScreen
 import org.leria.eats.project.presentation.SearchViewModel
@@ -38,11 +38,14 @@ fun MainScreenWithAI(
     val isListening by voiceRecognizer.isListening.collectAsState()
     val permissionStatus by permissionManager.status.collectAsState()
 
+    // Efeito para processar voz
     LaunchedEffect(voiceText) {
         if (isListening && voiceText.isNotEmpty()) {
             viewModel.updateInputFromVoice(voiceText)
         }
     }
+
+    // Efeito para parar voz se permissão for negada
     LaunchedEffect(permissionStatus) {
         if (permissionStatus != PermissionStatus.GRANTED) voiceRecognizer.stopListening()
     }
@@ -171,7 +174,6 @@ fun MainScreenWithAI(
                         CartScreen(
                             cartItems = uiState.cartItems,
                             onRemoveItem = { product -> viewModel.removeFromCart(product) },
-                            // Aqui conectamos a ação de finalizar o pedido
                             onCheckout = { viewModel.checkout() }
                         )
                     }
@@ -183,11 +185,13 @@ fun MainScreenWithAI(
                         )
                     }
 
+                    // --- AJUSTE FEITO AQUI ---
                     MainTab.PROFILE -> {
                         ProfileScreen(
                             userProfile = uiState.userProfile,
                             onSave = { name, phone, address ->
                                 viewModel.updateUserProfile(name, phone, address)
+                                viewModel.onTabSelected(MainTab.HOME)
                             },
                             onGetLocation = { callbackUpdateAddress ->
                                 if (permissionStatus == PermissionStatus.GRANTED) {

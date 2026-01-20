@@ -51,6 +51,8 @@ kotlin {
 
             implementation("media.kamel:kamel-image:0.9.4")
 
+            implementation(libs.androidx.datastore.preferences.core)
+
             // Koin Core (Injeção de Dependência)
             implementation("io.insert-koin:koin-core:3.5.3")
             implementation("io.insert-koin:koin-compose:1.1.2")

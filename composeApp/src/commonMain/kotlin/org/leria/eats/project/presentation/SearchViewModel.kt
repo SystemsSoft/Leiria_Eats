@@ -13,13 +13,35 @@ import org.leria.eats.project.data.Order
 import org.leria.eats.project.data.OrderItemRequest
 import org.leria.eats.project.data.OrderRequest
 import org.leria.eats.project.data.Product
+import org.leria.eats.project.data.ProfileRepository
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.data.UserProfile
 
-class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
+class SearchViewModel(
+    private val apiClient: LeriaApiClient,
+    private val profileRepository: ProfileRepository,
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
+
+
+    init {
+        viewModelScope.launch {
+            profileRepository.userProfileFlow.collect { profile ->
+                _uiState.update { it.copy(userProfile = profile) }
+            }
+        }
+    }
+
+    fun updateUserProfile(name: String, phone: String, address: String) {
+        viewModelScope.launch {
+            profileRepository.saveProfile(name, phone, address)
+            _uiState.update {
+                it.copy(userProfile = UserProfile(name, phone, address))
+            }
+        }
+    }
 
     fun onQueryChange(text: String) {
         _uiState.update { it.copy(textInput = text) }
@@ -186,19 +208,6 @@ class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
                     it.copy(isLoading = false, error = "Erro interno ao processar pedido: ${e.message}")
                 }
             }
-        }
-    }
-
-
-    fun updateUserProfile(name: String, phone: String, address: String) {
-        _uiState.update { currentState ->
-            currentState.copy(
-                userProfile = UserProfile(
-                    name = name,
-                    phone = phone,
-                    address = address
-                )
-            )
         }
     }
 

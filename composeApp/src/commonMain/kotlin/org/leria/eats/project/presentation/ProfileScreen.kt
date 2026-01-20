@@ -1,8 +1,10 @@
+// Arquivo: presentation/ProfileScreen.kt
 package org.leria.eats.project.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
@@ -16,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.leria.eats.project.data.UserProfile
 
@@ -23,7 +26,7 @@ import org.leria.eats.project.data.UserProfile
 fun ProfileScreen(
     userProfile: UserProfile,
     onSave: (String, String, String) -> Unit,
-    onGetLocation: ( (String) -> Unit ) -> Unit
+    onGetLocation: ((String) -> Unit) -> Unit
 ) {
     var name by remember(userProfile) { mutableStateOf(userProfile.name) }
     var phone by remember(userProfile) { mutableStateOf(userProfile.phone) }
@@ -63,6 +66,7 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
+
         ProfileTextField(
             value = name,
             onValueChange = { name = it },
@@ -76,12 +80,13 @@ fun ProfileScreen(
             value = phone,
             onValueChange = { phone = it },
             label = "Telefone / WhatsApp",
-            icon = Icons.Default.Phone
+            icon = Icons.Default.Phone,
+            keyboardType = KeyboardType.Phone
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-
+        // Campo de Endereço com Botão de GPS
         OutlinedTextField(
             value = address,
             onValueChange = { address = it },
@@ -126,12 +131,15 @@ fun ProfileScreen(
             ),
             modifier = Modifier.fillMaxWidth()
         )
-        // ---------------------------------------------
 
         Spacer(modifier = Modifier.weight(1f))
 
+        // --- BOTÃO SALVAR ---
         Button(
-            onClick = { onSave(name, phone, address) },
+            onClick = {
+                // Chama a função recebida por parâmetro (enviando para o MainScreen)
+                onSave(name, phone, address)
+            },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE94560)),
             modifier = Modifier
                 .fillMaxWidth()
@@ -148,13 +156,15 @@ fun ProfileTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    icon: ImageVector
+    icon: ImageVector,
+    keyboardType: KeyboardType = KeyboardType.Text
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label, color = Color.Gray) },
         leadingIcon = { Icon(icon, contentDescription = null, tint = Color(0xFF4CB5F5)) },
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = Color.White,
             unfocusedTextColor = Color.White,
