@@ -29,4 +29,17 @@ class LeriaApiClient {
         }
         return response.body()
     }
+
+    suspend fun sendOrder(request: OrderRequest): Boolean {
+        try {
+            val response = client.post("$baseUrl/orders") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            return response.status.value in 200..299
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        }
+    }
 }

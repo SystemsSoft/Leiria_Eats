@@ -39,3 +39,21 @@ data class SearchResponse(
     val intent: String,
     val results: List<Restaurant> = emptyList()
 )
+
+@Serializable
+data class OrderRequest(
+    val user_name: String,
+    val user_address: String,
+    val user_phone: String,
+    val restaurant_id: Int,
+    val items: List<OrderItemRequest>
+)
+
+// Arquivo: composeApp/.../data/Models.kt
+
+@Serializable
+data class OrderItemRequest(
+    val product_id: Int,
+    val quantity: Int,
+    val observation: String? = null
+)
