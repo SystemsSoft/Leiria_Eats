@@ -19,6 +19,7 @@ data class SearchUiState(
     val restaurants: List<Restaurant> = emptyList(),
     val error: String? = null,
     val selectedRestaurant: Restaurant? = null,
+    val cartRestaurantId: Int? = null,
     val cartItems: List<Product> = emptyList(),
     val currentTab: MainTab = MainTab.HOME,
     val orderHistory: List<Order> = emptyList(),

@@ -69,12 +69,14 @@ class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
             }
         }
     }
-// ... resto do código ...
 
     fun addToCart(product: Product) {
         _uiState.update { currentState ->
+            val restaurantId = currentState.cartRestaurantId ?: currentState.selectedRestaurant?.id
+
             currentState.copy(
-                cartItems = currentState.cartItems + product
+                cartItems = currentState.cartItems + product,
+                cartRestaurantId = restaurantId // <--- SALVAMOS AQUI
             )
         }
     }
@@ -89,7 +91,12 @@ class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
 
 
     fun clearCart() {
-        _uiState.update { it.copy(cartItems = emptyList()) }
+        _uiState.update {
+            it.copy(
+                cartItems = emptyList(),
+                cartRestaurantId = null
+            )
+        }
     }
 
     fun onTabSelected(tab: MainTab) {
@@ -101,11 +108,8 @@ class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
         val currentUser = _uiState.value.userProfile
         val currentCart = _uiState.value.cartItems
 
-        // --- 1. PEGAR ID DO RESTAURANTE ---
-        // O pedido pertence ao restaurante que está selecionado (ou do qual os itens vieram)
-        // Se você limpa a seleção ao sair da tela, talvez precise guardar o ID no carrinho ou manter a seleção.
-        // Assumindo que o usuário ainda está no contexto do restaurante ou o último selecionado:
-        val restaurantId = _uiState.value.selectedRestaurant?.id
+
+        val restaurantId = _uiState.value.cartRestaurantId
 
         if (restaurantId == null) {
             _uiState.update {
