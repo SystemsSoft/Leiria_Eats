@@ -28,10 +28,16 @@ fun ProfileScreen(
     onSave: (String, String, String) -> Unit,
     onGetLocation: ((String) -> Unit) -> Unit
 ) {
-    var name by remember(userProfile) { mutableStateOf(userProfile.name) }
-    var phone by remember(userProfile) { mutableStateOf(userProfile.phone) }
-    var address by remember(userProfile) { mutableStateOf(userProfile.address) }
+    var name by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
     var isLocating by remember { mutableStateOf(false) }
+
+    LaunchedEffect(userProfile) {
+        if (userProfile.name.isNotEmpty()) name = userProfile.name
+        if (userProfile.phone.isNotEmpty()) phone = userProfile.phone
+        if (userProfile.address.isNotEmpty()) address = userProfile.address
+    }
 
     Column(
         modifier = Modifier

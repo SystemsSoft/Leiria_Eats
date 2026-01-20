@@ -9,7 +9,6 @@ import org.koin.dsl.module
 import org.leria.eats.project.data.LeriaApiClient
 import org.leria.eats.project.data.ProfileRepository
 import org.leria.eats.project.data.getDataStore
-import org.leria.eats.project.presentation.ProfileViewModel
 import org.leria.eats.project.presentation.SearchViewModel
 
 expect val platformModule: Module
@@ -21,9 +20,8 @@ val sharedModule = module {
 
     single { ProfileRepository(get()) }
 
-    viewModel { SearchViewModel(get()) }
+    viewModel { SearchViewModel(get(),get()) }
 
-    viewModel { ProfileViewModel(repository = get()) }
 }
 
 fun initKoin(appDeclaration: KoinAppDeclaration = {}) =

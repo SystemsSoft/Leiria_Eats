@@ -1,16 +1,23 @@
+// Arquivo: composeApp/src/androidMain/kotlin/.../data/DataStoreConfig.android.kt
 package org.leria.eats.project.data
 
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 
-// Variável global ou injetada para segurar o contexto
-lateinit var appContext: Context
+private lateinit var appContext: Context
+
+fun initAndroidDataStore(context: Context) {
+    appContext = context
+}
 
 actual fun getDataStore(): DataStore<Preferences> {
+    if (!::appContext.isInitialized) {
+        throw IllegalStateException("❌ ERRO CRÍTICO: Chame initAndroidDataStore(context) na MainActivity antes de usar o Koin!")
+    }
+
     return createDataStore(
         producePath = {
-            // No Android, salvamos na pasta de arquivos interna
             appContext.filesDir.resolve(DATA_STORE_FILE_NAME).absolutePath
         }
     )
