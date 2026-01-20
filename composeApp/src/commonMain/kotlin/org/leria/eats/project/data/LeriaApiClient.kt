@@ -21,12 +21,11 @@ class LeriaApiClient {
         }
     }
 
-    private val baseUrl = "http://192.168.29.45:8000"
-
-    suspend fun sendChat(text: String): SearchResponse {
-        val response = client.post("$baseUrl/chat") {
+    private val baseUrl = "http://192.168.29.3:8080"
+    suspend fun searchRestaurants(text: String): SearchResponse {
+        val response = client.post("$baseUrl/search") {
             contentType(ContentType.Application.Json)
-            setBody(UserRequest(text = text))
+            setBody(SearchRequest(query = text))
         }
         return response.body()
     }

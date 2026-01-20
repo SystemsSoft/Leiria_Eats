@@ -8,12 +8,19 @@ data class UserRequest(
     val user_id: String = "mobile_user"
 )
 
+@Serializable
+data class SearchRequest(
+    val query: String
+)
+
 
 @Serializable
 data class Product(
+    val id: Int,
     val name: String,
+    val description: String,
     val price: Double,
-    val description: String
+    val image_url: String?
 )
 
 @Serializable
@@ -21,8 +28,9 @@ data class Restaurant(
     val id: Int,
     val name: String,
     val category: String,
-    val rating: Double,
-    val menu: List<Product>
+    val rating: Double? = null,
+    val image_url: String?,
+    val products: List<Product> = emptyList()
 )
 
 @Serializable

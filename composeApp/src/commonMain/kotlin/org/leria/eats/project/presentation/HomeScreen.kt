@@ -2,26 +2,32 @@ package org.leria.eats.project.presentation
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.kamel.image.KamelImage
+import io.kamel.image.asyncPainterResource
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
 import org.leria.eats.project.presentation.components.CentralMicButton
-import org.leria.eats.project.presentation.components.RestaurantCard
 
 @Composable
 fun HomeScreen(
@@ -42,10 +48,10 @@ fun HomeScreen(
             .fillMaxSize()
             .background(backgroundBrush)
             .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Título
+        // --- CABEÇALHO ---
+        Spacer(modifier = Modifier.height(20.dp))
         Text(
             text = "Leria Eats AI",
             style = MaterialTheme.typography.headlineMedium,
@@ -53,21 +59,21 @@ fun HomeScreen(
             fontWeight = FontWeight.Bold
         )
 
-        // Resposta da IA
+        // Resposta da IA (Destaque)
         Text(
             text = uiState.aiReply,
-            style = MaterialTheme.typography.headlineSmall,
-            color = Color(0xFF4CB5F5),
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color(0xFF4CB5F5), // Azul claro para destaque
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(vertical = 24.dp)
+            modifier = Modifier
+                .padding(vertical = 24.dp)
+                .fillMaxWidth()
         )
 
-        // --- BOTÃO "VER TODOS" ---
-        // Só mostramos se não tiver texto digitado
-        if (uiState.textInput.isEmpty()) {
+        // --- BOTÃO "VER TODOS" (Atalho Rápido) ---
+        if (uiState.restaurants.isEmpty() && !uiState.isLoading) {
             OutlinedButton(
                 onClick = {
-                    // Truque: Mandamos o texto "ver todos" para o Python
                     onTextChange("ver todos")
                     onSendClick()
                 },
@@ -81,22 +87,36 @@ fun HomeScreen(
             }
         }
 
-        // --- LISTA OU PLACEHOLDER ---
+        // --- LISTA DE RESULTADOS ---
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            if (uiState.restaurants.isNotEmpty()) {
+            if (uiState.isLoading) {
+                CircularProgressIndicator(
+                    color = Color(0xFFE94560),
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            } else if (uiState.restaurants.isNotEmpty()) {
                 LazyColumn(
-                    contentPadding = PaddingValues(vertical = 8.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp), // Espaço para não cobrir com o mic
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    item {
+                        Text(
+                            "Sugestões encontradas:",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
                     items(uiState.restaurants) { restaurant ->
-                        RestaurantCard(
+                        // Usamos um Card customizado aqui para mostrar os produtos que a IA achou
+                        RestaurantCardItem(
                             restaurant = restaurant,
                             onClick = { onRestaurantClick(restaurant) }
                         )
                     }
                 }
-            } else if (!uiState.isLoading && uiState.textInput.isEmpty()) {
-                // Estado vazio (Placeholder)
+            } else {
+                // Estado Vazio (Placeholder)
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
@@ -105,66 +125,150 @@ fun HomeScreen(
                     Text(
                         "Não sabe o que pedir?",
                         color = Color.Gray,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
                     )
                     Text(
-                        "Fale 'Pizza' ou clique em Ver Todos",
+                        "Fale 'Pizza' ou 'Quero algo barato'",
                         color = Color.Gray.copy(0.6f),
-                        fontSize = 12.sp
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        // --- CONTROLES INFERIORES ---
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Botão Microfone Grande
+            CentralMicButton(
+                status = permissionStatus,
+                isRecording = isListening,
+                onClick = onMicClick
+            )
 
-        // Botão Microfone
-        CentralMicButton(
-            status = permissionStatus,
-            isRecording = isListening,
-            onClick = onMicClick
-        )
+            Spacer(modifier = Modifier.height(20.dp))
 
-        Spacer(modifier = Modifier.height(40.dp))
+            // Campo de Texto
+            OutlinedTextField(
+                value = uiState.textInput,
+                onValueChange = onTextChange,
+                label = { Text("Digite seu pedido...", color = Color.White.copy(0.6f)) },
+                placeholder = { Text(if (isListening) "Ouvindo..." else "Ex: Hambúrguer...", color = Color.Gray) },
+                enabled = !uiState.isLoading,
+                singleLine = true,
+                shape = RoundedCornerShape(24.dp),
+                trailingIcon = {
+                    IconButton(
+                        onClick = onSendClick,
+                        enabled = uiState.textInput.isNotBlank() && !uiState.isLoading
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Send,
+                            contentDescription = "Enviar",
+                            tint = if (uiState.textInput.isNotBlank()) Color(0xFFE94560) else Color.Gray
+                        )
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = Color(0xFFE94560),
+                    focusedBorderColor = Color(0xFFE94560),
+                    unfocusedBorderColor = Color(0xFF0F3460),
+                    focusedContainerColor = Color(0xFF16213E), // Fundo levemente mais claro que o bg
+                    unfocusedContainerColor = Color(0xFF16213E)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
 
-        // Campo de Texto
-        OutlinedTextField(
-            value = uiState.textInput,
-            onValueChange = onTextChange,
-            label = { Text("Seu pedido", color = Color.White.copy(0.8f)) },
-            placeholder = { Text(if (isListening) "Ouvindo..." else "Digite...", color = Color.Gray) },
-            enabled = !uiState.isLoading,
-            trailingIcon = {
-                IconButton(
-                    onClick = onSendClick,
-                    enabled = uiState.textInput.isNotBlank() && !uiState.isLoading
+            if (uiState.error != null) {
+                Text(
+                    text = uiState.error!!,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun RestaurantCardItem(restaurant: Restaurant, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF232F4E)), // Azul escuro card
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Row(modifier = Modifier.padding(12.dp)) {
+            val imageUrl = restaurant.image_url ?: "https://placehold.co/100x100.png"
+            KamelImage(
+                resource = asyncPainterResource(data = imageUrl),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.Gray),
+                contentScale = ContentScale.Crop,
+                onLoading = { CircularProgressIndicator(modifier = Modifier.padding(20.dp)) },
+                onFailure = {
+                    Box(Modifier.fillMaxSize().background(Color.Red))
+                }
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                // Nome e Nota
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Send,
-                        contentDescription = "Enviar",
-                        tint = if (uiState.textInput.isNotBlank()) Color(0xFFE94560) else Color.Gray
+                    Text(
+                        text = restaurant.name,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        maxLines = 1
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Star, null, tint = Color(0xFFFFB300), modifier = Modifier.size(14.dp))
+                        Text(
+                            text = (restaurant.rating ?: 5.0).toString(),
+                            color = Color(0xFFFFB300),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Text(
+                    text = restaurant.category,
+                    color = Color.White.copy(0.6f),
+                    fontSize = 12.sp
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // --- AQUI ESTÁ A MÁGICA DA IA ---
+                // Se o Python mandou 'products' (sugestões), mostramos aqui
+                if (restaurant.products.isNotEmpty()) {
+                    Text(
+                        text = "Encontrei: ${restaurant.products.joinToString { it.name }}",
+                        color = Color(0xFFE94560), // Cor de destaque (Rosa/Vermelho do tema)
+                        fontSize = 12.sp,
+                        maxLines = 2,
+                        lineHeight = 16.sp
                     )
                 }
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                cursorColor = Color(0xFFE94560),
-                focusedBorderColor = Color(0xFFE94560),
-                unfocusedBorderColor = Color(0xFF0F3460)
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        // Status
-        if (uiState.isLoading) {
-            Spacer(modifier = Modifier.height(10.dp))
-            Text("Processando IA...", color = Color(0xFF4CB5F5))
-        }
-
-        if (uiState.error != null) {
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(uiState.error!!, color = Color.Red)
+            }
         }
     }
 }

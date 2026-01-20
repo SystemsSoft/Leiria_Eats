@@ -92,7 +92,7 @@ fun RestaurantDetailScreen(
                     )
                 }
 
-                items(restaurant.menu) { product ->
+                items(restaurant.products) { product ->
                     // Quantos deste produto já estão no carrinho?
                     val qty = cartItems.count { it.name == product.name }
 

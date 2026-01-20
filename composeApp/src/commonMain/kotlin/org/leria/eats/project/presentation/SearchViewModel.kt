@@ -37,6 +37,8 @@ class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
         _uiState.update { it.copy(selectedRestaurant = null) }
     }
 
+    // ... imports ...
+
     fun sendSearch() {
         val currentQuery = _uiState.value.textInput
         if (currentQuery.isBlank()) return
@@ -45,14 +47,14 @@ class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val response = apiClient.sendChat(currentQuery)
+                val response = apiClient.searchRestaurants(currentQuery)
 
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         aiReply = response.reply,
                         restaurants = response.results,
-                        textInput = "" // Limpa o campo após enviar (opcional)
+                        textInput = ""
                     )
                 }
             } catch (e: Exception) {
@@ -62,9 +64,11 @@ class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
                         error = "Erro ao conectar: ${e.message}"
                     )
                 }
+                e.printStackTrace() // Ajuda a ver o erro no Logcat
             }
         }
     }
+// ... resto do código ...
 
     fun addToCart(product: Product) {
         _uiState.update { currentState ->
