@@ -49,11 +49,16 @@ data class OrderRequest(
     val items: List<OrderItemRequest>
 )
 
-// Arquivo: composeApp/.../data/Models.kt
-
 @Serializable
 data class OrderItemRequest(
     val product_id: Int,
     val quantity: Int,
     val observation: String? = null
+)
+
+@Serializable
+data class UserProfile(
+    val name: String = "",
+    val phone: String = "",
+    val address: String = ""
 )

@@ -25,9 +25,9 @@ fun ProfileScreen(
     onSave: (String, String, String) -> Unit,
     onGetLocation: ( (String) -> Unit ) -> Unit
 ) {
-    var name by remember { mutableStateOf(userProfile.name) }
-    var phone by remember { mutableStateOf(userProfile.phone) }
-    var address by remember { mutableStateOf(userProfile.address) }
+    var name by remember(userProfile) { mutableStateOf(userProfile.name) }
+    var phone by remember(userProfile) { mutableStateOf(userProfile.phone) }
+    var address by remember(userProfile) { mutableStateOf(userProfile.address) }
     var isLocating by remember { mutableStateOf(false) }
 
     Column(

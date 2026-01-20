@@ -56,7 +56,6 @@ fun MainScreenWithAI(
             onAdd = { product -> viewModel.addToCart(product) },
             onRemove = { product -> viewModel.removeFromCart(product) },
             onViewCart = {
-                viewModel.clearSelection()
                 viewModel.onTabSelected(MainTab.CART)
             }
         )
