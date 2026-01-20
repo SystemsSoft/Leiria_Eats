@@ -6,11 +6,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeliveryDining
+import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -18,7 +24,8 @@ import org.leria.eats.project.data.Order
 
 @Composable
 fun OrdersScreen(
-    orders: List<Order>
+    orders: List<Order>,
+    onRefresh: () -> Unit = {} // Novo callback para atualizar
 ) {
     Column(
         modifier = Modifier
@@ -26,20 +33,36 @@ fun OrdersScreen(
             .background(Color(0xFF1A1A2E))
             .padding(16.dp)
     ) {
-        Text(
-            text = "Meus Pedidos",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        // Cabeçalho com Botão de Atualizar
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Meus Pedidos",
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+
+            IconButton(onClick = onRefresh) {
+                Icon(Icons.Default.Refresh, contentDescription = "Atualizar", tint = Color.White)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         if (orders.isEmpty()) {
             Box(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Nenhum pedido realizado ainda.", color = Color.Gray)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Nenhum pedido realizado ainda.", color = Color.Gray)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = onRefresh) { Text("Buscar Pedidos") }
+                }
             }
         } else {
             LazyColumn(
@@ -56,6 +79,10 @@ fun OrdersScreen(
 
 @Composable
 fun OrderItemCard(order: Order) {
+    // Define cor e ícone baseados no texto do status
+    val statusColor = getStatusColor(order.status)
+    val statusIcon = getStatusIcon(order.status)
+
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF16213E)),
         shape = MaterialTheme.shapes.medium,
@@ -74,12 +101,15 @@ fun OrderItemCard(order: Order) {
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
+
+                // Badge de Data (ou ID visual)
                 Surface(
                     color = Color(0xFF0F3460),
                     shape = MaterialTheme.shapes.small
                 ) {
                     Text(
-                        text = order.date,
+                        // Se seu objeto Order não tem data formatada, pode usar uma string fixa ou ajustar no Models
+                        text = "Ver detalhes",
                         color = Color(0xFF4CB5F5),
                         fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -89,7 +119,7 @@ fun OrderItemCard(order: Order) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Resumo dos itens (Ex: "1x Pizza, 2x Cola...")
+            // Resumo dos itens
             val summary = order.items.groupingBy { it.name }.eachCount()
                 .entries.joinToString(", ") { "${it.value}x ${it.key}" }
 
@@ -97,21 +127,27 @@ fun OrderItemCard(order: Order) {
 
             Divider(color = Color(0xFF0F3460), modifier = Modifier.padding(vertical = 12.dp))
 
-            // Rodapé: Status e Total
+            // Rodapé: Status Dinâmico e Total
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Status com cor e ícone dinâmicos
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Default.CheckCircle,
+                        imageVector = statusIcon,
                         contentDescription = null,
-                        tint = Color(0xFF4CAF50),
-                        modifier = Modifier.size(16.dp)
+                        tint = statusColor,
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(order.status, color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = order.status,
+                        color = statusColor,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
                 }
 
                 Text(
@@ -122,5 +158,29 @@ fun OrderItemCard(order: Order) {
                 )
             }
         }
+    }
+}
+
+// --- FUNÇÕES AUXILIARES DE ESTILO ---
+
+fun getStatusColor(status: String): Color {
+    return when (status) {
+        "Pendente" -> Color(0xFFFF9800) // Laranja
+        "Em Preparo" -> Color(0xFF2196F3) // Azul
+        "Saiu para Entrega" -> Color(0xFF9C27B0) // Roxo
+        "Entregue" -> Color(0xFF4CAF50) // Verde
+        "Cancelado" -> Color(0xFFF44336) // Vermelho
+        else -> Color.Gray
+    }
+}
+
+fun getStatusIcon(status: String): ImageVector {
+    return when (status) {
+        "Pendente" -> Icons.Default.HourglassEmpty
+        "Em Preparo" -> Icons.Default.Restaurant
+        "Saiu para Entrega" -> Icons.Default.DeliveryDining
+        "Entregue" -> Icons.Default.CheckCircle
+        "Cancelado" -> Icons.Default.Close
+        else -> Icons.Default.CheckCircle
     }
 }

@@ -175,8 +175,12 @@ fun MainScreenWithAI(
                             onCheckout = { viewModel.checkout() }
                         )
                     }
+
                     MainTab.ORDERS -> {
-                        OrdersScreen(orders = uiState.orderHistory)
+                        OrdersScreen(
+                            orders = uiState.orderHistory,
+                            onRefresh = { viewModel.refreshOrders() }
+                        )
                     }
 
                     MainTab.PROFILE -> {

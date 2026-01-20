@@ -202,6 +202,21 @@ class SearchViewModel(private val apiClient: LeriaApiClient) : ViewModel() {
         }
     }
 
+    fun refreshOrders() {
+        val userName = _uiState.value.userProfile.name
+        if (userName.isBlank()) return
 
+        _uiState.update { it.copy(isLoading = true) }
+
+        viewModelScope.launch {
+            val updatedOrders = apiClient.getCustomerOrders(userName)
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    orderHistory = updatedOrders // Substitui a lista local pela do servidor
+                )
+            }
+        }
+    }
 
 }

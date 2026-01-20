@@ -3,6 +3,7 @@ package org.leria.eats.project.data
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -40,6 +41,18 @@ class LeriaApiClient {
         } catch (e: Exception) {
             e.printStackTrace()
             return false
+        }
+    }
+
+    suspend fun getCustomerOrders(customerName: String): List<Order> {
+        return try {
+            // Assume que o objeto Order do KMM bate com o JSON do Python
+            // Se precisar, mapeie os campos manualmente como fizemos no Flutter
+            val response: List<Order> = client.get("$baseUrl/orders/customer/$customerName").body()
+            response
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
         }
     }
 }
