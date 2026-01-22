@@ -61,10 +61,24 @@ class SearchViewModel(
         _uiState.update { it.copy(selectedRestaurant = null) }
     }
 
+    fun clearSearch() {
+        _uiState.update {
+            it.copy(
+                restaurants = emptyList(),
+                aiReply = "Olá! Com o que a Leiria AI... O Que te apetece hoje?",
+                textInput = "",
+                error = null
+            )
+        }
+    }
+
 
     fun sendSearch() {
         val currentQuery = _uiState.value.textInput
-        if (currentQuery.isBlank()) return
+        if (currentQuery.isBlank()) {
+            clearSearch()
+            return
+        }
 
         _uiState.update { it.copy(isLoading = true, error = null) }
 
@@ -87,7 +101,7 @@ class SearchViewModel(
                         error = "Erro ao conectar: ${e.message}"
                     )
                 }
-                e.printStackTrace() // Ajuda a ver o erro no Logcat
+                e.printStackTrace()
             }
         }
     }
@@ -98,7 +112,7 @@ class SearchViewModel(
 
             currentState.copy(
                 cartItems = currentState.cartItems + product,
-                cartRestaurantId = restaurantId // <--- SALVAMOS AQUI
+                cartRestaurantId = restaurantId
             )
         }
     }
@@ -140,26 +154,20 @@ class SearchViewModel(
             return
         }
 
-        // --- 2. VALIDAÇÃO DE PERFIL ---
         if (currentUser.name.isBlank() || currentUser.address.isBlank()) {
             _uiState.update {
                 it.copy(error = "Por favor, preencha seu Nome e Endereço na aba Perfil antes de finalizar.")
             }
-            // Redireciona para a aba de perfil para o usuário preencher
             onTabSelected(MainTab.PROFILE)
             return
         }
 
-        // --- 3. VALIDAÇÃO DE CARRINHO VAZIO ---
         if (currentCart.isEmpty()) return
 
-        // Inicia carregamento
         _uiState.update { it.copy(isLoading = true, error = null) }
 
         viewModelScope.launch {
             try {
-                // --- 4. PREPARAR OS DADOS ---
-                // Agrupa itens iguais (ex: 2x Pizza de Calabresa)
                 val orderItems = currentCart.groupBy { it.id }.map { (id, products) ->
                     OrderItemRequest(
                         product_id = id,
@@ -172,16 +180,15 @@ class SearchViewModel(
                     user_name = currentUser.name,
                     user_address = currentUser.address,
                     user_phone = currentUser.phone,
-                    restaurant_id = restaurantId, // <--- CAMPO NOVO IMPORTANTE
+                    restaurant_id = restaurantId,
                     items = orderItems
                 )
 
-                // --- 5. ENVIAR AO SERVIDOR ---
                 val success = apiClient.sendOrder(request)
 
                 if (success) {
                     val newOrder = Order(
-                        id = "#OK-${(100..999).random()}", // ID temporário visual
+                        id = "#OK-${(100..999).random()}",
                         items = currentCart,
                         total = _uiState.value.cartTotal,
                         status = "Enviado para o Restaurante"
@@ -190,9 +197,9 @@ class SearchViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            cartItems = emptyList(), // Limpa a sacola
-                            orderHistory = it.orderHistory + newOrder, // Adiciona ao histórico
-                            currentTab = MainTab.ORDERS, // Leva para a tela de pedidos
+                            cartItems = emptyList(),
+                            orderHistory = it.orderHistory + newOrder,
+                            currentTab = MainTab.ORDERS,
                             error = null
                         )
                     }
@@ -226,5 +233,4 @@ class SearchViewModel(
             }
         }
     }
-
 }

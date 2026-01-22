@@ -40,7 +40,8 @@ fun HomeScreen(
     onClearSelection: () -> Unit,
     onAddToCart: (Product) -> Unit,
     onRemoveFromCart: (Product) -> Unit,
-    onViewCart: () -> Unit
+    onViewCart: () -> Unit,
+    onClearSearch: () -> Unit // NOVO PARÂMETRO
 ) {
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
@@ -106,12 +107,23 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         item {
-                            Text(
-                                "Sugestões encontradas:",
-                                color = Color.White.copy(alpha = 0.7f),
-                                fontSize = 14.sp,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "Sugestões encontradas:",
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    "Limpar",
+                                    color = Color(0xFFFFD700),
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.clickable { onClearSearch() } // AGORA USA A FUNÇÃO CORRETA
+                                )
+                            }
                         }
                         items(uiState.restaurants) { restaurant ->
                             RestaurantCardItem(
@@ -139,6 +151,19 @@ fun HomeScreen(
                             fontSize = 14.sp,
                             modifier = Modifier.padding(top = 8.dp)
                         )
+                        
+                        Spacer(modifier = Modifier.height(24.dp))
+                        
+                        Button(
+                            onClick = {
+                                onTextChange("ver todos")
+                                onSendClick()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF424242)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Ver todos os restaurantes", color = Color.White)
+                        }
                     }
                 }
             }
