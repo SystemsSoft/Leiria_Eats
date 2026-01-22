@@ -20,7 +20,6 @@ import org.leria.eats.project.presentation.HomeScreen
 import org.leria.eats.project.presentation.MainTab
 import org.leria.eats.project.presentation.OrdersScreen
 import org.leria.eats.project.presentation.ProfileScreen
-import org.leria.eats.project.presentation.RestaurantDetailScreen
 import org.leria.eats.project.presentation.SearchViewModel
 import org.leria.eats.project.service.LocationService
 import org.leria.eats.project.voice.VoiceRecognizer
@@ -50,164 +49,153 @@ fun MainScreenWithAI(
         if (permissionStatus != PermissionStatus.GRANTED) voiceRecognizer.stopListening()
     }
 
+    Scaffold(
+        bottomBar = {
+            NavigationBar(
+                containerColor = Color(0xFF1E1E1E),
+                contentColor = Color.White
+            ) {
+                val selectedColor = Color(0xFFFFD700) // Dourado
+                val unselectedColor = Color.Gray
 
-    if (uiState.selectedRestaurant != null) {
-        RestaurantDetailScreen(
-            restaurant = uiState.selectedRestaurant!!,
-            cartItems = uiState.cartItems,
-            onBack = { viewModel.clearSelection() },
-            onAdd = { product -> viewModel.addToCart(product) },
-            onRemove = { product -> viewModel.removeFromCart(product) },
-            onViewCart = {
-                viewModel.onTabSelected(MainTab.CART)
-            }
-        )
-    }
-    else {
-        Scaffold(
-            bottomBar = {
-                NavigationBar(
-                    containerColor = Color(0xFF1E1E1E),
-                    contentColor = Color.White
-                ) {
-                    val selectedColor = Color(0xFFE2C215) // Dourado
-                    val unselectedColor = Color.Gray
-
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Home, contentDescription = "Início") },
-                        label = { Text("Início") },
-                        selected = uiState.currentTab == MainTab.HOME,
-                        onClick = { viewModel.onTabSelected(MainTab.HOME) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color.Black,
-                            selectedTextColor = selectedColor,
-                            indicatorColor = selectedColor,
-                            unselectedIconColor = unselectedColor,
-                            unselectedTextColor = unselectedColor
-                        )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Início") },
+                    label = { Text("Início") },
+                    selected = uiState.currentTab == MainTab.HOME,
+                    onClick = { viewModel.onTabSelected(MainTab.HOME) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color.Black,
+                        selectedTextColor = selectedColor,
+                        indicatorColor = selectedColor,
+                        unselectedIconColor = unselectedColor,
+                        unselectedTextColor = unselectedColor
                     )
+                )
 
-                    NavigationBarItem(
-                        icon = {
-                            BadgedBox(
-                                badge = {
-                                    if (uiState.cartCount > 0) {
-                                        Badge { Text(uiState.cartCount.toString()) }
+                NavigationBarItem(
+                    icon = {
+                        BadgedBox(
+                            badge = {
+                                if (uiState.cartCount > 0) {
+                                    Badge { Text(uiState.cartCount.toString()) }
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.ShoppingCart, contentDescription = "Sacola")
+                        }
+                    },
+                    label = { Text("Sacola") },
+                    selected = uiState.currentTab == MainTab.CART,
+                    onClick = { viewModel.onTabSelected(MainTab.CART) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color.Black,
+                        selectedTextColor = selectedColor,
+                        indicatorColor = selectedColor,
+                        unselectedIconColor = unselectedColor,
+                        unselectedTextColor = unselectedColor
+                    )
+                )
+
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.List, contentDescription = "Pedidos") },
+                    label = { Text("Pedidos") },
+                    selected = uiState.currentTab == MainTab.ORDERS,
+                    onClick = { viewModel.onTabSelected(MainTab.ORDERS) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color.Black,
+                        selectedTextColor = selectedColor,
+                        indicatorColor = selectedColor,
+                        unselectedIconColor = unselectedColor,
+                        unselectedTextColor = unselectedColor
+                    )
+                )
+
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
+                    label = { Text("Perfil") },
+                    selected = uiState.currentTab == MainTab.PROFILE,
+                    onClick = { viewModel.onTabSelected(MainTab.PROFILE) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color.Black,
+                        selectedTextColor = selectedColor,
+                        indicatorColor = selectedColor,
+                        unselectedIconColor = unselectedColor,
+                        unselectedTextColor = unselectedColor
+                    )
+                )
+            }
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when (uiState.currentTab) {
+                MainTab.HOME -> {
+                    HomeScreen(
+                        uiState = uiState,
+                        isListening = isListening,
+                        permissionStatus = permissionStatus,
+                        onMicClick = {
+                            when (permissionStatus) {
+                                PermissionStatus.IDLE -> permissionManager.askForPermission()
+                                PermissionStatus.DENIED -> permissionManager.openSettings()
+                                PermissionStatus.GRANTED -> {
+                                    if (isListening) voiceRecognizer.stopListening()
+                                    else {
+                                        viewModel.onQueryChange("")
+                                        voiceRecognizer.startListening()
                                     }
                                 }
-                            ) {
-                                Icon(Icons.Default.ShoppingCart, contentDescription = "Sacola")
                             }
                         },
-                        label = { Text("Sacola") },
-                        selected = uiState.currentTab == MainTab.CART,
-                        onClick = { viewModel.onTabSelected(MainTab.CART) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color.Black,
-                            selectedTextColor = selectedColor,
-                            indicatorColor = selectedColor,
-                            unselectedIconColor = unselectedColor,
-                            unselectedTextColor = unselectedColor
-                        )
-                    )
-
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.List, contentDescription = "Pedidos") },
-                        label = { Text("Pedidos") },
-                        selected = uiState.currentTab == MainTab.ORDERS,
-                        onClick = { viewModel.onTabSelected(MainTab.ORDERS) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color.Black,
-                            selectedTextColor = selectedColor,
-                            indicatorColor = selectedColor,
-                            unselectedIconColor = unselectedColor,
-                            unselectedTextColor = unselectedColor
-                        )
-                    )
-
-                    NavigationBarItem(
-                        icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
-                        label = { Text("Perfil") },
-                        selected = uiState.currentTab == MainTab.PROFILE,
-                        onClick = { viewModel.onTabSelected(MainTab.PROFILE) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color.Black,
-                            selectedTextColor = selectedColor,
-                            indicatorColor = selectedColor,
-                            unselectedIconColor = unselectedColor,
-                            unselectedTextColor = unselectedColor
-                        )
+                        onSendClick = {
+                            if (isListening) voiceRecognizer.stopListening()
+                            viewModel.sendSearch()
+                        },
+                        onTextChange = { viewModel.onQueryChange(it) },
+                        onRestaurantClick = { restaurant -> viewModel.selectRestaurant(restaurant) },
+                        onClearSelection = { viewModel.clearSelection() },
+                        onAddToCart = { product -> viewModel.addToCart(product) },
+                        onRemoveFromCart = { product -> viewModel.removeFromCart(product) },
+                        onViewCart = { viewModel.onTabSelected(MainTab.CART) }
                     )
                 }
-            }
-        ) { paddingValues ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            ) {
-                when (uiState.currentTab) {
-                    MainTab.HOME -> {
-                        HomeScreen(
-                            uiState = uiState,
-                            isListening = isListening,
-                            permissionStatus = permissionStatus,
-                            onMicClick = {
-                                when (permissionStatus) {
-                                    PermissionStatus.IDLE -> permissionManager.askForPermission()
-                                    PermissionStatus.DENIED -> permissionManager.openSettings()
-                                    PermissionStatus.GRANTED -> {
-                                        if (isListening) voiceRecognizer.stopListening()
-                                        else {
-                                            viewModel.onQueryChange("")
-                                            voiceRecognizer.startListening()
-                                        }
-                                    }
-                                }
-                            },
-                            onSendClick = {
-                                if (isListening) voiceRecognizer.stopListening()
-                                viewModel.sendSearch()
-                            },
-                            onTextChange = { viewModel.onQueryChange(it) },
-                            onRestaurantClick = { restaurant -> viewModel.selectRestaurant(restaurant) }
-                        )
-                    }
-                    MainTab.CART -> {
-                        CartScreen(
-                            cartItems = uiState.cartItems,
-                            onRemoveItem = { product -> viewModel.removeFromCart(product) },
-                            onCheckout = { viewModel.checkout() }
-                        )
-                    }
+                MainTab.CART -> {
+                    CartScreen(
+                        cartItems = uiState.cartItems,
+                        onRemoveItem = { product -> viewModel.removeFromCart(product) },
+                        onCheckout = { viewModel.checkout() }
+                    )
+                }
 
-                    MainTab.ORDERS -> {
-                        OrdersScreen(
-                            orders = uiState.orderHistory,
-                            onRefresh = { viewModel.refreshOrders() }
-                        )
-                    }
+                MainTab.ORDERS -> {
+                    OrdersScreen(
+                        orders = uiState.orderHistory,
+                        onRefresh = { viewModel.refreshOrders() }
+                    )
+                }
 
-                    MainTab.PROFILE -> {
-                        ProfileScreen(
-                            userProfile = uiState.userProfile,
-                            onSave = { name, phone, address ->
-                                viewModel.updateUserProfile(name, phone, address)
-                                viewModel.onTabSelected(MainTab.HOME)
-                            },
-                            onGetLocation = { callbackUpdateAddress ->
-                                if (permissionStatus == PermissionStatus.GRANTED) {
-                                    scope.launch {
-                                        val addressFound = locationService.getCurrentAddress()
-                                        callbackUpdateAddress(addressFound ?: "Localização não encontrada")
-                                    }
-                                } else {
-                                    permissionManager.askForPermission()
-                                    callbackUpdateAddress("")
+                MainTab.PROFILE -> {
+                    ProfileScreen(
+                        userProfile = uiState.userProfile,
+                        onSave = { name, phone, address ->
+                            viewModel.updateUserProfile(name, phone, address)
+                            viewModel.onTabSelected(MainTab.HOME)
+                        },
+                        onGetLocation = { callbackUpdateAddress ->
+                            if (permissionStatus == PermissionStatus.GRANTED) {
+                                scope.launch {
+                                    val addressFound = locationService.getCurrentAddress()
+                                    callbackUpdateAddress(addressFound ?: "Localização não encontrada")
                                 }
+                            } else {
+                                permissionManager.askForPermission()
+                                callbackUpdateAddress("")
                             }
-                        )
-                    }
+                        }
+                    )
                 }
             }
         }

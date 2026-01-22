@@ -23,141 +23,115 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
-import kotlin.math.round // Import para arredondar se precisar futuramente
 
 @Composable
 fun RestaurantDetailScreen(
     restaurant: Restaurant,
-    cartItems: List<Product>, // Recebe o carrinho atual
+    cartItems: List<Product>,
     onBack: () -> Unit,
-    onAdd: (Product) -> Unit,    // Ação de adicionar
-    onRemove: (Product) -> Unit,  // Ação de remover
-    onViewCart: () -> Unit // <--- 1. NOVO PARÂMETRO
+    onAdd: (Product) -> Unit,
+    onRemove: (Product) -> Unit,
+    onViewCart: () -> Unit
 ) {
-    // Calcula totais para exibir na barra inferior
     val totalParams = cartItems.sumOf { it.price }
     val totalCount = cartItems.size
+    val goldColor = Color(0xFFFFD700)
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = if (totalCount > 0) 80.dp else 0.dp) // Espaço para a barra de sacola se necessário
+    ) {
+        // --- CABEÇALHO ---
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFF1A1A2E))
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // --- CABEÇALHO ---
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.background(Color(0xFF424242), CircleShape).size(36.dp)
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = Color.White)
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = restaurant.name,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "${restaurant.category} • ⭐ ${restaurant.rating}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF4CB5F5)
-                    )
-                }
+                Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = Color.White, modifier = Modifier.size(20.dp))
             }
-
-            Divider(color = Color(0xFF0F3460))
-
-            // --- LISTA DE PRATOS ---
-            LazyColumn(
-                contentPadding = PaddingValues(
-                    top = 16.dp,
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 100.dp // Espaço extra para a barra inferior não cobrir o último item
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                item {
-                    Text(
-                        "Cardápio",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                }
-
-                items(restaurant.products) { product ->
-                    // Quantos deste produto já estão no carrinho?
-                    val qty = cartItems.count { it.name == product.name }
-
-                    ProductItemWithCounter(
-                        product = product,
-                        quantity = qty,
-                        onAdd = { onAdd(product) },
-                        onRemove = { onRemove(product) }
-                    )
-                }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = restaurant.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${restaurant.category} • ⭐ ${restaurant.rating}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFBDBDBD)
+                )
             }
         }
 
-        // --- BARRA INFERIOR (CARRINHO) ---
-        // Só aparece se tiver itens
-        if (totalCount > 0) {
+        // --- LISTA DE PRATOS ---
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            item {
+                Text(
+                    "Cardápio",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+
+            items(restaurant.products) { product ->
+                val qty = cartItems.count { it.name == product.name }
+
+                ProductItemWithCounter(
+                    product = product,
+                    quantity = qty,
+                    onAdd = { onAdd(product) },
+                    onRemove = { onRemove(product) }
+                )
+            }
+        }
+    }
+
+    // Barra de Sacola Flutuante (DENTRO do espaço mas por cima)
+    if (totalCount > 0) {
+        Box(modifier = Modifier.fillMaxSize()) {
             Surface(
-                color = Color(0xFF16213E), // Fundo escuro leve
-                shadowElevation = 10.dp,
-                modifier = Modifier.align(Alignment.BottomCenter)
+                color = goldColor,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+                    .clickable { onViewCart() }
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFE94560)) // Vermelho/Rosa destaque
-                        .clickable { onViewCart() }
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.ShoppingCart,
-                            contentDescription = null,
-                            tint = Color.White
-                        )
+                        Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = Color.Black)
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text(
-                                text = "Ver Sacola ($totalCount)",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            // CORREÇÃO AQUI: Removemos o .format() do Java e usamos interpolação simples
-                            // O "0" no final é um truque visual simples para KMM sem libs extras:
-                            // Se for 25.0 -> vira 25.00. Se for 25.5 -> vira 25.50
-                            Text(
-                                text = "Total: R$ ${totalParams}0",
-                                color = Color.White.copy(alpha = 0.8f),
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                            Text("Ver Sacola ($totalCount)", color = Color.Black, fontWeight = FontWeight.Bold)
+                            Text("Total: R$ ${totalParams}0", color = Color.Black.copy(0.7f), style = MaterialTheme.typography.bodySmall)
                         }
                     }
-
-                    Text("Finalizar", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Finalizar", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
             }
         }
     }
 }
 
-// Componente visual do Prato com Contador (+ / -)
 @Composable
 fun ProductItemWithCounter(
     product: Product,
@@ -166,72 +140,36 @@ fun ProductItemWithCounter(
     onRemove: () -> Unit
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF16213E)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)),
         shape = MaterialTheme.shapes.medium
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // INFO DO PRODUTO
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = product.name,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-                Text(
-                    text = product.description,
-                    color = Color.Gray,
-                    fontSize = 14.sp,
-                    lineHeight = 18.sp
-                )
+                Text(product.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(product.description, color = Color.Gray, fontSize = 12.sp, maxLines = 2)
                 Spacer(modifier = Modifier.height(4.dp))
-                // Truque visual aqui também para manter consistência
-                Text(
-                    text = "R$ ${product.price}0",
-                    color = Color(0xFF4CAF50),
-                    fontWeight = FontWeight.Bold
-                )
+                Text(text = "R$ ${product.price}0", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
             }
 
-            // CONTROLES DE QUANTIDADE
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(start = 8.dp)
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (quantity > 0) {
-                    // Botão Menos
                     IconButton(
                         onClick = onRemove,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .background(Color(0xFF0F3460), CircleShape)
+                        modifier = Modifier.size(28.dp).background(Color(0xFF424242), CircleShape)
                     ) {
-                        Icon(Icons.Default.Remove, contentDescription = "Remover", tint = Color.White, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Remove, null, tint = Color.White, modifier = Modifier.size(14.dp))
                     }
-
-                    Text(
-                        text = quantity.toString(),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
+                    Text(quantity.toString(), color = Color.White, modifier = Modifier.padding(horizontal = 8.dp), fontWeight = FontWeight.Bold)
                 }
-
-                // Botão Mais (Sempre visível)
                 IconButton(
                     onClick = onAdd,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(Color(0xFF4CB5F5), CircleShape)
+                    modifier = Modifier.size(28.dp).background(Color(0xFFFFD700), CircleShape)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Adicionar", tint = Color.White, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Add, null, tint = Color.Black, modifier = Modifier.size(14.dp))
                 }
             }
         }

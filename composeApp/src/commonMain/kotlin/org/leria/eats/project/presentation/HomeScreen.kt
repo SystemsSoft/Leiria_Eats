@@ -1,6 +1,5 @@
 package org.leria.eats.project.presentation
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,7 +7,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -25,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
+import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
 import org.leria.eats.project.presentation.components.CentralMicButton
@@ -37,7 +36,11 @@ fun HomeScreen(
     onMicClick: () -> Unit,
     onSendClick: () -> Unit,
     onTextChange: (String) -> Unit,
-    onRestaurantClick: (Restaurant) -> Unit
+    onRestaurantClick: (Restaurant) -> Unit,
+    onClearSelection: () -> Unit,
+    onAddToCart: (Product) -> Unit,
+    onRemoveFromCart: (Product) -> Unit,
+    onViewCart: () -> Unit
 ) {
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
@@ -47,11 +50,11 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundBrush)
-            .padding(24.dp),
+            .padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // --- CABEÇALHO ---
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Leria Eats AI",
             style = MaterialTheme.typography.headlineMedium,
@@ -61,123 +64,122 @@ fun HomeScreen(
 
         // Resposta da IA (Destaque)
         Text(
-            text = uiState.aiReply,
+            text = if (uiState.selectedRestaurant == null) uiState.aiReply else "Cardápio de ${uiState.selectedRestaurant?.name}",
             style = MaterialTheme.typography.bodyLarge,
             color = Color(0xFFBDBDBD),
             textAlign = TextAlign.Center,
             modifier = Modifier
-                .padding(vertical = 24.dp)
+                .padding(vertical = 16.dp)
                 .fillMaxWidth()
         )
 
-        // --- MICROFONE (Movido para cima da lista) ---
+        // --- MICROFONE ---
         CentralMicButton(
             status = permissionStatus,
             isRecording = isListening,
             onClick = onMicClick
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // --- BOTÃO "VER TODOS" ---
-        if (uiState.restaurants.isEmpty() && !uiState.isLoading) {
-            OutlinedButton(
-                onClick = {
-                    onTextChange("ver todos")
-                    onSendClick()
-                },
-                border = BorderStroke(1.dp, Color(0xFF757575)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFBDBDBD)),
-                modifier = Modifier.padding(bottom = 16.dp)
-            ) {
-                Icon(Icons.Default.Menu, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Ver todos os restaurantes")
-            }
-        }
-
-        // --- LISTA DE RESULTADOS ---
+        // --- CONTEÚDO DINÂMICO (Lista ou Cardápio) ---
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            if (uiState.isLoading) {
-                CircularProgressIndicator(
-                    color = Color(0xFFBDBDBD),
-                    modifier = Modifier.align(Alignment.Center)
+            if (uiState.selectedRestaurant != null) {
+                // EXIBE O CARDÁPIO NO MESMO ESPAÇO
+                RestaurantDetailScreen(
+                    restaurant = uiState.selectedRestaurant!!,
+                    cartItems = uiState.cartItems,
+                    onBack = onClearSelection,
+                    onAdd = onAddToCart,
+                    onRemove = onRemoveFromCart,
+                    onViewCart = onViewCart
                 )
-            } else if (uiState.restaurants.isNotEmpty()) {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    item {
-                        Text(
-                            "Sugestões encontradas:",
-                            color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-                    items(uiState.restaurants) { restaurant ->
-                        RestaurantCardItem(
-                            restaurant = restaurant,
-                            onClick = { onRestaurantClick(restaurant) }
-                        )
-                    }
-                }
             } else {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        "Não sabe o que pedir?",
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
+                // EXIBE A LISTA DE RESTAURANTES
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        color = Color(0xFFBDBDBD),
+                        modifier = Modifier.align(Alignment.Center)
                     )
-                    Text(
-                        "Fale 'Pizza' ou 'Quero algo barato'",
-                        color = Color.Gray.copy(0.6f),
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
+                } else if (uiState.restaurants.isNotEmpty()) {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        item {
+                            Text(
+                                "Sugestões encontradas:",
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 14.sp,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                        items(uiState.restaurants) { restaurant ->
+                            RestaurantCardItem(
+                                restaurant = restaurant,
+                                onClick = { onRestaurantClick(restaurant) }
+                            )
+                        }
+                    }
+                } else {
+                    // Estado Vazio
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "Não sabe o que pedir?",
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                        Text(
+                            "Fale 'Pizza' ou 'Quero algo barato'",
+                            color = Color.Gray.copy(0.6f),
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- CAMPO DE TEXTO (Sempre na base) ---
-        OutlinedTextField(
-            value = uiState.textInput,
-            onValueChange = onTextChange,
-            label = { Text("Digite seu pedido...", color = Color.White.copy(0.6f)) },
-            placeholder = { Text(if (isListening) "Ouvindo..." else "Ex: Hambúrguer...", color = Color.Gray) },
-            enabled = !uiState.isLoading,
-            singleLine = true,
-            shape = RoundedCornerShape(24.dp),
-            trailingIcon = {
-                IconButton(
-                    onClick = onSendClick,
-                    enabled = uiState.textInput.isNotBlank() && !uiState.isLoading
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Send,
-                        contentDescription = "Enviar",
-                        tint = if (uiState.textInput.isNotBlank()) Color(0xFFBDBDBD) else Color.Gray
-                    )
-                }
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                cursorColor = Color(0xFFBDBDBD),
-                focusedBorderColor = Color(0xFFBDBDBD),
-                unfocusedBorderColor = Color(0xFF424242),
-                focusedContainerColor = Color(0xFF1E1E1E),
-                unfocusedContainerColor = Color(0xFF1E1E1E)
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
+        // --- CAMPO DE TEXTO ---
+        if (uiState.selectedRestaurant == null) {
+            OutlinedTextField(
+                value = uiState.textInput,
+                onValueChange = onTextChange,
+                label = { Text("Digite seu pedido...", color = Color.White.copy(0.6f)) },
+                placeholder = { Text(if (isListening) "Ouvindo..." else "Ex: Hambúrguer...", color = Color.Gray) },
+                enabled = !uiState.isLoading,
+                singleLine = true,
+                shape = RoundedCornerShape(24.dp),
+                trailingIcon = {
+                    IconButton(
+                        onClick = onSendClick,
+                        enabled = uiState.textInput.isNotBlank() && !uiState.isLoading
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Send,
+                            contentDescription = "Enviar",
+                            tint = if (uiState.textInput.isNotBlank()) Color(0xFFBDBDBD) else Color.Gray
+                        )
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = Color(0xFFBDBDBD),
+                    focusedBorderColor = Color(0xFFBDBDBD),
+                    unfocusedBorderColor = Color(0xFF424242),
+                    focusedContainerColor = Color(0xFF1E1E1E),
+                    unfocusedContainerColor = Color(0xFF1E1E1E)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         if (uiState.error != null) {
             Text(
