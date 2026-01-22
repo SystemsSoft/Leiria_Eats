@@ -3,8 +3,9 @@ package org.leria.eats.project.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
@@ -41,7 +43,7 @@ fun HomeScreen(
     onAddToCart: (Product) -> Unit,
     onRemoveFromCart: (Product) -> Unit,
     onViewCart: () -> Unit,
-    onClearSearch: () -> Unit // NOVO PARÂMETRO
+    onClearSearch: () -> Unit
 ) {
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
@@ -96,40 +98,44 @@ fun HomeScreen(
                     onViewCart = onViewCart
                 )
             } else {
-                // EXIBE A LISTA DE RESTAURANTES
+                // EXIBE A LISTA DE RESTAURANTES EM GRID (iFood Style)
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
                         color = Color(0xFFBDBDBD),
                         modifier = Modifier.align(Alignment.Center)
                     )
                 } else if (uiState.restaurants.isNotEmpty()) {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "Sugestões encontradas:",
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontSize = 14.sp
-                                )
-                                Text(
-                                    "Limpar",
-                                    color = Color(0xFFFFD700),
-                                    fontSize = 12.sp,
-                                    modifier = Modifier.clickable { onClearSearch() } // AGORA USA A FUNÇÃO CORRETA
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Sugestões encontradas:",
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                "Limpar",
+                                color = Color(0xFFFFD700),
+                                fontSize = 12.sp,
+                                modifier = Modifier.clickable { onClearSearch() }
+                            )
+                        }
+
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(3),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(uiState.restaurants) { restaurant ->
+                                RestaurantGridItem(
+                                    restaurant = restaurant,
+                                    onClick = { onRestaurantClick(restaurant) }
                                 )
                             }
-                        }
-                        items(uiState.restaurants) { restaurant ->
-                            RestaurantCardItem(
-                                restaurant = restaurant,
-                                onClick = { onRestaurantClick(restaurant) }
-                            )
                         }
                     }
                 } else {
@@ -218,74 +224,62 @@ fun HomeScreen(
 }
 
 @Composable
-fun RestaurantCardItem(restaurant: Restaurant, onClick: () -> Unit) {
-    Card(
+fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)),
-        elevation = CardDefaults.cardElevation(4.dp)
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(modifier = Modifier.padding(12.dp)) {
-            val imageUrl = restaurant.image_url ?: "https://placehold.co/100x100.png"
+        val imageUrl = restaurant.image_url ?: "https://placehold.co/100x100.png"
+        
+        Card(
+            modifier = Modifier
+                .aspectRatio(1f)
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            elevation = CardDefaults.cardElevation(2.dp)
+        ) {
             KamelImage(
                 resource = asyncPainterResource(data = imageUrl),
                 contentDescription = null,
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.Gray),
+                modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
-                onLoading = { CircularProgressIndicator(modifier = Modifier.padding(20.dp)) },
-                onFailure = {
-                    Box(Modifier.fillMaxSize().background(Color.Red))
-                }
+                onLoading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) } },
+                onFailure = { Box(Modifier.fillMaxSize().background(Color.DarkGray)) }
             )
+        }
 
-            Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = restaurant.name,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        maxLines = 1
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Star, null, tint = Color(0xFFFFB300), modifier = Modifier.size(14.dp))
-                        Text(
-                            text = (restaurant.rating ?: 5.0).toString(),
-                            color = Color(0xFFFFB300),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Text(
-                    text = restaurant.category,
-                    color = Color.White.copy(0.6f),
-                    fontSize = 12.sp
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (restaurant.products.isNotEmpty()) {
-                    Text(
-                        text = "Encontrei: ${restaurant.products.joinToString { it.name }}",
-                        color = Color(0xFFBDBDBD),
-                        fontSize = 12.sp,
-                        maxLines = 2,
-                        lineHeight = 16.sp
-                    )
-                }
-            }
+        Text(
+            text = restaurant.name,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+            fontSize = 12.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
+        
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                Icons.Default.Star, 
+                contentDescription = null, 
+                tint = Color(0xFFFFD700), 
+                modifier = Modifier.size(10.dp)
+            )
+            Spacer(modifier = Modifier.width(2.dp))
+            Text(
+                text = "${restaurant.rating ?: 5.0} • ${restaurant.category}",
+                color = Color.Gray,
+                fontSize = 10.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

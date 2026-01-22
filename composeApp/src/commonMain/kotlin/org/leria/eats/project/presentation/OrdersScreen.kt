@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -30,6 +31,10 @@ fun OrdersScreen(
     onOrderClick: (Order) -> Unit = {},
     onBackToList: () -> Unit = {}
 ) {
+    LaunchedEffect(Unit) {
+        onRefresh()
+    }
+
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
     )
@@ -79,7 +84,6 @@ fun OrdersScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text("${item.quantity}x ${item.product_name}", color = Color.White, modifier = Modifier.weight(1f))
-                            // Como o histórico não envia preço unitário, mostramos apenas o nome e quantidade
                         }
                         if (!item.observation.isNullOrBlank()) {
                             Text(
@@ -136,17 +140,7 @@ fun OrdersScreen(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Nenhum pedido realizado ainda.", color = Color.Gray)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = onRefresh,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700), contentColor = Color.Black),
-                            shape = RoundedCornerShape(12.dp)
-                        ) { 
-                            Text("Buscar Pedidos", fontWeight = FontWeight.Bold) 
-                        }
-                    }
+                    Text("Nenhum pedido realizado ainda.", color = Color.Gray)
                 }
             } else {
                 LazyColumn(
@@ -199,7 +193,6 @@ fun OrderItemCard(order: Order, onClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // RESUMO ATUALIZADO PARA OrderItem
             val summary = order.items.joinToString(", ") { "${it.quantity}x ${it.product_name}" }
 
             Text(text = summary, color = Color.Gray, fontSize = 14.sp, lineHeight = 20.sp)
@@ -240,9 +233,9 @@ fun OrderItemCard(order: Order, onClick: () -> Unit) {
 
 fun getStatusColor(status: String): Color {
     return when (status) {
-        "Pendente" -> Color(0xFFFFB300)
-        "Em Preparo" -> Color(0xFFBDBDBD)
-        "Saiu para Entrega" -> Color(0xFF757575)
+        "Pendente" -> Color(0xFFFF9800)
+        "Em Preparo" -> Color(0xFF2196F3)
+        "Saiu para Entrega" -> Color(0xFF9C27B0)
         "Entregue" -> Color(0xFF4CAF50)
         "Cancelado" -> Color(0xFFF44336)
         else -> Color.Gray

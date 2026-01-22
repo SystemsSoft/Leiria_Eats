@@ -28,11 +28,20 @@ class SearchViewModel(
 
 
     init {
+        // Carrega o perfil do usuário
         viewModelScope.launch {
             profileRepository.userProfileFlow.collect { profile ->
                 _uiState.update { it.copy(userProfile = profile) }
             }
         }
+        
+        // Carrega todos os restaurantes na inicialização
+        loadInitialRestaurants()
+    }
+
+    private fun loadInitialRestaurants() {
+        _uiState.update { it.copy(textInput = "ver todos") }
+        sendSearch()
     }
 
     fun updateUserProfile(name: String, phone: String, address: String) {
