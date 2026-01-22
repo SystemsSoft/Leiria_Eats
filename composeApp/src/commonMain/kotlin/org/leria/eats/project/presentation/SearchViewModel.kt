@@ -3,6 +3,7 @@ package org.leria.eats.project.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +38,42 @@ class SearchViewModel(
         
         // Carrega todos os restaurantes na inicialização
         loadInitialRestaurants()
+
+        // Inicia a observação automática de status dos pedidos
+        startStatusPolling()
+    }
+
+    private fun startStatusPolling() {
+        viewModelScope.launch {
+            while (true) {
+                val userName = _uiState.value.userProfile.name
+                if (userName.isNotBlank() && _uiState.value.currentTab == MainTab.ORDERS) {
+                    refreshOrdersInternal()
+                }
+                delay(10000) // Verifica a cada 10 segundos
+            }
+        }
+    }
+
+    private suspend fun refreshOrdersInternal() {
+        val userName = _uiState.value.userProfile.name
+        try {
+            val updatedOrders = apiClient.getCustomerOrders(userName)
+            _uiState.update {
+                it.copy(orderHistory = updatedOrders)
+            }
+            
+            // Se houver um pedido selecionado, atualiza ele também
+            val selectedId = _uiState.value.selectedOrder?.id
+            if (selectedId != null) {
+                val updatedSelected = updatedOrders.find { it.id == selectedId }
+                if (updatedSelected != null) {
+                    _uiState.update { it.copy(selectedOrder = updatedSelected) }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun loadInitialRestaurants() {
@@ -251,13 +288,8 @@ class SearchViewModel(
         _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
-            val updatedOrders = apiClient.getCustomerOrders(userName)
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    orderHistory = updatedOrders
-                )
-            }
+            refreshOrdersInternal()
+            _uiState.update { it.copy(isLoading = false) }
         }
     }
 }
