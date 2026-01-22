@@ -67,20 +67,23 @@ fun MainScreenWithAI(
         Scaffold(
             bottomBar = {
                 NavigationBar(
-                    containerColor = Color(0xFF16213E),
+                    containerColor = Color(0xFF1E1E1E),
                     contentColor = Color.White
                 ) {
+                    val selectedColor = Color(0xFFE2C215) // Dourado
+                    val unselectedColor = Color.Gray
+
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Home, contentDescription = "Início") },
                         label = { Text("Início") },
                         selected = uiState.currentTab == MainTab.HOME,
                         onClick = { viewModel.onTabSelected(MainTab.HOME) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color.White,
-                            selectedTextColor = Color.White,
-                            indicatorColor = Color(0xFFE94560),
-                            unselectedIconColor = Color.Gray,
-                            unselectedTextColor = Color.Gray
+                            selectedIconColor = Color.Black,
+                            selectedTextColor = selectedColor,
+                            indicatorColor = selectedColor,
+                            unselectedIconColor = unselectedColor,
+                            unselectedTextColor = unselectedColor
                         )
                     )
 
@@ -100,11 +103,11 @@ fun MainScreenWithAI(
                         selected = uiState.currentTab == MainTab.CART,
                         onClick = { viewModel.onTabSelected(MainTab.CART) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color.White,
-                            selectedTextColor = Color.White,
-                            indicatorColor = Color(0xFFE94560),
-                            unselectedIconColor = Color.Gray,
-                            unselectedTextColor = Color.Gray
+                            selectedIconColor = Color.Black,
+                            selectedTextColor = selectedColor,
+                            indicatorColor = selectedColor,
+                            unselectedIconColor = unselectedColor,
+                            unselectedTextColor = unselectedColor
                         )
                     )
 
@@ -114,11 +117,11 @@ fun MainScreenWithAI(
                         selected = uiState.currentTab == MainTab.ORDERS,
                         onClick = { viewModel.onTabSelected(MainTab.ORDERS) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color.White,
-                            selectedTextColor = Color.White,
-                            indicatorColor = Color(0xFFE94560),
-                            unselectedIconColor = Color.Gray,
-                            unselectedTextColor = Color.Gray
+                            selectedIconColor = Color.Black,
+                            selectedTextColor = selectedColor,
+                            indicatorColor = selectedColor,
+                            unselectedIconColor = unselectedColor,
+                            unselectedTextColor = unselectedColor
                         )
                     )
 
@@ -128,11 +131,11 @@ fun MainScreenWithAI(
                         selected = uiState.currentTab == MainTab.PROFILE,
                         onClick = { viewModel.onTabSelected(MainTab.PROFILE) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Color.White,
-                            selectedTextColor = Color.White,
-                            indicatorColor = Color(0xFFE94560),
-                            unselectedIconColor = Color.Gray,
-                            unselectedTextColor = Color.Gray
+                            selectedIconColor = Color.Black,
+                            selectedTextColor = selectedColor,
+                            indicatorColor = selectedColor,
+                            unselectedIconColor = unselectedColor,
+                            unselectedTextColor = unselectedColor
                         )
                     )
                 }
@@ -185,7 +188,6 @@ fun MainScreenWithAI(
                         )
                     }
 
-                    // --- AJUSTE FEITO AQUI ---
                     MainTab.PROFILE -> {
                         ProfileScreen(
                             userProfile = uiState.userProfile,

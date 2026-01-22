@@ -46,8 +46,6 @@ class LeriaApiClient {
 
     suspend fun getCustomerOrders(customerName: String): List<Order> {
         return try {
-            // Assume que o objeto Order do KMM bate com o JSON do Python
-            // Se precisar, mapeie os campos manualmente como fizemos no Flutter
             val response: List<Order> = client.get("$baseUrl/orders/customer/$customerName").body()
             response
         } catch (e: Exception) {

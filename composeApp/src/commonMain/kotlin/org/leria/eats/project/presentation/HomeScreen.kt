@@ -40,7 +40,7 @@ fun HomeScreen(
     onRestaurantClick: (Restaurant) -> Unit
 ) {
     val backgroundBrush = Brush.verticalGradient(
-        colors = listOf(Color(0xFF1A1A2E), Color(0xFF16213E), Color(0xFF0F3460))
+        colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
     )
 
     Column(
@@ -63,7 +63,7 @@ fun HomeScreen(
         Text(
             text = uiState.aiReply,
             style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xFF4CB5F5), // Azul claro para destaque
+            color = Color(0xFFBDBDBD), // Cinza claro para destaque
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .padding(vertical = 24.dp)
@@ -77,8 +77,8 @@ fun HomeScreen(
                     onTextChange("ver todos")
                     onSendClick()
                 },
-                border = BorderStroke(1.dp, Color(0xFFE94560)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE94560)),
+                border = BorderStroke(1.dp, Color(0xFF757575)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFBDBDBD)),
                 modifier = Modifier.padding(bottom = 16.dp)
             ) {
                 Icon(Icons.Default.Menu, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -91,7 +91,7 @@ fun HomeScreen(
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (uiState.isLoading) {
                 CircularProgressIndicator(
-                    color = Color(0xFFE94560),
+                    color = Color(0xFFBDBDBD),
                     modifier = Modifier.align(Alignment.Center)
                 )
             } else if (uiState.restaurants.isNotEmpty()) {
@@ -108,7 +108,6 @@ fun HomeScreen(
                         )
                     }
                     items(uiState.restaurants) { restaurant ->
-                        // Usamos um Card customizado aqui para mostrar os produtos que a IA achou
                         RestaurantCardItem(
                             restaurant = restaurant,
                             onClick = { onRestaurantClick(restaurant) }
@@ -169,18 +168,18 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.Send,
                             contentDescription = "Enviar",
-                            tint = if (uiState.textInput.isNotBlank()) Color(0xFFE94560) else Color.Gray
+                            tint = if (uiState.textInput.isNotBlank()) Color(0xFFBDBDBD) else Color.Gray
                         )
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
-                    cursorColor = Color(0xFFE94560),
-                    focusedBorderColor = Color(0xFFE94560),
-                    unfocusedBorderColor = Color(0xFF0F3460),
-                    focusedContainerColor = Color(0xFF16213E), // Fundo levemente mais claro que o bg
-                    unfocusedContainerColor = Color(0xFF16213E)
+                    cursorColor = Color(0xFFBDBDBD),
+                    focusedBorderColor = Color(0xFFBDBDBD),
+                    unfocusedBorderColor = Color(0xFF424242),
+                    focusedContainerColor = Color(0xFF1E1E1E),
+                    unfocusedContainerColor = Color(0xFF1E1E1E)
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -204,7 +203,7 @@ fun RestaurantCardItem(restaurant: Restaurant, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF232F4E)), // Azul escuro card
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)), // Cinza escuro card
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Row(modifier = Modifier.padding(12.dp)) {
@@ -257,12 +256,10 @@ fun RestaurantCardItem(restaurant: Restaurant, onClick: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // --- AQUI ESTÁ A MÁGICA DA IA ---
-                // Se o Python mandou 'products' (sugestões), mostramos aqui
                 if (restaurant.products.isNotEmpty()) {
                     Text(
                         text = "Encontrei: ${restaurant.products.joinToString { it.name }}",
-                        color = Color(0xFFE94560), // Cor de destaque (Rosa/Vermelho do tema)
+                        color = Color(0xFFBDBDBD), // Cinza claro destaque
                         fontSize = 12.sp,
                         maxLines = 2,
                         lineHeight = 16.sp

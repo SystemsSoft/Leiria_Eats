@@ -180,7 +180,6 @@ class SearchViewModel(
                 val success = apiClient.sendOrder(request)
 
                 if (success) {
-                    // Sucesso: Cria um objeto de pedido local para mostrar no histórico
                     val newOrder = Order(
                         id = "#OK-${(100..999).random()}", // ID temporário visual
                         items = currentCart,
@@ -222,7 +221,7 @@ class SearchViewModel(
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    orderHistory = updatedOrders // Substitui a lista local pela do servidor
+                    orderHistory = updatedOrders
                 )
             }
         }
