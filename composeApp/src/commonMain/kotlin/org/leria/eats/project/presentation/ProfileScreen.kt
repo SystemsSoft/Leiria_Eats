@@ -36,6 +36,7 @@ fun ProfileScreen(
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
     )
+    val goldColor = Color(0xFFFFD700)
 
     LaunchedEffect(userProfile) {
         if (userProfile.name.isNotEmpty()) name = userProfile.name
@@ -117,14 +118,14 @@ fun ProfileScreen(
                     if (isLocating) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = Color(0xFFFFD700),
+                            color = goldColor,
                             strokeWidth = 2.dp
                         )
                     } else {
                         Icon(
                             Icons.Default.LocationOn,
                             contentDescription = "Usar localização atual",
-                            tint = Color(0xFFFFD700)
+                            tint = goldColor
                         )
                     }
                 }
@@ -132,8 +133,8 @@ fun ProfileScreen(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
-                cursorColor = Color(0xFFFFD700),
-                focusedBorderColor = Color(0xFFFFD700),
+                cursorColor = goldColor,
+                focusedBorderColor = goldColor,
                 unfocusedBorderColor = Color(0xFF424242),
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent
@@ -147,7 +148,7 @@ fun ProfileScreen(
             onClick = {
                 onSave(name, phone, address)
             },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBDBDBD), contentColor = Color.Black),
+            colors = ButtonDefaults.buttonColors(containerColor = goldColor, contentColor = Color.Black),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
@@ -166,6 +167,7 @@ fun ProfileTextField(
     icon: ImageVector,
     keyboardType: KeyboardType = KeyboardType.Text
 ) {
+    val goldColor = Color(0xFFFFD700)
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -175,8 +177,8 @@ fun ProfileTextField(
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = Color.White,
             unfocusedTextColor = Color.White,
-            cursorColor = Color(0xFFFFD700),
-            focusedBorderColor = Color(0xFFFFD700),
+            cursorColor = goldColor,
+            focusedBorderColor = goldColor,
             unfocusedBorderColor = Color(0xFF424242),
             focusedContainerColor = Color.Transparent,
             unfocusedContainerColor = Color.Transparent

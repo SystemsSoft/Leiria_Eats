@@ -27,6 +27,7 @@ fun CartScreen(
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
     )
+    val goldColor = Color(0xFFFFD700)
 
     Column(
         modifier = Modifier
@@ -76,7 +77,7 @@ fun CartScreen(
                         Text("Total do Pedido", color = Color.White)
                         Text(
                             "R$ ${total}0",
-                            color = Color(0xFFFFD700), // Dourado
+                            color = goldColor,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
                         )
@@ -86,7 +87,7 @@ fun CartScreen(
 
                     Button(
                         onClick = onCheckout,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBDBDBD), contentColor = Color.Black),
+                        colors = ButtonDefaults.buttonColors(containerColor = goldColor, contentColor = Color.Black),
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         shape = MaterialTheme.shapes.medium
                     ) {
