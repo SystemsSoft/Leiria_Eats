@@ -56,7 +56,7 @@ fun HomeScreen(
         // --- CABEÇALHO ---
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Leria Eats AI",
+            text = "Leiria Eats",
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold
