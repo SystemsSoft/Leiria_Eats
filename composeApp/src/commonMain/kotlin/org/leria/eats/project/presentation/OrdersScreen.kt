@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -25,15 +26,18 @@ import org.leria.eats.project.data.Order
 @Composable
 fun OrdersScreen(
     orders: List<Order>,
-    onRefresh: () -> Unit = {} // Novo callback para atualizar
+    onRefresh: () -> Unit = {}
 ) {
+    val backgroundBrush = Brush.verticalGradient(
+        colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A1A2E))
-            .padding(16.dp)
+            .background(backgroundBrush)
+            .padding(24.dp)
     ) {
-        // Cabeçalho com Botão de Atualizar
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -61,14 +65,18 @@ fun OrdersScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Nenhum pedido realizado ainda.", color = Color.Gray)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = onRefresh) { Text("Buscar Pedidos") }
+                    Button(
+                        onClick = onRefresh,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF424242))
+                    ) { 
+                        Text("Buscar Pedidos", color = Color.White) 
+                    }
                 }
             }
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Inverte para o mais recente aparecer primeiro
                 items(orders.reversed()) { order ->
                     OrderItemCard(order)
                 }
@@ -79,17 +87,15 @@ fun OrdersScreen(
 
 @Composable
 fun OrderItemCard(order: Order) {
-    // Define cor e ícone baseados no texto do status
     val statusColor = getStatusColor(order.status)
     val statusIcon = getStatusIcon(order.status)
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF16213E)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)),
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Cabeçalho do Card
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -102,15 +108,13 @@ fun OrderItemCard(order: Order) {
                     fontSize = 16.sp
                 )
 
-                // Badge de Data (ou ID visual)
                 Surface(
-                    color = Color(0xFF0F3460),
+                    color = Color(0xFF424242),
                     shape = MaterialTheme.shapes.small
                 ) {
                     Text(
-                        // Se seu objeto Order não tem data formatada, pode usar uma string fixa ou ajustar no Models
                         text = "Ver detalhes",
-                        color = Color(0xFF4CB5F5),
+                        color = Color(0xFFBDBDBD),
                         fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
@@ -119,21 +123,18 @@ fun OrderItemCard(order: Order) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Resumo dos itens
             val summary = order.items.groupingBy { it.name }.eachCount()
                 .entries.joinToString(", ") { "${it.value}x ${it.key}" }
 
             Text(text = summary, color = Color.Gray, fontSize = 14.sp, lineHeight = 20.sp)
 
-            Divider(color = Color(0xFF0F3460), modifier = Modifier.padding(vertical = 12.dp))
+            Divider(color = Color(0xFF424242), modifier = Modifier.padding(vertical = 12.dp))
 
-            // Rodapé: Status Dinâmico e Total
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Status com cor e ícone dinâmicos
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = statusIcon,
@@ -152,7 +153,7 @@ fun OrderItemCard(order: Order) {
 
                 Text(
                     text = "R$ ${order.total}0",
-                    color = Color.White,
+                    color = Color(0xFFFFD700), // Dourado
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
@@ -161,15 +162,13 @@ fun OrderItemCard(order: Order) {
     }
 }
 
-// --- FUNÇÕES AUXILIARES DE ESTILO ---
-
 fun getStatusColor(status: String): Color {
     return when (status) {
-        "Pendente" -> Color(0xFFFF9800) // Laranja
-        "Em Preparo" -> Color(0xFF2196F3) // Azul
-        "Saiu para Entrega" -> Color(0xFF9C27B0) // Roxo
-        "Entregue" -> Color(0xFF4CAF50) // Verde
-        "Cancelado" -> Color(0xFFF44336) // Vermelho
+        "Pendente" -> Color(0xFFFFB300)
+        "Em Preparo" -> Color(0xFFBDBDBD)
+        "Saiu para Entrega" -> Color(0xFF757575)
+        "Entregue" -> Color(0xFF4CAF50)
+        "Cancelado" -> Color(0xFFF44336)
         else -> Color.Gray
     }
 }

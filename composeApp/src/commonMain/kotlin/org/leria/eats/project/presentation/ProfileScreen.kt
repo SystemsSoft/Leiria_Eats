@@ -1,4 +1,3 @@
-// Arquivo: presentation/ProfileScreen.kt
 package org.leria.eats.project.presentation
 
 import androidx.compose.foundation.background
@@ -15,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -33,6 +33,10 @@ fun ProfileScreen(
     var address by remember { mutableStateOf("") }
     var isLocating by remember { mutableStateOf(false) }
 
+    val backgroundBrush = Brush.verticalGradient(
+        colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
+    )
+
     LaunchedEffect(userProfile) {
         if (userProfile.name.isNotEmpty()) name = userProfile.name
         if (userProfile.phone.isNotEmpty()) phone = userProfile.phone
@@ -42,7 +46,7 @@ fun ProfileScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A1A2E))
+            .background(backgroundBrush)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -50,13 +54,13 @@ fun ProfileScreen(
             modifier = Modifier
                 .size(100.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF0F3460)),
+                .background(Color(0xFF424242)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Person,
                 contentDescription = null,
-                tint = Color(0xFF4CB5F5),
+                tint = Color(0xFFBDBDBD),
                 modifier = Modifier.size(50.dp)
             )
         }
@@ -92,12 +96,11 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Campo de Endereço com Botão de GPS
         OutlinedTextField(
             value = address,
             onValueChange = { address = it },
             label = { Text("Endereço de Entrega", color = Color.Gray) },
-            leadingIcon = { Icon(Icons.Default.Home, contentDescription = null, tint = Color(0xFF4CB5F5)) },
+            leadingIcon = { Icon(Icons.Default.Home, contentDescription = null, tint = Color(0xFFBDBDBD)) },
             trailingIcon = {
                 IconButton(
                     onClick = {
@@ -114,14 +117,14 @@ fun ProfileScreen(
                     if (isLocating) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = Color(0xFFE94560),
+                            color = Color(0xFFFFD700),
                             strokeWidth = 2.dp
                         )
                     } else {
                         Icon(
                             Icons.Default.LocationOn,
                             contentDescription = "Usar localização atual",
-                            tint = Color(0xFFE94560)
+                            tint = Color(0xFFFFD700)
                         )
                     }
                 }
@@ -129,9 +132,9 @@ fun ProfileScreen(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedTextColor = Color.White,
                 unfocusedTextColor = Color.White,
-                cursorColor = Color(0xFFE94560),
-                focusedBorderColor = Color(0xFFE94560),
-                unfocusedBorderColor = Color(0xFF0F3460),
+                cursorColor = Color(0xFFFFD700),
+                focusedBorderColor = Color(0xFFFFD700),
+                unfocusedBorderColor = Color(0xFF424242),
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent
             ),
@@ -140,19 +143,17 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // --- BOTÃO SALVAR ---
         Button(
             onClick = {
-                // Chama a função recebida por parâmetro (enviando para o MainScreen)
                 onSave(name, phone, address)
             },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE94560)),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBDBDBD), contentColor = Color.Black),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
             shape = MaterialTheme.shapes.medium
         ) {
-            Text("Salvar Dados", color = Color.White, fontWeight = FontWeight.Bold)
+            Text("Salvar Dados", fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -169,14 +170,14 @@ fun ProfileTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label, color = Color.Gray) },
-        leadingIcon = { Icon(icon, contentDescription = null, tint = Color(0xFF4CB5F5)) },
+        leadingIcon = { Icon(icon, contentDescription = null, tint = Color(0xFFBDBDBD)) },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = Color.White,
             unfocusedTextColor = Color.White,
-            cursorColor = Color(0xFFE94560),
-            focusedBorderColor = Color(0xFFE94560),
-            unfocusedBorderColor = Color(0xFF0F3460),
+            cursorColor = Color(0xFFFFD700),
+            focusedBorderColor = Color(0xFFFFD700),
+            unfocusedBorderColor = Color(0xFF424242),
             focusedContainerColor = Color.Transparent,
             unfocusedContainerColor = Color.Transparent
         ),
