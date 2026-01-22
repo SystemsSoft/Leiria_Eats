@@ -16,11 +16,11 @@ data class SearchRequest(
 
 @Serializable
 data class Product(
-    val id: Int,
-    val name: String,
-    val description: String,
-    val price: Double,
-    val image_url: String?
+    val id: Int = 0,
+    val name: String = "",
+    val description: String = "",
+    val price: Double = 0.0,
+    val image_url: String? = null
 )
 
 @Serializable
