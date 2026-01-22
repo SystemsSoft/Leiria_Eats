@@ -3,7 +3,7 @@ package org.leria.eats.project.presentation
 import org.leria.eats.project.data.Order
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
-import org.leria.eats.project.data.UserProfile // Importe o novo modelo
+import org.leria.eats.project.data.UserProfile
 
 enum class MainTab {
     HOME,
@@ -19,6 +19,7 @@ data class SearchUiState(
     val restaurants: List<Restaurant> = emptyList(),
     val error: String? = null,
     val selectedRestaurant: Restaurant? = null,
+    val selectedOrder: Order? = null, // NOVO CAMPO
     val cartRestaurantId: Int? = null,
     val cartItems: List<Product> = emptyList(),
     val currentTab: MainTab = MainTab.HOME,

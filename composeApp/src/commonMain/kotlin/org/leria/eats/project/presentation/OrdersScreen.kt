@@ -1,17 +1,14 @@
 package org.leria.eats.project.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DeliveryDining
-import androidx.compose.material.icons.filled.HourglassEmpty
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -28,7 +25,10 @@ import org.leria.eats.project.data.Order
 fun OrdersScreen(
     orders: List<Order>,
     isLoading: Boolean,
-    onRefresh: () -> Unit = {}
+    selectedOrder: Order? = null,
+    onRefresh: () -> Unit = {},
+    onOrderClick: (Order) -> Unit = {},
+    onBackToList: () -> Unit = {}
 ) {
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
@@ -40,56 +40,113 @@ fun OrdersScreen(
             .background(backgroundBrush)
             .padding(24.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Meus Pedidos",
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
-
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFFFFD700), strokeWidth = 2.dp)
-            } else {
-                IconButton(onClick = onRefresh) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Atualizar", tint = Color.White)
+        if (selectedOrder != null) {
+            // --- TELA DE DETALHES DO PEDIDO ---
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = onBackToList,
+                    modifier = Modifier.background(Color(0xFF424242), CircleShape).size(36.dp)
+                ) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Detalhes do Pedido",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-        if (isLoading && orders.isEmpty()) {
-            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFFFFD700))
-            }
-        } else if (orders.isEmpty()) {
-            Box(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentAlignment = Alignment.Center
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Nenhum pedido realizado ainda.", color = Color.Gray)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = onRefresh,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700), contentColor = Color.Black),
-                        shape = RoundedCornerShape(12.dp)
-                    ) { 
-                        Text("Buscar Pedidos", fontWeight = FontWeight.Bold) 
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("ID: ${selectedOrder.id}", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
+                    Text("Status: ${selectedOrder.status}", color = Color.White, modifier = Modifier.padding(top = 4.dp))
+                    Text("Data: ${selectedOrder.date}", color = Color.Gray, fontSize = 12.sp)
+                    
+                    HorizontalDivider(color = Color(0xFF424242), modifier = Modifier.padding(vertical = 16.dp))
+                    
+                    Text("Itens:", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                    
+                    selectedOrder.items.forEach { product ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(product.name, color = Color.White, modifier = Modifier.weight(1f))
+                            Text("R$ ${product.price}0", color = Color(0xFFFFD700))
+                        }
+                    }
+                    
+                    HorizontalDivider(color = Color(0xFF424242), modifier = Modifier.padding(vertical = 16.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Total", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text("R$ ${selectedOrder.total}0", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     }
                 }
             }
         } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            // --- TELA DE LISTA DE PEDIDOS ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                items(orders.reversed()) { order ->
-                    OrderItemCard(order)
+                Text(
+                    text = "Meus Pedidos",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFFFFD700), strokeWidth = 2.dp)
+                } else {
+                    IconButton(onClick = onRefresh) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Atualizar", tint = Color.White)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (isLoading && orders.isEmpty()) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFFFFD700))
+                }
+            } else if (orders.isEmpty()) {
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Nenhum pedido realizado ainda.", color = Color.Gray)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = onRefresh,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700), contentColor = Color.Black),
+                            shape = RoundedCornerShape(12.dp)
+                        ) { 
+                            Text("Buscar Pedidos", fontWeight = FontWeight.Bold) 
+                        }
+                    }
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(orders.reversed()) { order ->
+                        OrderItemCard(order, onClick = { onOrderClick(order) })
+                    }
                 }
             }
         }
@@ -97,14 +154,14 @@ fun OrdersScreen(
 }
 
 @Composable
-fun OrderItemCard(order: Order) {
+fun OrderItemCard(order: Order, onClick: () -> Unit) {
     val statusColor = getStatusColor(order.status)
     val statusIcon = getStatusIcon(order.status)
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)),
         shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(

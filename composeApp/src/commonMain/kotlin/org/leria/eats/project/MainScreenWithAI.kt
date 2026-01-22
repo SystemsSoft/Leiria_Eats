@@ -174,8 +174,11 @@ fun MainScreenWithAI(
                 MainTab.ORDERS -> {
                     OrdersScreen(
                         orders = uiState.orderHistory,
-                        isLoading = uiState.isLoading, // AGORA PASSA O ESTADO DE LOADING
-                        onRefresh = { viewModel.refreshOrders() }
+                        isLoading = uiState.isLoading,
+                        selectedOrder = uiState.selectedOrder, // PASSA O PEDIDO SELECIONADO
+                        onRefresh = { viewModel.refreshOrders() },
+                        onOrderClick = { order -> viewModel.selectOrder(order) }, // SELECIONA O PEDIDO
+                        onBackToList = { viewModel.clearOrderSelection() } // VOLTA PARA A LISTA
                     )
                 }
 

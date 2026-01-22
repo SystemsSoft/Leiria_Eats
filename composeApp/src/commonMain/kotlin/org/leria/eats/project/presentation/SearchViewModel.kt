@@ -139,6 +139,14 @@ class SearchViewModel(
         _uiState.update { it.copy(currentTab = tab) }
     }
 
+    fun selectOrder(order: Order) {
+        _uiState.update { it.copy(selectedOrder = order) }
+    }
+
+    fun clearOrderSelection() {
+        _uiState.update { it.copy(selectedOrder = null) }
+    }
+
 
     fun checkout() {
         val currentUser = _uiState.value.userProfile
