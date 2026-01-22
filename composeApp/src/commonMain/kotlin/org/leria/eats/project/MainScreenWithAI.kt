@@ -174,6 +174,7 @@ fun MainScreenWithAI(
                 MainTab.ORDERS -> {
                     OrdersScreen(
                         orders = uiState.orderHistory,
+                        isLoading = uiState.isLoading, // AGORA PASSA O ESTADO DE LOADING
                         onRefresh = { viewModel.refreshOrders() }
                     )
                 }

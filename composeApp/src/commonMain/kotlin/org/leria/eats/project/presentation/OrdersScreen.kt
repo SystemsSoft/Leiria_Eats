@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -26,6 +27,7 @@ import org.leria.eats.project.data.Order
 @Composable
 fun OrdersScreen(
     orders: List<Order>,
+    isLoading: Boolean,
     onRefresh: () -> Unit = {}
 ) {
     val backgroundBrush = Brush.verticalGradient(
@@ -50,26 +52,35 @@ fun OrdersScreen(
                 fontWeight = FontWeight.Bold
             )
 
-            IconButton(onClick = onRefresh) {
-                Icon(Icons.Default.Refresh, contentDescription = "Atualizar", tint = Color.White)
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFFFFD700), strokeWidth = 2.dp)
+            } else {
+                IconButton(onClick = onRefresh) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Atualizar", tint = Color.White)
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (orders.isEmpty()) {
+        if (isLoading && orders.isEmpty()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color(0xFFFFD700))
+            }
+        } else if (orders.isEmpty()) {
             Box(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Nenhum pedido realizado ainda.", color = Color.Gray)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = onRefresh,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF424242))
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFD700), contentColor = Color.Black),
+                        shape = RoundedCornerShape(12.dp)
                     ) { 
-                        Text("Buscar Pedidos", color = Color.White) 
+                        Text("Buscar Pedidos", fontWeight = FontWeight.Bold) 
                     }
                 }
             }
@@ -128,7 +139,7 @@ fun OrderItemCard(order: Order) {
 
             Text(text = summary, color = Color.Gray, fontSize = 14.sp, lineHeight = 20.sp)
 
-            Divider(color = Color(0xFF424242), modifier = Modifier.padding(vertical = 12.dp))
+            HorizontalDivider(color = Color(0xFF424242), modifier = Modifier.padding(vertical = 12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -153,7 +164,7 @@ fun OrderItemCard(order: Order) {
 
                 Text(
                     text = "R$ ${order.total}0",
-                    color = Color(0xFFFFD700), // Dourado
+                    color = Color(0xFFFFD700),
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
