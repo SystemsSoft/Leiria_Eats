@@ -63,14 +63,23 @@ fun HomeScreen(
         Text(
             text = uiState.aiReply,
             style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xFFBDBDBD), // Cinza claro para destaque
+            color = Color(0xFFBDBDBD),
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .padding(vertical = 24.dp)
                 .fillMaxWidth()
         )
 
-        // --- BOTÃO "VER TODOS" (Atalho Rápido) ---
+        // --- MICROFONE (Movido para cima da lista) ---
+        CentralMicButton(
+            status = permissionStatus,
+            isRecording = isListening,
+            onClick = onMicClick
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // --- BOTÃO "VER TODOS" ---
         if (uiState.restaurants.isEmpty() && !uiState.isLoading) {
             OutlinedButton(
                 onClick = {
@@ -96,7 +105,6 @@ fun HomeScreen(
                 )
             } else if (uiState.restaurants.isNotEmpty()) {
                 LazyColumn(
-                    contentPadding = PaddingValues(bottom = 80.dp), // Espaço para não cobrir com o mic
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     item {
@@ -115,7 +123,6 @@ fun HomeScreen(
                     }
                 }
             } else {
-                // Estado Vazio (Placeholder)
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
@@ -137,61 +144,48 @@ fun HomeScreen(
             }
         }
 
-        // --- CONTROLES INFERIORES ---
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // --- CAMPO DE TEXTO (Sempre na base) ---
+        OutlinedTextField(
+            value = uiState.textInput,
+            onValueChange = onTextChange,
+            label = { Text("Digite seu pedido...", color = Color.White.copy(0.6f)) },
+            placeholder = { Text(if (isListening) "Ouvindo..." else "Ex: Hambúrguer...", color = Color.Gray) },
+            enabled = !uiState.isLoading,
+            singleLine = true,
+            shape = RoundedCornerShape(24.dp),
+            trailingIcon = {
+                IconButton(
+                    onClick = onSendClick,
+                    enabled = uiState.textInput.isNotBlank() && !uiState.isLoading
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Send,
+                        contentDescription = "Enviar",
+                        tint = if (uiState.textInput.isNotBlank()) Color(0xFFBDBDBD) else Color.Gray
+                    )
+                }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                cursorColor = Color(0xFFBDBDBD),
+                focusedBorderColor = Color(0xFFBDBDBD),
+                unfocusedBorderColor = Color(0xFF424242),
+                focusedContainerColor = Color(0xFF1E1E1E),
+                unfocusedContainerColor = Color(0xFF1E1E1E)
+            ),
             modifier = Modifier.fillMaxWidth()
-        ) {
-            // Botão Microfone Grande
-            CentralMicButton(
-                status = permissionStatus,
-                isRecording = isListening,
-                onClick = onMicClick
+        )
+
+        if (uiState.error != null) {
+            Text(
+                text = uiState.error!!,
+                color = Color.Red,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 4.dp)
             )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Campo de Texto
-            OutlinedTextField(
-                value = uiState.textInput,
-                onValueChange = onTextChange,
-                label = { Text("Digite seu pedido...", color = Color.White.copy(0.6f)) },
-                placeholder = { Text(if (isListening) "Ouvindo..." else "Ex: Hambúrguer...", color = Color.Gray) },
-                enabled = !uiState.isLoading,
-                singleLine = true,
-                shape = RoundedCornerShape(24.dp),
-                trailingIcon = {
-                    IconButton(
-                        onClick = onSendClick,
-                        enabled = uiState.textInput.isNotBlank() && !uiState.isLoading
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Send,
-                            contentDescription = "Enviar",
-                            tint = if (uiState.textInput.isNotBlank()) Color(0xFFBDBDBD) else Color.Gray
-                        )
-                    }
-                },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    cursorColor = Color(0xFFBDBDBD),
-                    focusedBorderColor = Color(0xFFBDBDBD),
-                    unfocusedBorderColor = Color(0xFF424242),
-                    focusedContainerColor = Color(0xFF1E1E1E),
-                    unfocusedContainerColor = Color(0xFF1E1E1E)
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            if (uiState.error != null) {
-                Text(
-                    text = uiState.error!!,
-                    color = Color.Red,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
         }
     }
 }
@@ -203,7 +197,7 @@ fun RestaurantCardItem(restaurant: Restaurant, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)), // Cinza escuro card
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)),
         elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Row(modifier = Modifier.padding(12.dp)) {
@@ -225,7 +219,6 @@ fun RestaurantCardItem(restaurant: Restaurant, onClick: () -> Unit) {
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                // Nome e Nota
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -259,7 +252,7 @@ fun RestaurantCardItem(restaurant: Restaurant, onClick: () -> Unit) {
                 if (restaurant.products.isNotEmpty()) {
                     Text(
                         text = "Encontrei: ${restaurant.products.joinToString { it.name }}",
-                        color = Color(0xFFBDBDBD), // Cinza claro destaque
+                        color = Color(0xFFBDBDBD),
                         fontSize = 12.sp,
                         maxLines = 2,
                         lineHeight = 16.sp
