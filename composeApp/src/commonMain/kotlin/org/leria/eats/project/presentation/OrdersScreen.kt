@@ -73,13 +73,21 @@ fun OrdersScreen(
                     
                     Text("Itens:", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
                     
-                    selectedOrder.items.forEach { product ->
+                    selectedOrder.items.forEach { item ->
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(product.name, color = Color.White, modifier = Modifier.weight(1f))
-                            Text("R$ ${product.price}0", color = Color(0xFFFFD700))
+                            Text("${item.quantity}x ${item.product_name}", color = Color.White, modifier = Modifier.weight(1f))
+                            // Como o histórico não envia preço unitário, mostramos apenas o nome e quantidade
+                        }
+                        if (!item.observation.isNullOrBlank()) {
+                            Text(
+                                text = "Obs: ${item.observation}",
+                                color = Color.Gray,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
+                            )
                         }
                     }
                     
@@ -191,8 +199,8 @@ fun OrderItemCard(order: Order, onClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            val summary = order.items.groupingBy { it.name }.eachCount()
-                .entries.joinToString(", ") { "${it.value}x ${it.key}" }
+            // RESUMO ATUALIZADO PARA OrderItem
+            val summary = order.items.joinToString(", ") { "${it.quantity}x ${it.product_name}" }
 
             Text(text = summary, color = Color.Gray, fontSize = 14.sp, lineHeight = 20.sp)
 

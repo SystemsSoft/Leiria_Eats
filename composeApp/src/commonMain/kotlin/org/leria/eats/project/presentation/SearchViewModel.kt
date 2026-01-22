@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.leria.eats.project.data.LeriaApiClient
 import org.leria.eats.project.data.Order
+import org.leria.eats.project.data.OrderItem
 import org.leria.eats.project.data.OrderItemRequest
 import org.leria.eats.project.data.OrderRequest
 import org.leria.eats.project.data.Product
@@ -195,9 +196,18 @@ class SearchViewModel(
                 val success = apiClient.sendOrder(request)
 
                 if (success) {
+                    // Mapeia o carrinho atual para a nova estrutura de OrderItem para o histórico
+                    val orderItemsForHistory = currentCart.groupBy { it.name }.map { (name, products) ->
+                        OrderItem(
+                            product_name = name,
+                            quantity = products.size,
+                            observation = null
+                        )
+                    }
+
                     val newOrder = Order(
                         id = "#OK-${(100..999).random()}",
-                        items = currentCart,
+                        items = orderItemsForHistory,
                         total = _uiState.value.cartTotal,
                         status = "Enviado para o Restaurante"
                     )

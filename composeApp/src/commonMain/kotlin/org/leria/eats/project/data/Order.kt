@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Order(
     val id: String,
-    val items: List<Product>,
+    val items: List<OrderItem> = emptyList(),
     val total: Double,
     val status: String = "Em preparo",
     val date: String = "Hoje"
