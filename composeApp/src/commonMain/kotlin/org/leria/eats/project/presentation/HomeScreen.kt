@@ -77,14 +77,15 @@ fun HomeScreen(
                 .fillMaxWidth()
         )
 
-        // --- MICROFONE ---
-        CentralMicButton(
-            status = permissionStatus,
-            isRecording = isListening,
-            onClick = onMicClick
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
+        // --- MICROFONE (Oculto no Cardápio) ---
+        if (uiState.selectedRestaurant == null) {
+            CentralMicButton(
+                status = permissionStatus,
+                isRecording = isListening,
+                onClick = onMicClick
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         // --- CONTEÚDO DINÂMICO (Lista ou Cardápio) ---
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
