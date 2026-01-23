@@ -1,12 +1,7 @@
 package org.leria.eats.project.data
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-
-@Serializable
-data class UserRequest(
-    val text: String,
-    val user_id: String = "mobile_user"
-)
 
 @Serializable
 data class SearchRequest(
@@ -22,7 +17,9 @@ data class Product(
     val price: Double = 0.0,
     val image_url: String? = null,
     val restaurant_id: Int = 0,
-    val category: String = ""
+    val category: String = "",
+    @SerialName("preparation_time")
+    val preparationTime: String = ""
 )
 
 @Serializable

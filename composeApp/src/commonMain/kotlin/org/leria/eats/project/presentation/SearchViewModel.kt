@@ -112,7 +112,7 @@ class SearchViewModel(
         _uiState.update {
             it.copy(
                 restaurants = emptyList(),
-                aiReply = "Olá! Com o que a Leiria AI... O Que te apetece hoje?",
+                aiReply = "O que lhe apetece hoje?",
                 textInput = "",
                 error = null
             )

@@ -88,7 +88,6 @@ fun HomeScreen(
         // --- CONTEÚDO DINÂMICO (Lista ou Cardápio) ---
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (uiState.selectedRestaurant != null) {
-                // EXIBE O CARDÁPIO NO MESMO ESPAÇO
                 RestaurantDetailScreen(
                     restaurant = uiState.selectedRestaurant!!,
                     cartItems = uiState.cartItems,
@@ -152,7 +151,7 @@ fun HomeScreen(
                             fontSize = 18.sp
                         )
                         Text(
-                            "Fale 'Pizza' ou 'Quero algo barato'",
+                            "Fale 'Pizza' ou 'Sushi'",
                             color = Color.Gray.copy(0.6f),
                             fontSize = 14.sp,
                             modifier = Modifier.padding(top = 8.dp)

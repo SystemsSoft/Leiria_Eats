@@ -37,14 +37,12 @@ fun MainScreenWithAI(
     val isListening by voiceRecognizer.isListening.collectAsState()
     val permissionStatus by permissionManager.status.collectAsState()
 
-    // Efeito para processar voz
     LaunchedEffect(voiceText) {
         if (isListening && voiceText.isNotEmpty()) {
             viewModel.updateInputFromVoice(voiceText)
         }
     }
 
-    // Efeito para parar voz se permissão for negada
     LaunchedEffect(permissionStatus) {
         if (permissionStatus != PermissionStatus.GRANTED) voiceRecognizer.stopListening()
     }
@@ -55,7 +53,7 @@ fun MainScreenWithAI(
                 containerColor = Color(0xFF1E1E1E),
                 contentColor = Color.White
             ) {
-                val selectedColor = Color(0xFFFFD700) // Dourado
+                val selectedColor = Color(0xFFFFD700)
                 val unselectedColor = Color.Gray
 
                 NavigationBarItem(
@@ -175,10 +173,10 @@ fun MainScreenWithAI(
                     OrdersScreen(
                         orders = uiState.orderHistory,
                         isLoading = uiState.isLoading,
-                        selectedOrder = uiState.selectedOrder, // PASSA O PEDIDO SELECIONADO
+                        selectedOrder = uiState.selectedOrder,
                         onRefresh = { viewModel.refreshOrders() },
-                        onOrderClick = { order -> viewModel.selectOrder(order) }, // SELECIONA O PEDIDO
-                        onBackToList = { viewModel.clearOrderSelection() } // VOLTA PARA A LISTA
+                        onOrderClick = { order -> viewModel.selectOrder(order) },
+                        onBackToList = { viewModel.clearOrderSelection() }
                     )
                 }
 

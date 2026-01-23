@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -40,7 +41,7 @@ fun RestaurantDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(bottom = if (totalCount > 0) 80.dp else 0.dp) // Espaço para a barra de sacola se necessário
+            .padding(bottom = if (totalCount > 0) 80.dp else 0.dp)
     ) {
         // --- CABEÇALHO ---
         Row(
@@ -99,7 +100,6 @@ fun RestaurantDetailScreen(
         }
     }
 
-    // Barra de Sacola Flutuante (DENTRO do espaço mas por cima)
     if (totalCount > 0) {
         Box(modifier = Modifier.fillMaxSize()) {
             Surface(
@@ -151,8 +151,32 @@ fun ProductItemWithCounter(
             Column(modifier = Modifier.weight(1f)) {
                 Text(product.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Text(product.description, color = Color.Gray, fontSize = 12.sp, maxLines = 2)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "R$ ${product.price}0", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
+                
+                Spacer(modifier = Modifier.height(6.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Timer,
+                        contentDescription = null,
+                        tint = Color(0xFFBDBDBD),
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = product.preparationTime.ifBlank { "15-25 min" },
+                        color = Color(0xFFBDBDBD),
+                        fontSize = 11.sp
+                    )
+                    
+                    Spacer(modifier = Modifier.width(12.dp))
+                    
+                    Text(
+                        text = "R$ ${product.price}0",
+                        color = Color(0xFFFFD700),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
