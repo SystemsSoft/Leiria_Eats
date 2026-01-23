@@ -11,23 +11,25 @@ import kotlinx.coroutines.flow.map
 class ProfileRepository(private val dataStore: DataStore<Preferences>) {
 
     // Chaves para salvar os dados
+    private val ID_KEY = stringPreferencesKey("user_id")
     private val NAME_KEY = stringPreferencesKey("user_name")
     private val ADDRESS_KEY = stringPreferencesKey("user_address")
-
     private val PHONE_KEY = stringPreferencesKey("user_phone")
 
     val userProfileFlow: Flow<UserProfile> = dataStore.data.map { preferences ->
         UserProfile(
+            id = preferences[ID_KEY] ?: "",
             name = preferences[NAME_KEY] ?: "",
-            phone = preferences[PHONE_KEY] ?: "", // <--- Novo
+            phone = preferences[PHONE_KEY] ?: "",
             address = preferences[ADDRESS_KEY] ?: ""
         )
     }
 
-    suspend fun saveProfile(name: String, phone: String, address: String) {
+    suspend fun saveProfile(id: String, name: String, phone: String, address: String) {
         dataStore.edit { preferences ->
+            preferences[ID_KEY] = id
             preferences[NAME_KEY] = name
-            preferences[PHONE_KEY] = phone // <--- Novo
+            preferences[PHONE_KEY] = phone
             preferences[ADDRESS_KEY] = address
         }
     }

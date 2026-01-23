@@ -64,6 +64,7 @@ data class OrderItem(
 
 @Serializable
 data class UserProfile(
+    val id: String = "", // NOVO CAMPO: Código único
     val name: String = "",
     val phone: String = "",
     val address: String = ""

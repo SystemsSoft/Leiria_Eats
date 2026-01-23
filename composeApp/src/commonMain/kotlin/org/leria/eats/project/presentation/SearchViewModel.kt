@@ -83,9 +83,17 @@ class SearchViewModel(
 
     fun updateUserProfile(name: String, phone: String, address: String) {
         viewModelScope.launch {
-            profileRepository.saveProfile(name, phone, address)
+            // Gera um ID único se o usuário ainda não tiver um (ex: #U-12345)
+            val currentId = _uiState.value.userProfile.id
+            val newId = if (currentId.isBlank()) {
+                "#U-${(10000..99999).random()}"
+            } else {
+                currentId
+            }
+
+            profileRepository.saveProfile(newId, name, phone, address)
             _uiState.update {
-                it.copy(userProfile = UserProfile(name, phone, address))
+                it.copy(userProfile = UserProfile(newId, name, phone, address))
             }
         }
     }
