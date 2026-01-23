@@ -265,15 +265,13 @@ class SearchViewModel(
                         )
                     }
 
-                    val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-                    val formattedDate = "${now.dayOfMonth.toString().padStart(2, '0')}/${now.monthNumber.toString().padStart(2, '0')} ${now.hour.toString().padStart(2, '0')}:${now.minute.toString().padStart(2, '0')}"
 
                     val newOrder = Order(
                         id = "#OK-${(100..999).random()}",
                         items = orderItemsForHistory,
                         total = _uiState.value.cartTotal,
                         status = "Enviado para o Restaurante",
-                        date = formattedDate
+                        date = "Hoje"
                     )
 
                     _uiState.update {

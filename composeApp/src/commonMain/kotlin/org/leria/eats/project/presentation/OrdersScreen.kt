@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -71,7 +72,6 @@ fun OrdersScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("ID: ${selectedOrder.id}", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
                     Text("Status: ${selectedOrder.status}", color = Color.White, modifier = Modifier.padding(top = 4.dp))
-                    Text("Data: ${selectedOrder.date}", color = Color.Gray, fontSize = 12.sp)
                     
                     HorizontalDivider(color = Color(0xFF424242), modifier = Modifier.padding(vertical = 16.dp))
                     
