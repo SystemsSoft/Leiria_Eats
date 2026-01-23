@@ -14,13 +14,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
@@ -49,6 +52,7 @@ fun HomeScreen(
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
     )
+    val goldColor = Color(0xFFFFD700)
 
     Column(
         modifier = Modifier
@@ -59,12 +63,32 @@ fun HomeScreen(
     ) {
         // --- CABEÇALHO ---
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Leiria Eats",
-            style = MaterialTheme.typography.headlineMedium,
-            color = Color.White,
-            fontWeight = FontWeight.Bold
-        )
+        
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            KamelImage(
+                resource = asyncPainterResource(data = "https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo-pato.png"),
+                contentDescription = "Logo",
+                modifier = Modifier.size(100.dp),
+                contentScale = ContentScale.Fit
+            )
+            Spacer(modifier = Modifier.width(2.dp))
+            Text(
+                text = buildAnnotatedString {
+                    withStyle(style = SpanStyle(color = goldColor, fontWeight = FontWeight.Bold)) {
+                        append("LEIRIA")
+                    }
+                    append(" ")
+                    withStyle(style = SpanStyle(color = Color.White, fontWeight = FontWeight.Bold)) {
+                        append("EATS")
+                    }
+                },
+                style = MaterialTheme.typography.headlineMedium
+            )
+        }
 
         // Resposta da IA (Destaque)
         Text(
@@ -121,7 +145,7 @@ fun HomeScreen(
                             )
                             Text(
                                 "Limpar",
-                                color = Color(0xFFFFD700),
+                                color = goldColor,
                                 fontSize = 12.sp,
                                 modifier = Modifier.clickable { onClearSearch() }
                             )
