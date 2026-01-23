@@ -19,10 +19,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.kamel.image.KamelImage
+import io.kamel.image.asyncPainterResource
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 
@@ -148,10 +151,25 @@ fun ProductItemWithCounter(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // IMAGEM DO PRODUTO (Nova funcionalidade)
+            if (!product.image_url.isNullOrBlank()) {
+                KamelImage(
+                    resource = asyncPainterResource(data = product.image_url),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.DarkGray),
+                    contentScale = ContentScale.Crop,
+                    onLoading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) } },
+                    onFailure = { Box(Modifier.fillMaxSize().background(Color.DarkGray)) }
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+            }
+
             // INFO DO PRODUTO
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -200,7 +218,7 @@ fun ProductItemWithCounter(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // SELETOR DE QUANTIDADE (Estilo iFood)
+            // SELETOR DE QUANTIDADE
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
