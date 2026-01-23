@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.leria.eats.project.data.LeriaApiClient
 import org.leria.eats.project.data.Order
 import org.leria.eats.project.data.OrderItem
@@ -262,11 +265,15 @@ class SearchViewModel(
                         )
                     }
 
+                    val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+                    val formattedDate = "${now.dayOfMonth.toString().padStart(2, '0')}/${now.monthNumber.toString().padStart(2, '0')} ${now.hour.toString().padStart(2, '0')}:${now.minute.toString().padStart(2, '0')}"
+
                     val newOrder = Order(
                         id = "#OK-${(100..999).random()}",
                         items = orderItemsForHistory,
                         total = _uiState.value.cartTotal,
-                        status = "Enviado para o Restaurante"
+                        status = "Enviado para o Restaurante",
+                        date = formattedDate
                     )
 
                     _uiState.update {

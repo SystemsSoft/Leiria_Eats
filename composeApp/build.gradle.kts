@@ -63,8 +63,11 @@ kotlin {
             implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
             implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
 
-            // Serialização JSON (Essencial para o erro anterior)
+            // Serialização JSON
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+            
+            // Data e Hora (Multiplatform)
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
         }
 
         commonTest.dependencies {
