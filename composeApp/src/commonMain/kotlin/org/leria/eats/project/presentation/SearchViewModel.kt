@@ -85,10 +85,10 @@ class SearchViewModel(
 
     fun updateUserProfile(name: String, phone: String, address: String) {
         viewModelScope.launch {
-            // Gera um ID único se o usuário ainda não tiver um (ex: #U-12345)
+            // Gera um ID único se o usuário ainda não tiver um (ex: U-12345)
             val currentId = _uiState.value.userProfile.id
             val newId = if (currentId.isBlank()) {
-                "#U-${(10000..99999).random()}"
+                "U-${(10000..99999).random()}"
             } else {
                 currentId
             }

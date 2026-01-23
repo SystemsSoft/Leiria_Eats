@@ -37,6 +37,12 @@ class LeriaApiClient {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
+            
+            if (response.status.value == 422) {
+                val errorBody: String = response.body()
+                println("❌ Erro 422 no envio do pedido: $errorBody")
+            }
+            
             return response.status.value in 200..299
         } catch (e: Exception) {
             e.printStackTrace()
@@ -46,11 +52,17 @@ class LeriaApiClient {
 
     suspend fun getCustomerOrders(userId: String): List<Order> {
         return try {
-            // Atualizado para buscar pelo ID único do usuário
-            val response: List<Order> = client.get("$baseUrl/orders/customer/$userId").body()
-            response
+            val response = client.get("$baseUrl/orders/customer/$userId")
+            
+            if (response.status.value == 200) {
+                response.body()
+            } else {
+                val errorBody: String = response.body()
+                println("⚠️ Erro ${response.status.value} ao buscar pedidos: $errorBody")
+                emptyList()
+            }
         } catch (e: Exception) {
-            e.printStackTrace()
+            println("🚨 Falha crítica no GET: ${e.message}")
             emptyList()
         }
     }
