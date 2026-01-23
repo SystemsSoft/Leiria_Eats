@@ -7,7 +7,6 @@ import org.koin.compose.koinInject
 import org.leria.eats.project.BindPermissionController
 import org.leria.eats.project.MainScreenWithAI
 import org.leria.eats.project.permissions.PermissionManager
-import org.leria.eats.project.presentation.SplashScreen
 
 private val GrayColorScheme = darkColorScheme(
     primary = Color(0xFFBDBDBD), // Cinza claro/Prateado
@@ -25,16 +24,10 @@ private val GrayColorScheme = darkColorScheme(
 @Composable
 @Preview
 fun App() {
-    var showSplash by remember { mutableStateOf(true) }
+    MaterialTheme(colorScheme = GrayColorScheme) {
+        val permissionManager = koinInject<PermissionManager>()
+        BindPermissionController(permissionManager)
 
-    if (showSplash) {
-        SplashScreen(onFinished = { showSplash = false })
-    } else {
-        MaterialTheme(colorScheme = GrayColorScheme) {
-            val permissionManager = koinInject<PermissionManager>()
-            BindPermissionController(permissionManager)
-
-            MainScreenWithAI(permissionManager = permissionManager)
-        }
+        MainScreenWithAI(permissionManager = permissionManager)
     }
 }

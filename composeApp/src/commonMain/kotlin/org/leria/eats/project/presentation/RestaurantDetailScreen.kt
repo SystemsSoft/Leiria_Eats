@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,6 +34,8 @@ import org.leria.eats.project.data.Restaurant
 fun RestaurantDetailScreen(
     restaurant: Restaurant,
     cartItems: List<Product>,
+    selectedCategory: String?,
+    onCategorySelect: (String?) -> Unit,
     onBack: () -> Unit,
     onAdd: (Product) -> Unit,
     onRemove: (Product) -> Unit,
@@ -41,6 +44,13 @@ fun RestaurantDetailScreen(
     val totalParams = cartItems.sumOf { it.price }
     val totalCount = cartItems.size
     val goldColor = Color(0xFFFFD700)
+
+    val categories = listOf("Todos") + restaurant.products.map { it.category }.distinct().sorted()
+    val filteredProducts = if (selectedCategory == null || selectedCategory == "Todos") {
+        restaurant.products
+    } else {
+        restaurant.products.filter { it.category == selectedCategory }
+    }
 
     Column(
         modifier = Modifier
@@ -76,6 +86,32 @@ fun RestaurantDetailScreen(
             }
         }
 
+        // --- FILTRO DE CATEGORIAS ---
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp)
+        ) {
+            items(categories) { category ->
+                val isSelected = (selectedCategory == category) || (selectedCategory == null && category == "Todos")
+                
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onCategorySelect(if (category == "Todos") null else category) },
+                    label = { Text(category) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = Color(0xFF333333),
+                        labelColor = Color.White,
+                        selectedContainerColor = goldColor,
+                        selectedLabelColor = Color.Black
+                    ),
+                    border = null
+                )
+            }
+        }
+
         // --- LISTA DE PRATOS ---
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -91,7 +127,7 @@ fun RestaurantDetailScreen(
                 )
             }
 
-            items(restaurant.products) { product ->
+            items(filteredProducts) { product ->
                 val qty = cartItems.count { it.name == product.name }
 
                 ProductItemWithCounter(

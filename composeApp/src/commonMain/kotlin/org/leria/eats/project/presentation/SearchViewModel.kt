@@ -114,11 +114,15 @@ class SearchViewModel(
     }
 
     fun selectRestaurant(restaurant: Restaurant) {
-        _uiState.update { it.copy(selectedRestaurant = restaurant) }
+        _uiState.update { it.copy(selectedRestaurant = restaurant, selectedCategory = null) }
+    }
+
+    fun selectCategory(category: String?) {
+        _uiState.update { it.copy(selectedCategory = category) }
     }
 
     fun clearSelection() {
-        _uiState.update { it.copy(selectedRestaurant = null) }
+        _uiState.update { it.copy(selectedRestaurant = null, selectedCategory = null) }
     }
 
     fun clearSearch() {

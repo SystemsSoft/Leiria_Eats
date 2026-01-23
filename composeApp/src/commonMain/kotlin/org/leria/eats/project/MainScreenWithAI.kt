@@ -154,6 +154,7 @@ fun MainScreenWithAI(
                         },
                         onTextChange = { viewModel.onQueryChange(it) },
                         onRestaurantClick = { restaurant -> viewModel.selectRestaurant(restaurant) },
+                        onCategorySelect = { category -> viewModel.selectCategory(category) },
                         onClearSelection = { viewModel.clearSelection() },
                         onAddToCart = { product -> viewModel.addToCart(product) },
                         onRemoveFromCart = { product -> viewModel.removeFromCart(product) },

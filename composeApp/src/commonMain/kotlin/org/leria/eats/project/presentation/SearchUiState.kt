@@ -19,7 +19,8 @@ data class SearchUiState(
     val restaurants: List<Restaurant> = emptyList(),
     val error: String? = null,
     val selectedRestaurant: Restaurant? = null,
-    val selectedOrder: Order? = null, // NOVO CAMPO
+    val selectedCategory: String? = null, // NOVO CAMPO para filtro de categoria
+    val selectedOrder: Order? = null,
     val cartRestaurantId: Int? = null,
     val cartItems: List<Product> = emptyList(),
     val currentTab: MainTab = MainTab.HOME,
@@ -29,4 +30,14 @@ data class SearchUiState(
 ) {
     val cartTotal: Double get() = cartItems.sumOf { it.price }
     val cartCount: Int get() = cartItems.size
+
+    // Filtra os produtos do restaurante selecionado com base na categoria
+    val filteredProducts: List<Product>
+        get() = selectedRestaurant?.products?.filter {
+            selectedCategory == null || it.category == selectedCategory
+        } ?: emptyList()
+
+    // Obtém as categorias únicas do restaurante selecionado
+    val categories: List<String>
+        get() = selectedRestaurant?.products?.map { it.category }?.distinct()?.sorted() ?: emptyList()
 }

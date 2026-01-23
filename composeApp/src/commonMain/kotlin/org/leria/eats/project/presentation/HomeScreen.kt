@@ -39,6 +39,7 @@ fun HomeScreen(
     onSendClick: () -> Unit,
     onTextChange: (String) -> Unit,
     onRestaurantClick: (Restaurant) -> Unit,
+    onCategorySelect: (String?) -> Unit,
     onClearSelection: () -> Unit,
     onAddToCart: (Product) -> Unit,
     onRemoveFromCart: (Product) -> Unit,
@@ -91,6 +92,8 @@ fun HomeScreen(
                 RestaurantDetailScreen(
                     restaurant = uiState.selectedRestaurant!!,
                     cartItems = uiState.cartItems,
+                    selectedCategory = uiState.selectedCategory,
+                    onCategorySelect = onCategorySelect,
                     onBack = onClearSelection,
                     onAdd = onAddToCart,
                     onRemove = onRemoveFromCart,
