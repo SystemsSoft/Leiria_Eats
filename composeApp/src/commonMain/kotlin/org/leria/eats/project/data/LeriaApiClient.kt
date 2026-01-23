@@ -44,9 +44,10 @@ class LeriaApiClient {
         }
     }
 
-    suspend fun getCustomerOrders(customerName: String): List<Order> {
+    suspend fun getCustomerOrders(userId: String): List<Order> {
         return try {
-            val response: List<Order> = client.get("$baseUrl/orders/customer/$customerName").body()
+            // Atualizado para buscar pelo ID único do usuário
+            val response: List<Order> = client.get("$baseUrl/orders/customer/$userId").body()
             response
         } catch (e: Exception) {
             e.printStackTrace()

@@ -46,8 +46,8 @@ class SearchViewModel(
     private fun startStatusPolling() {
         viewModelScope.launch {
             while (true) {
-                val userName = _uiState.value.userProfile.name
-                if (userName.isNotBlank() && _uiState.value.currentTab == MainTab.ORDERS) {
+                val userId = _uiState.value.userProfile.id
+                if (userId.isNotBlank() && _uiState.value.currentTab == MainTab.ORDERS) {
                     refreshOrdersInternal()
                 }
                 delay(10000) // Verifica a cada 10 segundos
@@ -56,9 +56,11 @@ class SearchViewModel(
     }
 
     private suspend fun refreshOrdersInternal() {
-        val userName = _uiState.value.userProfile.name
+        val userId = _uiState.value.userProfile.id
+        if (userId.isBlank()) return
+        
         try {
-            val updatedOrders = apiClient.getCustomerOrders(userName)
+            val updatedOrders = apiClient.getCustomerOrders(userId)
             _uiState.update {
                 it.copy(orderHistory = updatedOrders)
             }
@@ -240,6 +242,7 @@ class SearchViewModel(
                 }
 
                 val request = OrderRequest(
+                    user_id = currentUser.id,
                     user_name = currentUser.name,
                     user_address = currentUser.address,
                     user_phone = currentUser.phone,
@@ -290,8 +293,8 @@ class SearchViewModel(
     }
 
     fun refreshOrders() {
-        val userName = _uiState.value.userProfile.name
-        if (userName.isBlank()) return
+        val userId = _uiState.value.userProfile.id
+        if (userId.isBlank()) return
 
         _uiState.update { it.copy(isLoading = true) }
 

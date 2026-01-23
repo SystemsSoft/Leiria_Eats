@@ -41,6 +41,7 @@ data class SearchResponse(
 
 @Serializable
 data class OrderRequest(
+    val user_id: String, // NOVO CAMPO: ID do usuário
     val user_name: String,
     val user_address: String,
     val user_phone: String,
