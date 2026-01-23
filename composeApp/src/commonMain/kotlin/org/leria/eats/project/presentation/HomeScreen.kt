@@ -1,5 +1,6 @@
 package org.leria.eats.project.presentation
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,11 +12,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -54,6 +56,15 @@ fun HomeScreen(
     )
     val goldColor = Color(0xFFFFD700)
 
+    // Animação do Logo
+    val animProgress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        animProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 3500, easing = EaseInOutQuart)
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -69,13 +80,26 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
+            // O ícone é desenhado primeiro para ficar "por trás" das letras se houver sobreposição
             KamelImage(
                 resource = asyncPainterResource(data = "https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo-pato.png"),
                 contentDescription = "Logo",
-                modifier = Modifier.size(100.dp),
+                modifier = Modifier
+                    .size(100.dp)
+                    .offset(
+                        x = (80 * (1 - animProgress.value)).dp, // Começa sobre as letras e move para a esquerda
+                        y = ((-60) * (1 - animProgress.value)).dp // Começa acima e "escorre" para baixo
+                    )
+                    .graphicsLayer {
+                        alpha = animProgress.value
+                        scaleX = 0.5f + (0.5f * animProgress.value)
+                        scaleY = 0.5f + (0.5f * animProgress.value)
+                    },
                 contentScale = ContentScale.Fit
             )
-            Spacer(modifier = Modifier.width(2.dp))
+            
+            Spacer(modifier = Modifier.width((2 * animProgress.value).dp))
+            
             Text(
                 text = buildAnnotatedString {
                     withStyle(style = SpanStyle(color = goldColor, fontWeight = FontWeight.Bold)) {
@@ -86,7 +110,11 @@ fun HomeScreen(
                         append("EATS")
                     }
                 },
-                style = MaterialTheme.typography.headlineMedium
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.graphicsLayer {
+                    // Mantém o texto em uma camada superior
+                    translationX = (5 * (1 - animProgress.value))
+                }
             )
         }
 
