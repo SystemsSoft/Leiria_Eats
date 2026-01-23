@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.leria.eats.project.data.Product
@@ -139,61 +140,91 @@ fun ProductItemWithCounter(
     onAdd: () -> Unit,
     onRemove: () -> Unit
 ) {
+    val goldColor = Color(0xFFFFD700)
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)),
-        shape = MaterialTheme.shapes.medium
+        shape = RoundedCornerShape(12.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // INFO DO PRODUTO
             Column(modifier = Modifier.weight(1f)) {
-                Text(product.name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(product.description, color = Color.Gray, fontSize = 12.sp, maxLines = 2)
+                Text(
+                    text = product.name,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = product.description,
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
                 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Timer,
-                        contentDescription = null,
-                        tint = Color(0xFFBDBDBD),
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = product.preparationTime.ifBlank { "15-25 min" },
-                        color = Color(0xFFBDBDBD),
-                        fontSize = 11.sp
-                    )
-                    
-                    Spacer(modifier = Modifier.width(12.dp))
-                    
                     Text(
                         text = "R$ ${product.price}0",
-                        color = Color(0xFFFFD700),
+                        color = goldColor,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )
+                    
+                    if (product.preparationTime.isNotBlank()) {
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Icon(
+                            imageVector = Icons.Default.Timer,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = product.preparationTime,
+                            color = Color.Gray,
+                            fontSize = 11.sp
+                        )
+                    }
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // SELETOR DE QUANTIDADE (Estilo iFood)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 if (quantity > 0) {
                     IconButton(
                         onClick = onRemove,
-                        modifier = Modifier.size(28.dp).background(Color(0xFF424242), CircleShape)
+                        modifier = Modifier.size(24.dp)
                     ) {
-                        Icon(Icons.Default.Remove, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Default.Remove, null, tint = goldColor, modifier = Modifier.size(20.dp))
                     }
-                    Text(quantity.toString(), color = Color.White, modifier = Modifier.padding(horizontal = 8.dp), fontWeight = FontWeight.Bold)
+                    Text(
+                        text = quantity.toString(),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
                 }
+                
                 IconButton(
                     onClick = onAdd,
-                    modifier = Modifier.size(28.dp).background(Color(0xFFFFD700), CircleShape)
+                    modifier = Modifier.size(24.dp)
                 ) {
-                    Icon(Icons.Default.Add, null, tint = Color.Black, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Add, null, tint = goldColor, modifier = Modifier.size(20.dp))
                 }
             }
         }
