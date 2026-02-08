@@ -103,11 +103,11 @@ fun HomeScreen(
             Text(
                 text = buildAnnotatedString {
                     withStyle(style = SpanStyle(color = goldColor, fontWeight = FontWeight.Bold)) {
-                        append("LEIRIA")
+                        append("KOMA")
                     }
                     append(" ")
                     withStyle(style = SpanStyle(color = Color.White, fontWeight = FontWeight.Bold)) {
-                        append("EATS")
+                        append("AI")
                     }
                 },
                 style = MaterialTheme.typography.headlineMedium,
