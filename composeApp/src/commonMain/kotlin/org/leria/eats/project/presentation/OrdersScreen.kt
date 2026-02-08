@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -14,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -35,14 +33,10 @@ fun OrdersScreen(
         onRefresh()
     }
 
-    val backgroundBrush = Brush.verticalGradient(
-        colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
-    )
-
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundBrush)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp)
     ) {
         if (selectedOrder != null) {
@@ -50,15 +44,15 @@ fun OrdersScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(
                     onClick = onBackToList,
-                    modifier = Modifier.background(Color(0xFF424242), CircleShape).size(36.dp)
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f), CircleShape).size(36.dp)
                 ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = Color.White, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = "Detalhes do Pedido",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -66,42 +60,42 @@ fun OrdersScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("ID: ${selectedOrder.id}", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
-                    Text("Status: ${selectedOrder.status}", color = Color.White, modifier = Modifier.padding(top = 4.dp))
+                    Text("ID: ${selectedOrder.id}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text("Status: ${selectedOrder.status}", color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(top = 4.dp))
                     
-                    HorizontalDivider(color = Color(0xFF424242), modifier = Modifier.padding(vertical = 16.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(vertical = 16.dp))
                     
-                    Text("Itens:", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+                    Text("Itens:", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
                     
                     selectedOrder.items.forEach { item ->
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("${item.quantity}x ${item.product_name}", color = Color.White, modifier = Modifier.weight(1f))
+                            Text("${item.quantity}x ${item.product_name}", color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
                         }
                         if (!item.observation.isNullOrBlank()) {
                             Text(
                                 text = "Obs: ${item.observation}",
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                 fontSize = 12.sp,
                                 modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
                             )
                         }
                     }
                     
-                    HorizontalDivider(color = Color(0xFF424242), modifier = Modifier.padding(vertical = 16.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(vertical = 16.dp))
                     
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Total", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text("R$ ${selectedOrder.total}0", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text("Total", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text("R$ ${selectedOrder.total}0", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     }
                 }
             }
@@ -115,15 +109,15 @@ fun OrdersScreen(
                 Text(
                     text = "Meus Pedidos",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold
                 )
 
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFFFFD700), strokeWidth = 2.dp)
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
                 } else {
                     IconButton(onClick = onRefresh) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Atualizar", tint = Color.White)
+                        Icon(Icons.Default.Refresh, contentDescription = "Atualizar", tint = MaterialTheme.colorScheme.onBackground)
                     }
                 }
             }
@@ -132,14 +126,14 @@ fun OrdersScreen(
 
             if (isLoading && orders.isEmpty()) {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFFFFD700))
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else if (orders.isEmpty()) {
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Nenhum pedido realizado ainda.", color = Color.Gray)
+                    Text("Nenhum pedido realizado ainda.", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
                 }
             } else {
                 LazyColumn(
@@ -160,7 +154,7 @@ fun OrderItemCard(order: Order, onClick: () -> Unit) {
     val statusIcon = getStatusIcon(order.status)
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth().clickable { onClick() }
     ) {
@@ -172,18 +166,18 @@ fun OrderItemCard(order: Order, onClick: () -> Unit) {
             ) {
                 Text(
                     text = "Pedido ${order.id}",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
 
                 Surface(
-                    color = Color(0xFF424242),
+                    color = MaterialTheme.colorScheme.surface,
                     shape = MaterialTheme.shapes.small
                 ) {
                     Text(
                         text = "Ver detalhes",
-                        color = Color(0xFFBDBDBD),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
@@ -194,9 +188,9 @@ fun OrderItemCard(order: Order, onClick: () -> Unit) {
 
             val summary = order.items.joinToString(", ") { "${it.quantity}x ${it.product_name}" }
 
-            Text(text = summary, color = Color.Gray, fontSize = 14.sp, lineHeight = 20.sp)
+            Text(text = summary, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontSize = 14.sp, lineHeight = 20.sp)
 
-            HorizontalDivider(color = Color(0xFF424242), modifier = Modifier.padding(vertical = 12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(vertical = 12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -221,7 +215,7 @@ fun OrderItemCard(order: Order, onClick: () -> Unit) {
 
                 Text(
                     text = "R$ ${order.total}0",
-                    color = Color(0xFFFFD700),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
@@ -230,24 +224,25 @@ fun OrderItemCard(order: Order, onClick: () -> Unit) {
     }
 }
 
-fun getStatusColor(status: String): Color {
+@Composable
+private fun getStatusColor(status: String): Color {
     return when (status) {
-        "Pendente" -> Color(0xFFFF9800)
-        "Em Preparo" -> Color(0xFF2196F3)
-        "Saiu para Entrega" -> Color(0xFF9C27B0)
-        "Entregue" -> Color(0xFF4CAF50)
-        "Cancelado" -> Color(0xFFF44336)
-        else -> Color.Gray
+        "Pendente" -> MaterialTheme.colorScheme.primary
+        "Em Preparo" -> Color(0xFF64B5F6) // Light Blue
+        "Saiu para Entrega" -> Color(0xFF81C784) // Light Green
+        "Entregue" -> MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+        "Cancelado" -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
     }
 }
 
-fun getStatusIcon(status: String): ImageVector {
+private fun getStatusIcon(status: String): ImageVector {
     return when (status) {
         "Pendente" -> Icons.Default.HourglassEmpty
         "Em Preparo" -> Icons.Default.Restaurant
         "Saiu para Entrega" -> Icons.Default.DeliveryDining
         "Entregue" -> Icons.Default.CheckCircle
         "Cancelado" -> Icons.Default.Close
-        else -> Icons.Default.CheckCircle
+        else -> Icons.Default.Info
     }
 }

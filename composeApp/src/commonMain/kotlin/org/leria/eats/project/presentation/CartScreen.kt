@@ -10,8 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,38 +22,38 @@ fun CartScreen(
     onCheckout: () -> Unit
 ) {
     val total = cartItems.sumOf { it.price }
-    val backgroundBrush = Brush.verticalGradient(
-        colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
-    )
-    val goldColor = Color(0xFFFFD700)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundBrush)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp)
     ) {
         Text(
             text = "Minha Sacola",
             style = MaterialTheme.typography.headlineMedium,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 16.dp).align(Alignment.CenterHorizontally)
         )
 
         if (cartItems.isEmpty()) {
-            // Estado Vazio
+            // Empty State
             Box(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Sua sacola está vazia 😔", color = Color.Gray, fontSize = 18.sp)
+                Text(
+                    "Sua sacola está vazia 😔",
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    fontSize = 18.sp
+                )
             }
         } else {
-            // Lista de Itens
+            // Item List
             LazyColumn(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(cartItems) { product ->
                     CartItemRow(product, onRemove = { onRemoveItem(product) })
@@ -64,9 +62,9 @@ fun CartScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Resumo do Pedido
+            // Order Summary
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -74,10 +72,10 @@ fun CartScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Total do Pedido", color = Color.White)
+                        Text("Total do Pedido", color = MaterialTheme.colorScheme.onSurface)
                         Text(
                             "R$ ${total}0",
-                            color = goldColor,
+                            color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
                         )
@@ -87,7 +85,10 @@ fun CartScreen(
 
                     Button(
                         onClick = onCheckout,
-                        colors = ButtonDefaults.buttonColors(containerColor = goldColor, contentColor = Color.Black),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         shape = MaterialTheme.shapes.medium
                     ) {
@@ -102,8 +103,8 @@ fun CartScreen(
 @Composable
 fun CartItemRow(product: Product, onRemove: () -> Unit) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF424242)),
-        shape = MaterialTheme.shapes.small
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -111,11 +112,19 @@ fun CartItemRow(product: Product, onRemove: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(product.name, color = Color.White, fontWeight = FontWeight.Bold)
-                Text("R$ ${product.price}0", color = Color(0xFFBDBDBD), fontSize = 14.sp)
+                Text(product.name, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                Text(
+                    "R$ ${product.price}0",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 14.sp
+                )
             }
             IconButton(onClick = onRemove) {
-                Icon(Icons.Default.Delete, contentDescription = "Remover", tint = Color.Gray)
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Remover",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
             }
         }
     }

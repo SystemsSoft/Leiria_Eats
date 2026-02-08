@@ -14,8 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -33,11 +31,6 @@ fun ProfileScreen(
     var address by remember { mutableStateOf("") }
     var isLocating by remember { mutableStateOf(false) }
 
-    val backgroundBrush = Brush.verticalGradient(
-        colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
-    )
-    val goldColor = Color(0xFFFFD700)
-
     LaunchedEffect(userProfile) {
         if (userProfile.name.isNotEmpty()) name = userProfile.name
         if (userProfile.phone.isNotEmpty()) phone = userProfile.phone
@@ -47,7 +40,7 @@ fun ProfileScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundBrush)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -55,13 +48,13 @@ fun ProfileScreen(
             modifier = Modifier
                 .size(100.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF424242)),
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Person,
                 contentDescription = null,
-                tint = Color(0xFFBDBDBD),
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 modifier = Modifier.size(50.dp)
             )
         }
@@ -71,12 +64,11 @@ fun ProfileScreen(
         Text(
             "Meu Perfil",
             style = MaterialTheme.typography.headlineMedium,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold
         )
 
         Spacer(modifier = Modifier.height(32.dp))
-
 
         ProfileTextField(
             value = name,
@@ -100,8 +92,8 @@ fun ProfileScreen(
         OutlinedTextField(
             value = address,
             onValueChange = { address = it },
-            label = { Text("Endereço de Entrega", color = Color.Gray) },
-            leadingIcon = { Icon(Icons.Default.Home, contentDescription = null, tint = Color(0xFFBDBDBD)) },
+            label = { Text("Endereço de Entrega") },
+            leadingIcon = { Icon(Icons.Default.Home, contentDescription = null) },
             trailingIcon = {
                 IconButton(
                     onClick = {
@@ -118,26 +110,30 @@ fun ProfileScreen(
                     if (isLocating) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = goldColor,
+                            color = MaterialTheme.colorScheme.primary,
                             strokeWidth = 2.dp
                         )
                     } else {
                         Icon(
                             Icons.Default.LocationOn,
                             contentDescription = "Usar localização atual",
-                            tint = goldColor
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
             },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                cursorColor = goldColor,
-                focusedBorderColor = goldColor,
-                unfocusedBorderColor = Color(0xFF424242),
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                cursorColor = MaterialTheme.colorScheme.primary,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.surface,
+                focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                focusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                focusedLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             ),
             modifier = Modifier.fillMaxWidth()
         )
@@ -148,7 +144,10 @@ fun ProfileScreen(
             onClick = {
                 onSave(name, phone, address)
             },
-            colors = ButtonDefaults.buttonColors(containerColor = goldColor, contentColor = Color.Black),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
@@ -167,21 +166,24 @@ fun ProfileTextField(
     icon: ImageVector,
     keyboardType: KeyboardType = KeyboardType.Text
 ) {
-    val goldColor = Color(0xFFFFD700)
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, color = Color.Gray) },
-        leadingIcon = { Icon(icon, contentDescription = null, tint = Color(0xFFBDBDBD)) },
+        label = { Text(label) },
+        leadingIcon = { Icon(icon, contentDescription = null) },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = Color.White,
-            unfocusedTextColor = Color.White,
-            cursorColor = goldColor,
-            focusedBorderColor = goldColor,
-            unfocusedBorderColor = Color(0xFF424242),
-            focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+            cursorColor = MaterialTheme.colorScheme.primary,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.surface,
+            focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+            focusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            focusedLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
         ),
         modifier = Modifier.fillMaxWidth()
     )
