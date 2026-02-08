@@ -9,11 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -43,8 +39,7 @@ fun RestaurantDetailScreen(
 ) {
     val totalParams = cartItems.sumOf { it.price }
     val totalCount = cartItems.size
-    val goldColor = Color(0xFFFFD700)
-
+    
     val categories = listOf("Todos") + restaurant.products.map { it.category }.distinct().sorted()
     val filteredProducts = if (selectedCategory == null || selectedCategory == "Todos") {
         restaurant.products
@@ -66,22 +61,22 @@ fun RestaurantDetailScreen(
         ) {
             IconButton(
                 onClick = onBack,
-                modifier = Modifier.background(Color(0xFF424242), CircleShape).size(36.dp)
+                modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f), CircleShape).size(36.dp)
             ) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = Color.White, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
                     text = restaurant.name,
                     style = MaterialTheme.typography.titleLarge,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "${restaurant.category} • ⭐ ${restaurant.rating}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFBDBDBD)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                 )
             }
         }
@@ -102,10 +97,10 @@ fun RestaurantDetailScreen(
                     onClick = { onCategorySelect(if (category == "Todos") null else category) },
                     label = { Text(category) },
                     colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Color(0xFF333333),
-                        labelColor = Color.White,
-                        selectedContainerColor = goldColor,
-                        selectedLabelColor = Color.Black
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                        labelColor = MaterialTheme.colorScheme.onSurface,
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     border = null
                 )
@@ -117,14 +112,16 @@ fun RestaurantDetailScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            item {
-                Text(
-                    "Cardápio",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
+            if (filteredProducts.isNotEmpty()) {
+                item {
+                    Text(
+                        "Cardápio",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 4.dp, top = 8.dp)
+                    )
+                }
             }
 
             items(filteredProducts) { product ->
@@ -143,7 +140,7 @@ fun RestaurantDetailScreen(
     if (totalCount > 0) {
         Box(modifier = Modifier.fillMaxSize()) {
             Surface(
-                color = goldColor,
+                color = MaterialTheme.colorScheme.primary,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -158,14 +155,14 @@ fun RestaurantDetailScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = Color.Black)
+                        Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text("Ver Sacola ($totalCount)", color = Color.Black, fontWeight = FontWeight.Bold)
-                            Text("Total: R$ ${totalParams}0", color = Color.Black.copy(0.7f), style = MaterialTheme.typography.bodySmall)
+                            Text("Ver Sacola ($totalCount)", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                            Text("Total: R$ ${totalParams}0", color = MaterialTheme.colorScheme.onPrimary.copy(0.7f), style = MaterialTheme.typography.bodySmall)
                         }
                     }
-                    Text("Finalizar", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text("Finalizar", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -179,9 +176,8 @@ fun ProductItemWithCounter(
     onAdd: () -> Unit,
     onRemove: () -> Unit
 ) {
-    val goldColor = Color(0xFFFFD700)
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF333333)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
@@ -190,7 +186,6 @@ fun ProductItemWithCounter(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // IMAGEM DO PRODUTO (Nova funcionalidade)
             if (!product.image_url.isNullOrBlank()) {
                 KamelImage(
                     resource = asyncPainterResource(data = product.image_url),
@@ -210,7 +205,7 @@ fun ProductItemWithCounter(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = product.name,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     maxLines = 1,
@@ -218,7 +213,7 @@ fun ProductItemWithCounter(
                 )
                 Text(
                     text = product.description,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     fontSize = 12.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -229,7 +224,7 @@ fun ProductItemWithCounter(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "R$ ${product.price}0",
-                        color = goldColor,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )
@@ -239,13 +234,13 @@ fun ProductItemWithCounter(
                         Icon(
                             imageVector = Icons.Default.Timer,
                             contentDescription = null,
-                            tint = Color.Gray,
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = product.preparationTime,
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             fontSize = 11.sp
                         )
                     }
@@ -264,11 +259,11 @@ fun ProductItemWithCounter(
                         onClick = onRemove,
                         modifier = Modifier.size(24.dp)
                     ) {
-                        Icon(Icons.Default.Remove, null, tint = goldColor, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Remove, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     }
                     Text(
                         text = quantity.toString(),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )
@@ -278,7 +273,7 @@ fun ProductItemWithCounter(
                     onClick = onAdd,
                     modifier = Modifier.size(24.dp)
                 ) {
-                    Icon(Icons.Default.Add, null, tint = goldColor, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                 }
             }
         }

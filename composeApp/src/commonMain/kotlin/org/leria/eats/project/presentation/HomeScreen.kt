@@ -15,11 +15,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -51,11 +49,6 @@ fun HomeScreen(
     onViewCart: () -> Unit,
     onClearSearch: () -> Unit
 ) {
-    val backgroundBrush = Brush.verticalGradient(
-        colors = listOf(Color(0xFF2C2C2C), Color(0xFF1E1E1E), Color(0xFF121212))
-    )
-    val goldColor = Color(0xFFFFD700)
-
     // Animação do Logo
     val animProgress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
@@ -68,7 +61,7 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundBrush)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -80,15 +73,14 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // O ícone é desenhado primeiro para ficar "por trás" das letras se houver sobreposição
             KamelImage(
                 resource = asyncPainterResource(data = "https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo-pato.png"),
                 contentDescription = "Logo",
                 modifier = Modifier
                     .size(100.dp)
                     .offset(
-                        x = (80 * (1 - animProgress.value)).dp, // Começa sobre as letras e move para a esquerda
-                        y = ((-60) * (1 - animProgress.value)).dp // Começa acima e "escorre" para baixo
+                        x = (80 * (1 - animProgress.value)).dp,
+                        y = ((-60) * (1 - animProgress.value)).dp
                     )
                     .graphicsLayer {
                         alpha = animProgress.value
@@ -102,17 +94,16 @@ fun HomeScreen(
             
             Text(
                 text = buildAnnotatedString {
-                    withStyle(style = SpanStyle(color = goldColor, fontWeight = FontWeight.Bold)) {
+                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)) {
                         append("KOMA")
                     }
                     append(" ")
-                    withStyle(style = SpanStyle(color = Color.White, fontWeight = FontWeight.Bold)) {
+                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)) {
                         append("AI")
                     }
                 },
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.graphicsLayer {
-                    // Mantém o texto em uma camada superior
                     translationX = (5 * (1 - animProgress.value))
                 }
             )
@@ -122,14 +113,14 @@ fun HomeScreen(
         Text(
             text = if (uiState.selectedRestaurant == null) uiState.aiReply else "Cardápio de ${uiState.selectedRestaurant?.name}",
             style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xFFBDBDBD),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .padding(vertical = 16.dp)
                 .fillMaxWidth()
         )
 
-        // --- MICROFONE (Oculto no Cardápio) ---
+        // --- MICROFONE ---
         if (uiState.selectedRestaurant == null) {
             CentralMicButton(
                 status = permissionStatus,
@@ -139,7 +130,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // --- CONTEÚDO DINÂMICO (Lista ou Cardápio) ---
+        // --- CONTEÚDO ---
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (uiState.selectedRestaurant != null) {
                 RestaurantDetailScreen(
@@ -153,10 +144,9 @@ fun HomeScreen(
                     onViewCart = onViewCart
                 )
             } else {
-                // EXIBE A LISTA DE RESTAURANTES EM GRID (iFood Style)
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
-                        color = Color(0xFFBDBDBD),
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.align(Alignment.Center)
                     )
                 } else if (uiState.restaurants.isNotEmpty()) {
@@ -168,12 +158,12 @@ fun HomeScreen(
                         ) {
                             Text(
                                 "Sugestões encontradas:",
-                                color = Color.White.copy(alpha = 0.7f),
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                                 fontSize = 14.sp
                             )
                             Text(
                                 "Limpar",
-                                color = goldColor,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontSize = 12.sp,
                                 modifier = Modifier.clickable { onClearSearch() }
                             )
@@ -194,7 +184,6 @@ fun HomeScreen(
                         }
                     }
                 } else {
-                    // Estado Vazio
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.Center,
@@ -202,13 +191,13 @@ fun HomeScreen(
                     ) {
                         Text(
                             "Não sabe o que pedir?",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
                         )
                         Text(
                             "Fale 'Pizza' ou 'Sushi'",
-                            color = Color.Gray.copy(0.6f),
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                             fontSize = 14.sp,
                             modifier = Modifier.padding(top = 8.dp)
                         )
@@ -220,10 +209,10 @@ fun HomeScreen(
                                 onTextChange("ver todos")
                                 onSendClick()
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF424242)),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Ver todos os restaurantes", color = Color.White)
+                            Text("Ver todos os restaurantes", color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
                 }
@@ -237,8 +226,8 @@ fun HomeScreen(
             OutlinedTextField(
                 value = uiState.textInput,
                 onValueChange = onTextChange,
-                label = { Text("Digite seu pedido...", color = Color.White.copy(0.6f)) },
-                placeholder = { Text(if (isListening) "Ouvindo..." else "Ex: Hambúrguer...", color = Color.Gray) },
+                label = { Text("Digite seu pedido...", color = MaterialTheme.colorScheme.onSurface.copy(0.6f)) },
+                placeholder = { Text(if (isListening) "Ouvindo..." else "Ex: Hambúrguer...", color = MaterialTheme.colorScheme.onSurface.copy(0.4f)) },
                 enabled = !uiState.isLoading,
                 singleLine = true,
                 shape = RoundedCornerShape(24.dp),
@@ -250,18 +239,18 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.Send,
                             contentDescription = "Enviar",
-                            tint = if (uiState.textInput.isNotBlank()) Color(0xFFBDBDBD) else Color.Gray
+                            tint = if (uiState.textInput.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                         )
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    cursorColor = Color(0xFFBDBDBD),
-                    focusedBorderColor = Color(0xFFBDBDBD),
-                    unfocusedBorderColor = Color(0xFF424242),
-                    focusedContainerColor = Color(0xFF1E1E1E),
-                    unfocusedContainerColor = Color(0xFF1E1E1E)
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.surface,
+                    focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -269,8 +258,8 @@ fun HomeScreen(
 
         if (uiState.error != null) {
             Text(
-                text = uiState.error!!,
-                color = Color.Red,
+                text = uiState.error,
+                color = MaterialTheme.colorScheme.error,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(top = 4.dp)
             )
@@ -286,8 +275,6 @@ fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
             .clickable { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val imageUrl = restaurant.image_url ?: "https://placehold.co/100x100.png"
-        
         Card(
             modifier = Modifier
                 .aspectRatio(1f)
@@ -296,7 +283,7 @@ fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
             elevation = CardDefaults.cardElevation(2.dp)
         ) {
             KamelImage(
-                resource = asyncPainterResource(data = imageUrl),
+                resource = asyncPainterResource(data = restaurant.image_url ?: ""),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
@@ -310,7 +297,7 @@ fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
         Text(
             text = restaurant.name,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 12.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -324,13 +311,13 @@ fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
             Icon(
                 Icons.Default.Star, 
                 contentDescription = null, 
-                tint = Color(0xFFFFD700), 
+                tint = MaterialTheme.colorScheme.primary, 
                 modifier = Modifier.size(10.dp)
             )
             Spacer(modifier = Modifier.width(2.dp))
             Text(
                 text = "${restaurant.rating ?: 5.0} • ${restaurant.category}",
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 fontSize = 10.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

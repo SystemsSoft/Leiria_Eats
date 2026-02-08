@@ -9,7 +9,6 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -50,11 +49,11 @@ fun MainScreenWithAI(
     Scaffold(
         bottomBar = {
             NavigationBar(
-                containerColor = Color(0xFF1E1E1E),
-                contentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface
             ) {
-                val selectedColor = Color(0xFFFFD700)
-                val unselectedColor = Color.Gray
+                val selectedColor = MaterialTheme.colorScheme.primary
+                val unselectedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
 
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Home, contentDescription = "Início") },
@@ -62,7 +61,7 @@ fun MainScreenWithAI(
                     selected = uiState.currentTab == MainTab.HOME,
                     onClick = { viewModel.onTabSelected(MainTab.HOME) },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
+                        selectedIconColor = MaterialTheme.colorScheme.onPrimary,
                         selectedTextColor = selectedColor,
                         indicatorColor = selectedColor,
                         unselectedIconColor = unselectedColor,
@@ -75,7 +74,9 @@ fun MainScreenWithAI(
                         BadgedBox(
                             badge = {
                                 if (uiState.cartCount > 0) {
-                                    Badge { Text(uiState.cartCount.toString()) }
+                                    Badge(containerColor = selectedColor, contentColor = MaterialTheme.colorScheme.onPrimary) {
+                                        Text(uiState.cartCount.toString())
+                                    }
                                 }
                             }
                         ) {
@@ -86,7 +87,7 @@ fun MainScreenWithAI(
                     selected = uiState.currentTab == MainTab.CART,
                     onClick = { viewModel.onTabSelected(MainTab.CART) },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
+                        selectedIconColor = MaterialTheme.colorScheme.onPrimary,
                         selectedTextColor = selectedColor,
                         indicatorColor = selectedColor,
                         unselectedIconColor = unselectedColor,
@@ -100,7 +101,7 @@ fun MainScreenWithAI(
                     selected = uiState.currentTab == MainTab.ORDERS,
                     onClick = { viewModel.onTabSelected(MainTab.ORDERS) },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
+                        selectedIconColor = MaterialTheme.colorScheme.onPrimary,
                         selectedTextColor = selectedColor,
                         indicatorColor = selectedColor,
                         unselectedIconColor = unselectedColor,
@@ -114,7 +115,7 @@ fun MainScreenWithAI(
                     selected = uiState.currentTab == MainTab.PROFILE,
                     onClick = { viewModel.onTabSelected(MainTab.PROFILE) },
                     colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
+                        selectedIconColor = MaterialTheme.colorScheme.onPrimary,
                         selectedTextColor = selectedColor,
                         indicatorColor = selectedColor,
                         unselectedIconColor = unselectedColor,
