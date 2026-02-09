@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -18,12 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
@@ -31,7 +29,6 @@ import io.kamel.image.asyncPainterResource
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
-import org.leria.eats.project.presentation.components.CentralMicButton
 
 @Composable
 fun HomeScreen(
@@ -103,17 +100,7 @@ fun HomeScreen(
                 .padding(vertical = 16.dp)
                 .fillMaxWidth()
         )
-
-        // --- MICROFONE ---
-        if (uiState.selectedRestaurant == null) {
-            CentralMicButton(
-                status = permissionStatus,
-                isRecording = isListening,
-                onClick = onMicClick
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
+        
         // --- CONTEÚDO ---
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (uiState.selectedRestaurant != null) {
@@ -216,15 +203,26 @@ fun HomeScreen(
                 singleLine = true,
                 shape = RoundedCornerShape(24.dp),
                 trailingIcon = {
-                    IconButton(
-                        onClick = onSendClick,
-                        enabled = uiState.textInput.isNotBlank() && !uiState.isLoading
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Send,
-                            contentDescription = "Enviar",
-                            tint = if (uiState.textInput.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onMicClick, enabled = !uiState.isLoading) {
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = "Gravar áudio",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        if (uiState.textInput.isNotBlank()) {
+                            IconButton(
+                                onClick = onSendClick,
+                                enabled = !uiState.isLoading
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Send,
+                                    contentDescription = "Enviar",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
