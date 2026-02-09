@@ -55,6 +55,13 @@ fun HomeScreen(
         )
     }
 
+    LaunchedEffect(Unit) {
+        if (uiState.restaurants.isEmpty()) {
+            onTextChange("ver todos")
+            onSendClick()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -174,17 +181,6 @@ fun HomeScreen(
                         )
                         
                         Spacer(modifier = Modifier.height(24.dp))
-                        
-                        Button(
-                            onClick = {
-                                onTextChange("ver todos")
-                                onSendClick()
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Ver todos os restaurantes", color = MaterialTheme.colorScheme.onSurface)
-                        }
                     }
                 }
             }
