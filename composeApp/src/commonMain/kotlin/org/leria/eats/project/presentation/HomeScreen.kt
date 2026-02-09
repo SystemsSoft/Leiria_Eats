@@ -62,7 +62,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(horizontal = 4.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // --- CABEÇALHO ---
@@ -74,10 +74,10 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             KamelImage(
-                resource = asyncPainterResource(data = "https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo-pato.png"),
+                resource = asyncPainterResource(data = "https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo%3Dpato.png"),
                 contentDescription = "Logo",
                 modifier = Modifier
-                    .size(100.dp)
+                    .size(200.dp)
                     .offset(
                         x = (80 * (1 - animProgress.value)).dp,
                         y = ((-60) * (1 - animProgress.value)).dp
@@ -91,22 +91,6 @@ fun HomeScreen(
             )
             
             Spacer(modifier = Modifier.width((2 * animProgress.value).dp))
-            
-            Text(
-                text = buildAnnotatedString {
-                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)) {
-                        append("KOMA")
-                    }
-                    append(" ")
-                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold)) {
-                        append("AI")
-                    }
-                },
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.graphicsLayer {
-                    translationX = (5 * (1 - animProgress.value))
-                }
-            )
         }
 
         // Resposta da IA (Destaque)

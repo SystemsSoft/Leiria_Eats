@@ -1,4 +1,4 @@
-rootProject.name = "LeiriaEats"
+rootProject.name = "KomaAi"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
