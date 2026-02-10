@@ -171,8 +171,8 @@ fun HomeScreen(
             OutlinedTextField(
                 value = uiState.textInput,
                 onValueChange = onTextChange,
-                label = { Text("Digite seu pedido...", color = MaterialTheme.colorScheme.onSurface.copy(0.6f)) },
-                placeholder = { Text(if (isListening) "Ouvindo..." else "Ex: Hambúrguer...", color = MaterialTheme.colorScheme.onSurface.copy(0.4f)) },
+                label = { Text("Peça com sua voz ou digite...", color = MaterialTheme.colorScheme.onSurface.copy(0.6f)) },
+                placeholder = { Text(if (isListening) "Ouvindo..." else "Ex: Quero um hambúrguer com fritas", color = MaterialTheme.colorScheme.onSurface.copy(0.4f)) },
                 enabled = !uiState.isLoading,
                 singleLine = true,
                 shape = RoundedCornerShape(24.dp),
