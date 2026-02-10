@@ -8,5 +8,6 @@ data class Order(
     val items: List<OrderItem> = emptyList(),
     val total: Double,
     val status: String = "Em preparo",
-    val date: String = "Hoje"
+    val date: String = "Hoje",
+    val isFavorite: Boolean = false
 )

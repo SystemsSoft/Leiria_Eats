@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -14,12 +15,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.leria.eats.project.permissions.PermissionManager
 import org.leria.eats.project.permissions.PermissionStatus
-import org.leria.eats.project.presentation.CartScreen
-import org.leria.eats.project.presentation.HomeScreen
-import org.leria.eats.project.presentation.MainTab
-import org.leria.eats.project.presentation.OrdersScreen
-import org.leria.eats.project.presentation.ProfileScreen
-import org.leria.eats.project.presentation.SearchViewModel
+import org.leria.eats.project.presentation.*
 import org.leria.eats.project.service.LocationService
 import org.leria.eats.project.voice.VoiceRecognizer
 
@@ -109,6 +105,20 @@ fun MainScreenWithAI(
                     )
                 )
 
+                 NavigationBarItem(
+                    icon = { Icon(Icons.Default.Star, contentDescription = "Favoritos") },
+                    label = { Text("Favoritos") },
+                    selected = uiState.currentTab == MainTab.FAVORITES,
+                    onClick = { viewModel.onTabSelected(MainTab.FAVORITES) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                        selectedTextColor = selectedColor,
+                        indicatorColor = selectedColor,
+                        unselectedIconColor = unselectedColor,
+                        unselectedTextColor = unselectedColor
+                    )
+                )
+
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
                     label = { Text("Perfil") },
@@ -178,7 +188,16 @@ fun MainScreenWithAI(
                         selectedOrder = uiState.selectedOrder,
                         onRefresh = { viewModel.refreshOrders() },
                         onOrderClick = { order -> viewModel.selectOrder(order) },
-                        onBackToList = { viewModel.clearOrderSelection() }
+                        onBackToList = { viewModel.clearOrderSelection() },
+                        onToggleFavorite = { order -> viewModel.toggleFavoriteOrder(order) }
+                    )
+                }
+
+                 MainTab.FAVORITES -> {
+                    FavoritesScreen(
+                        orders = uiState.favoriteOrders,
+                        onOrderClick = { order -> viewModel.selectOrder(order) },
+                        onToggleFavorite = { order -> viewModel.toggleFavoriteOrder(order) }
                     )
                 }
 
@@ -194,7 +213,7 @@ fun MainScreenWithAI(
                                 scope.launch {
                                     val addressFound = locationService.getCurrentAddress()
                                     callbackUpdateAddress(addressFound ?: "Localização não encontrada")
-                                }
+                                 }
                             } else {
                                 permissionManager.askForPermission()
                                 callbackUpdateAddress("")

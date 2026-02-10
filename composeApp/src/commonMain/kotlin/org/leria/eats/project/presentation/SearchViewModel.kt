@@ -7,11 +7,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import org.leria.eats.project.data.LeriaApiClient
 import org.leria.eats.project.data.Order
 import org.leria.eats.project.data.OrderItem
@@ -30,6 +28,8 @@ class SearchViewModel(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
+    private val favoriteOrderIdsFlow = profileRepository.favoriteOrderIdsFlow
+
 
     init {
         // Carrega o perfil do usuário
@@ -44,7 +44,35 @@ class SearchViewModel(
 
         // Inicia a observação automática de status dos pedidos
         startStatusPolling()
+
+        observeFavoriteOrders()
     }
+
+     private fun observeFavoriteOrders() {
+        viewModelScope.launch {
+            favoriteOrderIdsFlow.collect { favoriteIds ->
+                _uiState.update { currentState ->
+                    val updatedOrders = currentState.orderHistory.map { order ->
+                        order.copy(isFavorite = favoriteIds.contains(order.id))
+                    }
+                    currentState.copy(orderHistory = updatedOrders)
+                }
+            }
+        }
+    }
+
+    fun toggleFavoriteOrder(order: Order) {
+        viewModelScope.launch {
+            val currentFavorites = favoriteOrderIdsFlow.first()
+            val newFavorites = if (order.isFavorite) {
+                currentFavorites - order.id
+            } else {
+                currentFavorites + order.id
+            }
+            profileRepository.saveFavoriteOrderIds(newFavorites)
+        }
+    }
+
 
     private fun startStatusPolling() {
         viewModelScope.launch {
@@ -64,14 +92,21 @@ class SearchViewModel(
         
         try {
             val updatedOrders = apiClient.getCustomerOrders(userId)
+            val favoriteIds = favoriteOrderIdsFlow.first()
+
+            val ordersWithFavorites = updatedOrders.map { order ->
+                order.copy(isFavorite = favoriteIds.contains(order.id))
+            }
+
+
             _uiState.update {
-                it.copy(orderHistory = updatedOrders)
+                it.copy(orderHistory = ordersWithFavorites)
             }
             
             // Se houver um pedido selecionado, atualiza ele também
             val selectedId = _uiState.value.selectedOrder?.id
             if (selectedId != null) {
-                val updatedSelected = updatedOrders.find { it.id == selectedId }
+                val updatedSelected = ordersWithFavorites.find { it.id == selectedId }
                 if (updatedSelected != null) {
                     _uiState.update { it.copy(selectedOrder = updatedSelected) }
                 }

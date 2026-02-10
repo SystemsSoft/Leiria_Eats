@@ -10,6 +10,7 @@ enum class MainTab {
     CART,
     ORDERS,
     PROFILE,
+    FAVORITES
 }
 
 data class SearchUiState(
@@ -30,6 +31,8 @@ data class SearchUiState(
 ) {
     val cartTotal: Double get() = cartItems.sumOf { it.price }
     val cartCount: Int get() = cartItems.size
+    val favoriteOrders: List<Order> get() = orderHistory.filter { it.isFavorite }
+
 
     // Filtra os produtos do restaurante selecionado com base na categoria
     val filteredProducts: List<Product>

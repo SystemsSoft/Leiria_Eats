@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,7 +28,8 @@ fun OrdersScreen(
     selectedOrder: Order? = null,
     onRefresh: () -> Unit = {},
     onOrderClick: (Order) -> Unit = {},
-    onBackToList: () -> Unit = {}
+    onBackToList: () -> Unit = {},
+    onToggleFavorite: (Order) -> Unit
 ) {
     LaunchedEffect(Unit) {
         onRefresh()
@@ -140,7 +142,11 @@ fun OrdersScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(orders.reversed()) { order ->
-                        OrderItemCard(order, onClick = { onOrderClick(order) })
+                        OrderItemCard(
+                            order = order,
+                            onClick = { onOrderClick(order) },
+                            onToggleFavorite = { onToggleFavorite(order) }
+                        )
                     }
                 }
             }
@@ -149,7 +155,11 @@ fun OrdersScreen(
 }
 
 @Composable
-fun OrderItemCard(order: Order, onClick: () -> Unit) {
+fun OrderItemCard(
+    order: Order,
+    onClick: () -> Unit,
+    onToggleFavorite: () -> Unit
+) {
     val statusColor = getStatusColor(order.status)
     val statusIcon = getStatusIcon(order.status)
 
@@ -170,16 +180,11 @@ fun OrderItemCard(order: Order, onClick: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
-
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Text(
-                        text = "Ver detalhes",
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                IconButton(onClick = onToggleFavorite) {
+                    Icon(
+                        imageVector = if (order.isFavorite) Icons.Default.Star else Icons.Outlined.StarBorder,
+                        contentDescription = "Favoritar",
+                        tint = if (order.isFavorite) Color.Yellow else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                 }
             }

@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -15,6 +16,8 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
     private val NAME_KEY = stringPreferencesKey("user_name")
     private val ADDRESS_KEY = stringPreferencesKey("user_address")
     private val PHONE_KEY = stringPreferencesKey("user_phone")
+    private val FAVORITE_ORDERS_KEY = stringSetPreferencesKey("favorite_orders")
+
 
     val userProfileFlow: Flow<UserProfile> = dataStore.data.map { preferences ->
         UserProfile(
@@ -31,6 +34,16 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
             preferences[NAME_KEY] = name
             preferences[PHONE_KEY] = phone
             preferences[ADDRESS_KEY] = address
+        }
+    }
+
+    val favoriteOrderIdsFlow: Flow<Set<String>> = dataStore.data.map { preferences ->
+        preferences[FAVORITE_ORDERS_KEY] ?: emptySet()
+    }
+
+    suspend fun saveFavoriteOrderIds(ids: Set<String>) {
+        dataStore.edit { preferences ->
+            preferences[FAVORITE_ORDERS_KEY] = ids
         }
     }
 }
