@@ -71,7 +71,7 @@ fun HomeScreen(
     ) {
 
         Row(
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -157,32 +157,11 @@ fun HomeScreen(
                             }
                         }
                     }
-                } else {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            "Não sabe o que pedir?",
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
-                        Text(
-                            "Fale 'Pizza' ou 'Sushi'",
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                        
-                        Spacer(modifier = Modifier.height(24.dp))
-                    }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         // --- CAMPO DE TEXTO ---
         if (uiState.selectedRestaurant == null) {
