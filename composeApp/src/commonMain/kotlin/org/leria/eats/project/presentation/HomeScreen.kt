@@ -79,10 +79,12 @@ fun HomeScreen(
                 resource = asyncPainterResource(data = "https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo%3Dpato.png"),
                 contentDescription = "Logo",
                 modifier = Modifier
-                    .size(220.dp)
+                    // menor para reduzir espaço abaixo do logo
+                    .size(180.dp)
                     .offset(
                         x = (80 * (1 - animProgress.value)).dp,
-                        y = ((-60) * (1 - animProgress.value)).dp
+                        // reduzido o deslocamento vertical da animação para evitar grande lacuna
+                        y = ((-10) * (1 - animProgress.value)).dp
                     )
                     .graphicsLayer {
                         alpha = animProgress.value
@@ -100,7 +102,8 @@ fun HomeScreen(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             textAlign = TextAlign.Center,
             modifier = Modifier
-                .padding(vertical = 16.dp)
+                // remover espaçamento superior para ficar imediatamente abaixo do logo
+                .padding(top = 0.dp)
                 .fillMaxWidth()
         )
         
