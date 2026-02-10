@@ -66,12 +66,10 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 4.dp, vertical = 16.dp),
+            .padding(horizontal = 4.dp), // reduzida a padding vertical para aproximar o cabeçalho do topo
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // --- CABEÇALHO ---
-        Spacer(modifier = Modifier.height(8.dp))
-        
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
@@ -81,7 +79,7 @@ fun HomeScreen(
                 resource = asyncPainterResource(data = "https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo%3Dpato.png"),
                 contentDescription = "Logo",
                 modifier = Modifier
-                    .size(200.dp)
+                    .size(220.dp)
                     .offset(
                         x = (80 * (1 - animProgress.value)).dp,
                         y = ((-60) * (1 - animProgress.value)).dp
@@ -93,8 +91,6 @@ fun HomeScreen(
                     },
                 contentScale = ContentScale.Fit
             )
-            
-            Spacer(modifier = Modifier.width((2 * animProgress.value).dp))
         }
 
         // Resposta da IA (Destaque)
