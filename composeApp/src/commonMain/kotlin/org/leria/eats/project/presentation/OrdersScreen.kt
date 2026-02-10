@@ -175,7 +175,7 @@ fun OrderItemCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Pedido ${order.id}",
+                    text = order.restaurantName,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp

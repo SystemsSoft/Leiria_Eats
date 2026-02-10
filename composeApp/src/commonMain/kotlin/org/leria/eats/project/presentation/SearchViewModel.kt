@@ -248,31 +248,32 @@ class SearchViewModel(
 
 
     fun checkout() {
-        val currentUser = _uiState.value.userProfile
-        val currentCart = _uiState.value.cartItems
-
-
-        val restaurantId = _uiState.value.cartRestaurantId
-
+        val currentState = _uiState.value
+        val currentUser = currentState.userProfile
+        val currentCart = currentState.cartItems
+        val restaurantId = currentState.cartRestaurantId
+    
         if (restaurantId == null) {
-            _uiState.update {
-                it.copy(error = "Erro: Não foi possível identificar o restaurante do pedido.")
-            }
+            _uiState.update { it.copy(error = "Erro: Não foi possível identificar o restaurante do pedido.") }
             return
         }
-
+    
+        val restaurant = currentState.restaurants.find { it.id == restaurantId }
+        if (restaurant == null) {
+            _uiState.update { it.copy(error = "Erro: Restaurante não encontrado.") }
+            return
+        }
+    
         if (currentUser.name.isBlank() || currentUser.address.isBlank()) {
-            _uiState.update {
-                it.copy(error = "Por favor, preencha seu Nome e Endereço na aba Perfil antes de finalizar.")
-            }
+            _uiState.update { it.copy(error = "Por favor, preencha seu Nome e Endereço na aba Perfil antes de finalizar.") }
             onTabSelected(MainTab.PROFILE)
             return
         }
-
+    
         if (currentCart.isEmpty()) return
-
+    
         _uiState.update { it.copy(isLoading = true, error = null) }
-
+    
         viewModelScope.launch {
             try {
                 val orderItems = currentCart.groupBy { it.id }.map { (id, products) ->
@@ -282,20 +283,20 @@ class SearchViewModel(
                         observation = null
                     )
                 }
-
+    
                 val request = OrderRequest(
                     user_id = currentUser.id,
                     user_name = currentUser.name,
                     user_address = currentUser.address,
                     user_phone = currentUser.phone,
                     restaurant_id = restaurantId,
+                    restaurant_name = restaurant.name,
                     items = orderItems
                 )
-
+    
                 val success = apiClient.sendOrder(request)
-
+    
                 if (success) {
-                    // Mapeia o carrinho atual para a nova estrutura de OrderItem para o histórico
                     val orderItemsForHistory = currentCart.groupBy { it.name }.map { (name, products) ->
                         OrderItem(
                             product_name = name,
@@ -303,10 +304,10 @@ class SearchViewModel(
                             observation = null
                         )
                     }
-
-
+    
                     val newOrder = Order(
                         id = "#OK-${(100..999).random()}",
+                        restaurantName = restaurant.name,
                         items = orderItemsForHistory,
                         total = _uiState.value.cartTotal,
                         status = "Enviado para o Restaurante",

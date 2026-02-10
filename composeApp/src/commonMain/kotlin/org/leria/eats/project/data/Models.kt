@@ -46,6 +46,7 @@ data class OrderRequest(
     val user_address: String,
     val user_phone: String,
     val restaurant_id: Int,
+    val restaurant_name: String,
     val items: List<OrderItemRequest>
 )
 
