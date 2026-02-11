@@ -38,11 +38,14 @@ class SearchViewModel(
                 _uiState.update { it.copy(userProfile = profile) }
             }
         }
+
+        viewModelScope.launch {
+            profileRepository.userProfileFlow.first { it.id.isNotBlank() }
+            refreshOrdersInternal()
+        }
         
-        // Carrega todos os restaurantes na inicialização
         loadInitialRestaurants()
 
-        // Inicia a observação automática de status dos pedidos
         startStatusPolling()
 
         observeFavoriteOrders()
