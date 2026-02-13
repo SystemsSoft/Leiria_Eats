@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<resources>
+    <string name="see_all">ver todos</string>
+    <string name="logo">Logo</string>
+    <string name="menu_of">Menú de %1$s</string>
+    <string name="suggestions_found">Sugerencias encontradas:</string>
+    <string name="clear">Limpiar</string>
+    <string name="ask_with_your_voice_or_type">Pide con tu voz o escribe...</string>
+    <string name="listening">Escuchando...</string>
+    <string name="example_want_a_hamburger_with_fries">Ej: Quiero una hamburguesa con papas fritas</string>
+    <string name="record_audio">Grabar audio</string>
+    <string name="send">Enviar</string>
+</resources>

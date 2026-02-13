@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<resources>
+    <string name="see_all">see all</string>
+    <string name="logo">Logo</string>
+    <string name="menu_of">Menu of %1$s</string>
+    <string name="suggestions_found">Suggestions found:</string>
+    <string name="clear">Clear</string>
+    <string name="ask_with_your_voice_or_type">Ask with your voice or type...</string>
+    <string name="listening">Listening...</string>
+    <string name="example_want_a_hamburger_with_fries">Ex: I want a hamburger with fries</string>
+    <string name="record_audio">Record audio</string>
+    <string name="send">Send</string>
+</resources>
