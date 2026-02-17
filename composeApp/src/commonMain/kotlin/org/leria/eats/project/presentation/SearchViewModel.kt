@@ -10,19 +10,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.leria.eats.project.data.LeriaApiClient
-import org.leria.eats.project.data.Order
-import org.leria.eats.project.data.OrderItem
-import org.leria.eats.project.data.OrderItemRequest
-import org.leria.eats.project.data.OrderRequest
-import org.leria.eats.project.data.Product
-import org.leria.eats.project.data.ProfileRepository
-import org.leria.eats.project.data.Restaurant
-import org.leria.eats.project.data.UserProfile
+import org.leria.eats.project.data.*
+import org.leria.eats.project.service.LocationService
 
 class SearchViewModel(
     private val apiClient: LeriaApiClient,
     private val profileRepository: ProfileRepository,
+    private val locationService: LocationService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -49,6 +43,17 @@ class SearchViewModel(
         startStatusPolling()
 
         observeFavoriteOrders()
+    }
+    
+    fun onLocationClicked() {
+        viewModelScope.launch {
+            val address = locationService.getCurrentAddress()
+            if (!address.isNullOrBlank()) {
+                val currentUserProfile = _uiState.value.userProfile
+                val updatedProfile = currentUserProfile.copy(address = address)
+                _uiState.update { it.copy(userProfile = updatedProfile) }
+            }
+        }
     }
 
      private fun observeFavoriteOrders() {
@@ -106,7 +111,6 @@ class SearchViewModel(
                 it.copy(orderHistory = ordersWithFavorites)
             }
             
-            // Se houver um pedido selecionado, atualiza ele também
             val selectedId = _uiState.value.selectedOrder?.id
             if (selectedId != null) {
                 val updatedSelected = ordersWithFavorites.find { it.id == selectedId }
@@ -126,18 +130,10 @@ class SearchViewModel(
 
     fun updateUserProfile(name: String, phone: String, address: String) {
         viewModelScope.launch {
-            // Gera um ID único se o usuário ainda não tiver um (ex: U-12345)
             val currentId = _uiState.value.userProfile.id
-            val newId = if (currentId.isBlank()) {
-                "U-${(10000..99999).random()}"
-            } else {
-                currentId
-            }
-
+            val newId = if (currentId.isBlank()) "U-${(10000..99999).random()}" else currentId
             profileRepository.saveProfile(newId, name, phone, address)
-            _uiState.update {
-                it.copy(userProfile = UserProfile(newId, name, phone, address))
-            }
+            _uiState.update { it.copy(userProfile = UserProfile(newId, name, phone, address)) }
         }
     }
 
@@ -165,12 +161,7 @@ class SearchViewModel(
 
     fun clearSearch() {
         _uiState.update {
-            it.copy(
-                restaurants = emptyList(),
-                aiReply = "O que lhe apetece hoje?",
-                textInput = "",
-                error = null
-            )
+            it.copy(restaurants = emptyList(), aiReply = "O que lhe apetece hoje?", textInput = "", error = null)
         }
     }
 
@@ -187,22 +178,11 @@ class SearchViewModel(
         viewModelScope.launch {
             try {
                 val response = apiClient.searchRestaurants(currentQuery)
-
                 _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        aiReply = response.reply,
-                        restaurants = response.results,
-                        textInput = ""
-                    )
+                    it.copy(isLoading = false, aiReply = response.reply, restaurants = response.results, textInput = "")
                 }
             } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "Erro ao conectar: ${e.message}"
-                    )
-                }
+                _uiState.update { it.copy(isLoading = false, error = "Erro ao conectar: ${e.message}") }
                 e.printStackTrace()
             }
         }
@@ -211,11 +191,7 @@ class SearchViewModel(
     fun addToCart(product: Product) {
         _uiState.update { currentState ->
             val restaurantId = currentState.cartRestaurantId ?: currentState.selectedRestaurant?.id
-
-            currentState.copy(
-                cartItems = currentState.cartItems + product,
-                cartRestaurantId = restaurantId
-            )
+            currentState.copy(cartItems = currentState.cartItems + product, cartRestaurantId = restaurantId)
         }
     }
 
@@ -227,14 +203,8 @@ class SearchViewModel(
         }
     }
 
-
     fun clearCart() {
-        _uiState.update {
-            it.copy(
-                cartItems = emptyList(),
-                cartRestaurantId = null
-            )
-        }
+        _uiState.update { it.copy(cartItems = emptyList(), cartRestaurantId = null) }
     }
 
     fun onTabSelected(tab: MainTab) {
@@ -249,44 +219,68 @@ class SearchViewModel(
         _uiState.update { it.copy(selectedOrder = null) }
     }
 
-
     fun checkout() {
         val currentState = _uiState.value
-        val currentUser = currentState.userProfile
-        val currentCart = currentState.cartItems
         val restaurantId = currentState.cartRestaurantId
     
         if (restaurantId == null) {
-            _uiState.update { it.copy(error = "Erro: Não foi possível identificar o restaurante do pedido.") }
+            _uiState.update { it.copy(error = "Erro: ID do restaurante não encontrado.") }
             return
         }
-    
-        val restaurant = currentState.restaurants.find { it.id == restaurantId }
-        if (restaurant == null) {
-            _uiState.update { it.copy(error = "Erro: Restaurante não encontrado.") }
-            return
-        }
-    
-        if (currentUser.name.isBlank() || currentUser.address.isBlank()) {
-            _uiState.update { it.copy(error = "Por favor, preencha seu Nome e Endereço na aba Perfil antes de finalizar.") }
+
+        if (currentState.userProfile.name.isBlank() || currentState.userProfile.address.isBlank()) {
+            _uiState.update { it.copy(error = "Por favor, preencha seu Nome e Endereço no Perfil.") }
             onTabSelected(MainTab.PROFILE)
             return
         }
-    
-        if (currentCart.isEmpty()) return
-    
+
+        if (currentState.cartItems.isEmpty()) return
+
         _uiState.update { it.copy(isLoading = true, error = null) }
-    
+
         viewModelScope.launch {
+            val request = PaymentIntentRequest(
+                amount_euros = currentState.cartTotal,
+                restaurant_id = restaurantId
+            )
+            val sessionResponse = apiClient.createPaymentIntent(request)
+
+            if (sessionResponse == null) {
+                _uiState.update { it.copy(isLoading = false, error = "Erro ao iniciar pagamento.") }
+                return@launch
+            }
+            
+            _uiState.update { it.copy(isLoading = false, checkoutUrl = sessionResponse.url) }
+        }
+    }
+
+    fun onPaymentResult(isSuccess: Boolean) {
+        if (isSuccess) {
+            proceedWithOrder()
+        } else {
+            _uiState.update { it.copy(checkoutUrl = null, error = "Pagamento cancelado.") }
+        }
+    }
+
+    private fun proceedWithOrder() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, checkoutUrl = null) }
+            val currentState = _uiState.value
+            val currentUser = currentState.userProfile
+            val currentCart = currentState.cartItems
+            val restaurantId = currentState.cartRestaurantId!!
+
+            val restaurant = apiClient.searchRestaurants("id:${restaurantId}").results.firstOrNull()
+            if (restaurant == null) {
+                _uiState.update { it.copy(isLoading = false, error = "Erro: Restaurante não encontrado para finalizar.") }
+                return@launch
+            }
+            
             try {
                 val orderItems = currentCart.groupBy { it.id }.map { (id, products) ->
-                    OrderItemRequest(
-                        product_id = id,
-                        quantity = products.size,
-                        observation = null
-                    )
+                    OrderItemRequest(product_id = id, quantity = products.size, observation = null)
                 }
-    
+
                 val request = OrderRequest(
                     user_id = currentUser.id,
                     user_name = currentUser.name,
@@ -296,46 +290,27 @@ class SearchViewModel(
                     restaurant_name = restaurant.name,
                     items = orderItems
                 )
-    
-                val success = apiClient.sendOrder(request)
-    
-                if (success) {
-                    val orderItemsForHistory = currentCart.groupBy { it.name }.map { (name, products) ->
-                        OrderItem(
-                            product_name = name,
-                            quantity = products.size,
-                            observation = null
-                        )
-                    }
-    
-                    val newOrder = Order(
-                        id = "#OK-${(100..999).random()}",
-                        restaurantName = restaurant.name,
-                        items = orderItemsForHistory,
-                        total = _uiState.value.cartTotal,
-                        status = "Enviado para o Restaurante",
-                        date = "Hoje"
-                    )
 
-                    _uiState.update {
+                val success = apiClient.sendOrder(request)
+
+                if (success) {
+                     _uiState.update {
                         it.copy(
-                            isLoading = false,
                             cartItems = emptyList(),
-                            orderHistory = it.orderHistory + newOrder,
+                            cartRestaurantId = null,
                             currentTab = MainTab.ORDERS,
                             error = null
                         )
                     }
+                    refreshOrders()
                 } else {
-                    _uiState.update {
-                        it.copy(isLoading = false, error = "Falha ao enviar pedido. Verifique sua internet.")
-                    }
+                    _uiState.update { it.copy(isLoading = false, error = "Falha ao enviar pedido após pagamento.") }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                _uiState.update {
-                    it.copy(isLoading = false, error = "Erro interno ao processar pedido: ${e.message}")
-                }
+                _uiState.update { it.copy(isLoading = false, error = "Erro interno ao processar pedido: ${e.message}") }
+            } finally {
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }

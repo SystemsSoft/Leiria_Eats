@@ -20,14 +20,14 @@ data class SearchUiState(
     val restaurants: List<Restaurant> = emptyList(),
     val error: String? = null,
     val selectedRestaurant: Restaurant? = null,
-    val selectedCategory: String? = null, // NOVO CAMPO para filtro de categoria
+    val selectedCategory: String? = null,
     val selectedOrder: Order? = null,
     val cartRestaurantId: Int? = null,
     val cartItems: List<Product> = emptyList(),
     val currentTab: MainTab = MainTab.HOME,
     val orderHistory: List<Order> = emptyList(),
-
-    val userProfile: UserProfile = UserProfile()
+    val userProfile: UserProfile = UserProfile(),
+    val checkoutUrl: String? = null // Para controlar a exibição do WebView
 ) {
     val cartTotal: Double get() = cartItems.sumOf { it.price }
     val cartCount: Int get() = cartItems.size

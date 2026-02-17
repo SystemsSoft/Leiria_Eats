@@ -27,6 +27,7 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+            implementation("androidx.compose.ui:ui")
 
             implementation("io.ktor:ktor-client-okhttp:2.3.7")
             implementation("io.insert-koin:koin-android:3.5.3")

@@ -9,7 +9,19 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+
+@Serializable
+data class PaymentIntentRequest(
+    val amount_euros: Double,
+    val restaurant_id: Int,
+)
+
+@Serializable
+data class PaymentIntentResponse(
+    val url: String,
+)
 
 class LeriaApiClient {
     private val client = HttpClient {
@@ -29,6 +41,23 @@ class LeriaApiClient {
             setBody(SearchRequest(query = text))
         }
         return response.body()
+    }
+
+    suspend fun createPaymentIntent(request: PaymentIntentRequest): PaymentIntentResponse? {
+        return try {
+            val response = client.post("$baseUrl/checkout/create-session") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            if (response.status.value in 200..299) {
+                response.body()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
     suspend fun sendOrder(request: OrderRequest): Boolean {
