@@ -269,12 +269,6 @@ class SearchViewModel(
             val currentUser = currentState.userProfile
             val currentCart = currentState.cartItems
             val restaurantId = currentState.cartRestaurantId!!
-
-            val restaurant = apiClient.searchRestaurants("id:${restaurantId}").results.firstOrNull()
-            if (restaurant == null) {
-                _uiState.update { it.copy(isLoading = false, error = "Erro: Restaurante não encontrado para finalizar.") }
-                return@launch
-            }
             
             try {
                 val orderItems = currentCart.groupBy { it.id }.map { (id, products) ->
@@ -287,7 +281,7 @@ class SearchViewModel(
                     user_address = currentUser.address,
                     user_phone = currentUser.phone,
                     restaurant_id = restaurantId,
-                    restaurant_name = restaurant.name,
+                    restaurant_name = uiState.value.selectedRestaurant?.name?:"",
                     items = orderItems
                 )
 
