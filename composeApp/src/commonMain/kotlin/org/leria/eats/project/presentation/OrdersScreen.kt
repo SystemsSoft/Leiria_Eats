@@ -142,17 +142,41 @@ fun OrderDetailView(order: Order, onBack: () -> Unit) {
 
             order.items.forEach { item ->
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("${item.quantity}x ${item.product_name}", color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-                }
-                if (!item.observation.isNullOrBlank()) {
+                    KamelImage(
+                        asyncPainterResource(item.imageUrl),
+                        contentDescription = item.product_name,
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = item.product_name,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = item.description,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                        Text(
+                            text = "R$ ${item.price}0",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     Text(
-                        text = "Obs: ${item.observation}",
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
+                        text = "x${item.quantity}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
