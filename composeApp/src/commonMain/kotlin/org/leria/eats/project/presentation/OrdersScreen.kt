@@ -218,7 +218,7 @@ fun OrderItemCard(
                     asyncPainterResource(order.restaurantImageUrl),
                     contentDescription = order.restaurantName,
                     modifier = Modifier
-                        .size(50.dp)
+                        .size(60.dp)
                         .clip(RoundedCornerShape(8.dp)),
                     contentScale = ContentScale.Crop
                 )
@@ -234,6 +234,11 @@ fun OrderItemCard(
                         text = order.restaurantCategory,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         fontSize = 12.sp
+                    )
+                    Text(
+                        text = order.deliveryAddress,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        fontSize = 10.sp
                     )
                 }
                 IconButton(onClick = onToggleFavorite) {

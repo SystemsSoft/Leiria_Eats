@@ -15,6 +15,8 @@ data class Order(
     val restaurantCategory: String = "",
     @SerialName("restaurant_image_url")
     val restaurantImageUrl: String = "",
+    @SerialName("delivery_address")
+    val deliveryAddress: String = "",
     val date: String = "Hoje",
     val isFavorite: Boolean = false,
 
