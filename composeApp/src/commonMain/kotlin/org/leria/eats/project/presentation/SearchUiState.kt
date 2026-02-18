@@ -28,8 +28,8 @@ data class SearchUiState(
     val orderHistory: List<Order> = emptyList(),
     val userProfile: UserProfile = UserProfile(),
     val isFilterEnabled: Boolean = false,
-
-    val checkoutUrl: String? = null
+    val checkoutUrl: String? = null,
+    val isAddressSheetVisible: Boolean = false
 ) {
     val cartTotal: Double get() = cartItems.sumOf { it.price }
     val cartCount: Int get() = cartItems.size

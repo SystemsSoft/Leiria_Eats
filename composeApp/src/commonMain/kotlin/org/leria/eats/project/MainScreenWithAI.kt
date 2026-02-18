@@ -51,6 +51,18 @@ fun MainScreenWithAI(
             onCancel = { viewModel.onPaymentResult(isSuccess = false, orderId = null) }
         )
     } else {
+        if (uiState.isAddressSheetVisible) {
+            AddressSelectionBottomSheet(
+                addresses = uiState.userProfile.addresses,
+                onAddressSelected = { address ->
+                    viewModel.confirmCheckout(address)
+                },
+                onDismiss = {
+                    viewModel.dismissAddressSheet()
+                }
+            )
+        }
+
         Scaffold(
             bottomBar = {
                 NavigationBar(

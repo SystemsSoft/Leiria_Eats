@@ -46,7 +46,7 @@ class SearchViewModel(
             if (!addressString.isNullOrBlank()) {
                 val currentUserProfile = _uiState.value.userProfile
                 val newAddress = Address("Endereço Atual", addressString)
-                val updatedAddresses = currentUserProfile.addresses.toMutableList().apply {
+                 val updatedAddresses = currentUserProfile.addresses.toMutableList().apply {
                     add(newAddress)
                 }
                 updateUserProfile(currentUserProfile.name, currentUserProfile.phone, updatedAddresses)
@@ -215,25 +215,42 @@ class SearchViewModel(
 
     fun checkout() {
         val currentState = _uiState.value
+        if (currentState.userProfile.addresses.isEmpty()) {
+            _uiState.update { it.copy(error = "Por favor, adicione um endereço no seu perfil antes de continuar.") }
+            onTabSelected(MainTab.PROFILE)
+            return
+        }
+        _uiState.update { it.copy(isAddressSheetVisible = true) }
+    }
+
+    fun dismissAddressSheet() {
+        _uiState.update { it.copy(isAddressSheetVisible = false) }
+    }
+
+    fun confirmCheckout(selectedAddress: Address) {
+        _uiState.update { it.copy(isAddressSheetVisible = false, isLoading = true, error = null) }
+
+        val currentState = _uiState.value
         val restaurantId = currentState.cartRestaurantId
     
         if (restaurantId == null) {
-            _uiState.update { it.copy(error = "Erro: ID do restaurante não encontrado.") }
+            _uiState.update { it.copy(isLoading = false, error = "Erro: ID do restaurante não encontrado.") }
             return
         }
         val restaurant = uiState.value.restaurants.find { it.id == restaurantId }
         if (restaurant == null) {
-            _uiState.update { it.copy(error = "Erro: Restaurante não encontrado.") }
+            _uiState.update { it.copy(isLoading = false, error = "Erro: Restaurante não encontrado.") }
             return
         }
-        if (currentState.userProfile.name.isBlank() || currentState.userProfile.addresses.isEmpty()) {
-            _uiState.update { it.copy(error = "Por favor, preencha seu Nome e Endereço no Perfil.") }
+        if (currentState.userProfile.name.isBlank()) {
+            _uiState.update { it.copy(isLoading = false, error = "Por favor, preencha seu Nome no Perfil.") }
             onTabSelected(MainTab.PROFILE)
             return
         }
-        if (currentState.cartItems.isEmpty()) return
-
-        _uiState.update { it.copy(isLoading = true, error = null) }
+        if (currentState.cartItems.isEmpty()) {
+            _uiState.update { it.copy(isLoading = false) }
+            return
+        }
 
         viewModelScope.launch {
             val orderItems = currentState.cartItems.groupBy { it }.map { (product, products) ->
@@ -251,7 +268,7 @@ class SearchViewModel(
             val request = OrderRequest(
                 user_id = currentState.userProfile.id,
                 user_name = currentState.userProfile.name,
-                user_address = currentState.userProfile.addresses.first().address,
+                user_address = selectedAddress.address,
                 user_phone = currentState.userProfile.phone,
                 restaurant_id = restaurantId,
                 restaurant_name = restaurant.name,
