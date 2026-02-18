@@ -134,11 +134,20 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            "Meus Endereços",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.fillMaxWidth()
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                "Meus Endereços",
+                style = MaterialTheme.typography.titleLarge,
+            )
+            IconButton(onClick = { showAddAddressDialog = true }) {
+                Icon(Icons.Default.Add, contentDescription = "Adicionar Endereço")
+            }
+        }
+        
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(addresses) { address ->
                 AddressItem(
@@ -147,19 +156,7 @@ fun ProfileScreen(
                     onDelete = { addresses = addresses - it }
                 )
             }
-            item {
-                Button(
-                    onClick = { showAddAddressDialog = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Adicionar Endereço")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Adicionar Endereço")
-                }
-            }
         }
-
-
 
         Spacer(modifier = Modifier.weight(1f))
 
