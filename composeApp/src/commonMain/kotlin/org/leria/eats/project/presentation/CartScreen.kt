@@ -14,6 +14,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.leria.eats.project.data.Product
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 @Composable
 fun CartScreen(
@@ -22,6 +26,7 @@ fun CartScreen(
     onCheckout: () -> Unit
 ) {
     val total = cartItems.sumOf { it.price }
+    var showConfirmDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -84,7 +89,7 @@ fun CartScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Button(
-                        onClick = onCheckout,
+                        onClick = { showConfirmDialog = true },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
@@ -96,6 +101,28 @@ fun CartScreen(
                     }
                 }
             }
+        }
+
+        // Confirmation dialog shown when user taps checkout
+        if (showConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showConfirmDialog = false },
+                title = { Text("Confirmar pagamento") },
+                text = { Text("Você será redirecionado para o pagamento do pedido. Deseja continuar?") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showConfirmDialog = false
+                        onCheckout()
+                    }) {
+                        Text("Continuar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showConfirmDialog = false }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
         }
     }
 }
