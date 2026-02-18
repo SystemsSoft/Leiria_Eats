@@ -39,65 +39,7 @@ fun OrdersScreen(
             .padding(24.dp)
     ) {
         if (selectedOrder != null) {
-            // --- TELA DE DETALHES DO PEDIDO ---
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = onBackToList,
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f), CircleShape).size(36.dp)
-                ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "Detalhes do Pedido",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("ID: ${selectedOrder.id}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                    Text("Status: ${selectedOrder.status}", color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(top = 4.dp))
-                    
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(vertical = 16.dp))
-                    
-                    Text("Itens:", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
-                    
-                    selectedOrder.items.forEach { item ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("${item.quantity}x ${item.product_name}", color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
-                        }
-                        if (!item.observation.isNullOrBlank()) {
-                            Text(
-                                text = "Obs: ${item.observation}",
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
-                            )
-                        }
-                    }
-                    
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(vertical = 16.dp))
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Total", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Text("R$ ${selectedOrder.total}0", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    }
-                }
-            }
+            OrderDetailView(order = selectedOrder, onBack = onBackToList)
         } else {
             // --- TELA DE LISTA DE PEDIDOS ---
             Row(
@@ -156,6 +98,68 @@ fun OrdersScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun OrderDetailView(order: Order, onBack: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(
+            onClick = onBack,
+            modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f), CircleShape).size(36.dp)
+        ) {
+            Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = "Detalhes do Pedido",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold
+        )
+    }
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("ID: ${order.id}", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            Text("Status: ${order.status}", color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(top = 4.dp))
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(vertical = 16.dp))
+
+            Text("Itens:", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+
+            order.items.forEach { item ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("${item.quantity}x ${item.product_name}", color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                }
+                if (!item.observation.isNullOrBlank()) {
+                    Text(
+                        text = "Obs: ${item.observation}",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
+                    )
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(vertical = 16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Total", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text("R$ ${order.total}0", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             }
         }
     }

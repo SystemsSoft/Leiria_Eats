@@ -17,8 +17,10 @@ import org.leria.eats.project.data.Order
 @Composable
 fun FavoritesScreen(
     orders: List<Order>,
+    selectedOrder: Order?,
     onOrderClick: (Order) -> Unit,
-    onToggleFavorite: (Order) -> Unit
+    onToggleFavorite: (Order) -> Unit,
+    onBackToList: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -26,47 +28,51 @@ fun FavoritesScreen(
             .background(MaterialTheme.colorScheme.background)
             .padding(24.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Favorite,
-                contentDescription = "Favoritos",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = "Pedidos Favoritos",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        if (orders.isEmpty()) {
-            Box(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentAlignment = Alignment.Center
+        if (selectedOrder != null) {
+            OrderDetailView(order = selectedOrder, onBack = onBackToList)
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = "Favoritos",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    "Você ainda não favoritou nenhum pedido.",
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    text = "Pedidos Favoritos",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontWeight = FontWeight.Bold
                 )
             }
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(orders.reversed()) { order ->
-                    OrderItemCard(
-                        order = order,
-                        onClick = { onOrderClick(order) },
-                        onToggleFavorite = { onToggleFavorite(order) }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            if (orders.isEmpty()) {
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "Você ainda não favoritou nenhum pedido.",
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(orders.reversed()) { order ->
+                        OrderItemCard(
+                            order = order,
+                            onClick = { onOrderClick(order) },
+                            onToggleFavorite = { onToggleFavorite(order) }
+                        )
+                    }
                 }
             }
         }

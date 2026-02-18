@@ -207,8 +207,10 @@ fun MainScreenWithAI(
                      MainTab.FAVORITES -> {
                         FavoritesScreen(
                             orders = uiState.favoriteOrders,
+                            selectedOrder = uiState.selectedOrder,
                             onOrderClick = { order -> viewModel.selectOrder(order) },
-                            onToggleFavorite = { order -> viewModel.toggleFavoriteOrder(order) }
+                            onToggleFavorite = { order -> viewModel.toggleFavoriteOrder(order) },
+                            onBackToList = { viewModel.clearOrderSelection() }
                         )
                     }
 
