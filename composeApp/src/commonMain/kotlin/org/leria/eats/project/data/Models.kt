@@ -58,7 +58,13 @@ data class OrderRequest(
 data class OrderItemRequest(
     val product_id: Int,
     val quantity: Int,
-    val observation: String? = null
+    val observation: String? = null,
+    @SerialName("product_name")
+    val product_name: String,
+    val price: Double,
+    @SerialName("image_url")
+    val image_url: String?,
+    val description: String?
 )
 
 @Serializable

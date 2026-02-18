@@ -234,8 +234,16 @@ class SearchViewModel(
         _uiState.update { it.copy(isLoading = true, error = null) }
 
         viewModelScope.launch {
-            val orderItems = currentState.cartItems.groupBy { it.id }.map { (id, products) ->
-                OrderItemRequest(product_id = id, quantity = products.size, observation = null)
+            val orderItems = currentState.cartItems.groupBy { it }.map { (product, products) ->
+                OrderItemRequest(
+                    product_id = product.id,
+                    quantity = products.size,
+                    observation = null,
+                    product_name = product.name,
+                    price = product.price,
+                    image_url = product.image_url,
+                    description = product.description
+                )
             }
 
             val request = OrderRequest(
