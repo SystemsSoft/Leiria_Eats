@@ -131,19 +131,14 @@ fun ProfileScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Icon(
-                                Icons.Default.LocationOn,
-                                contentDescription = "Usar localização atual",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
+                            IconButton(onClick = { showMapDialog = true }) {
+                                Icon(
+                                    Icons.Default.Map,
+                                    contentDescription = "Selecionar no mapa",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
-                    }
-                    IconButton(onClick = { showMapDialog = true }) {
-                        Icon(
-                            Icons.Default.Map,
-                            contentDescription = "Selecionar no mapa",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
                     }
                 }
             },
