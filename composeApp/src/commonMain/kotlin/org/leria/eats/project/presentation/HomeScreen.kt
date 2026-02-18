@@ -208,7 +208,9 @@ fun HomeScreen(
                     focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
                     unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
                 ),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
             )
         }
 
