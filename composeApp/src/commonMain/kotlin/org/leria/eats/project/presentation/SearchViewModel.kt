@@ -245,6 +245,8 @@ class SearchViewModel(
                 user_phone = currentState.userProfile.phone,
                 restaurant_id = restaurantId,
                 restaurant_name = restaurant.name,
+                restaurant_image_url = restaurant.image_url,
+                restaurant_category = restaurant.category,
                 items = orderItems
             )
             

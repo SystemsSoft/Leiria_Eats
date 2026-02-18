@@ -47,8 +47,10 @@ data class OrderRequest(
     val user_phone: String,
     val restaurant_id: Int,
     val restaurant_name: String,
-    // REMOVIDO: Este campo não é mais necessário no início do processo
-    // val payment_intent_id: String? = null,
+    @SerialName("restaurant_image_url")
+    val restaurant_image_url: String?,
+    @SerialName("restaurant_category")
+    val restaurant_category: String,
     val items: List<OrderItemRequest>
 )
 
