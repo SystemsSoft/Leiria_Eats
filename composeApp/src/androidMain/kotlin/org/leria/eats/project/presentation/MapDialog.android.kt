@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.google.android.gms.maps.model.CameraPosition
@@ -25,49 +26,58 @@ actual fun MapDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
-        Scaffold(
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = {
-                        selectedLocation?.let {
-                            onLocationSelected(it.latitude, it.longitude)
-                        }
-                    },
-                    modifier = Modifier.padding(bottom = 64.dp)
-                ) {
-                    Icon(Icons.Default.Check, contentDescription = "Confirmar Localização")
-                }
-            },
-            floatingActionButtonPosition = FabPosition.Center
-        ) { padding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) {
-                GoogleMap(
-                    modifier = Modifier.fillMaxSize(),
-                    cameraPositionState = cameraPositionState,
-                    onMapClick = { latLng ->
-                        selectedLocation = latLng
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.85f),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Scaffold(
+                floatingActionButton = {
+                    FloatingActionButton(
+                        onClick = {
+                            selectedLocation?.let {
+                                onLocationSelected(it.latitude, it.longitude)
+                            }
+                        },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = "Confirmar Localização")
                     }
+                },
+                floatingActionButtonPosition = FabPosition.Center
+            ) { padding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
                 ) {
-                    selectedLocation?.let {
-                        Marker(
-                            state = MarkerState(position = it),
-                            title = "Local Selecionado"
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState,
+                        onMapClick = { latLng ->
+                            selectedLocation = latLng
+                        }
+                    ) {
+                        selectedLocation?.let {
+                            Marker(
+                                state = MarkerState(position = it),
+                                title = "Local Selecionado"
+                            )
+                        }
+                    }
+                    if (selectedLocation == null) {
+                        Text(
+                            "Toque no mapa para selecionar um endereço",
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(16.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Black
                         )
                     }
-                }
-                if (selectedLocation == null) {
-                    Text(
-                        "Toque no mapa para selecionar um endereço",
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(16.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
                 }
             }
         }
