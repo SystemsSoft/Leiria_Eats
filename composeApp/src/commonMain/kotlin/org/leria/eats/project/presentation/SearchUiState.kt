@@ -27,7 +27,8 @@ data class SearchUiState(
     val currentTab: MainTab = MainTab.HOME,
     val orderHistory: List<Order> = emptyList(),
     val userProfile: UserProfile = UserProfile(),
-    val checkoutUrl: String? = null // Para controlar a exibição do WebView
+
+    val checkoutUrl: String? = null
 ) {
     val cartTotal: Double get() = cartItems.sumOf { it.price }
     val cartCount: Int get() = cartItems.size

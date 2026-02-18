@@ -47,8 +47,8 @@ fun MainScreenWithAI(
         WebView(
             modifier = Modifier.fillMaxSize(),
             url = uiState.checkoutUrl!!,
-            onSuccess = { viewModel.onPaymentResult(isSuccess = true) },
-            onCancel = { viewModel.onPaymentResult(isSuccess = false) }
+            onSuccess = { orderId -> viewModel.onPaymentResult(isSuccess = true, orderId = orderId) },
+            onCancel = { viewModel.onPaymentResult(isSuccess = false, orderId = null) }
         )
     } else {
         Scaffold(

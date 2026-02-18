@@ -12,5 +12,8 @@ data class Order(
     @SerialName("restaurant_name")
     val restaurantName: String = "",
     val date: String = "Hoje",
-    val isFavorite: Boolean = false
+    val isFavorite: Boolean = false,
+    
+    @SerialName("payment_intent_id")
+    val paymentIntentId: String? = ""
 )

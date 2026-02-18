@@ -7,6 +7,6 @@ import androidx.compose.ui.Modifier
 expect fun WebView(
     modifier: Modifier,
     url: String,
-    onSuccess: () -> Unit,
+    onSuccess: (orderId: String) -> Unit,
     onCancel: () -> Unit
 )

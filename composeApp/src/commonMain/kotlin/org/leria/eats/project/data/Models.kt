@@ -41,12 +41,14 @@ data class SearchResponse(
 
 @Serializable
 data class OrderRequest(
-    val user_id: String, // NOVO CAMPO: ID do usuário
+    val user_id: String,
     val user_name: String,
     val user_address: String,
     val user_phone: String,
     val restaurant_id: Int,
     val restaurant_name: String,
+    // REMOVIDO: Este campo não é mais necessário no início do processo
+    // val payment_intent_id: String? = null,
     val items: List<OrderItemRequest>
 )
 

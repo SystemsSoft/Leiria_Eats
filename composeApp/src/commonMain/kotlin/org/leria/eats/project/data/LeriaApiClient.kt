@@ -13,14 +13,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 @Serializable
-data class PaymentIntentRequest(
-    val amount_euros: Double,
-    val restaurant_id: Int,
-)
-
-@Serializable
 data class PaymentIntentResponse(
-    val url: String,
+    val url: String
 )
 
 class LeriaApiClient {
@@ -43,9 +37,9 @@ class LeriaApiClient {
         return response.body()
     }
 
-    suspend fun createPaymentIntent(request: PaymentIntentRequest): PaymentIntentResponse? {
+    suspend fun initiateCheckout(request: OrderRequest): PaymentIntentResponse? {
         return try {
-            val response = client.post("$baseUrl/checkout/create-session") {
+            val response = client.post("$baseUrl/orders/initiate-checkout") {
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
@@ -60,24 +54,6 @@ class LeriaApiClient {
         }
     }
 
-    suspend fun sendOrder(request: OrderRequest): Boolean {
-        try {
-            val response = client.post("$baseUrl/orders") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }
-            
-            if (response.status.value == 422) {
-                val errorBody: String = response.body()
-                println("❌ Erro 422 no envio do pedido: $errorBody")
-            }
-            
-            return response.status.value in 200..299
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return false
-        }
-    }
 
     suspend fun getCustomerOrders(userId: String): List<Order> {
         return try {

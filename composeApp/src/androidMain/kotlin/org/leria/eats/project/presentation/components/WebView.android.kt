@@ -11,7 +11,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 actual fun WebView(
     modifier: Modifier,
     url: String,
-    onSuccess: () -> Unit,
+    onSuccess: (orderId: String) -> Unit,
     onCancel: () -> Unit
 ) {
     AndroidView(
@@ -23,7 +23,11 @@ actual fun WebView(
                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                         super.onPageStarted(view, url, favicon)
                         if (url?.contains("success", ignoreCase = true) == true) {
-                            onSuccess()
+                            // Extrai o order_id da URL
+                            val orderId = url.substringAfter("order_id=", "")
+                            if (orderId.isNotEmpty()) {
+                                onSuccess(orderId)
+                            }
                         } else if (url?.contains("cancel", ignoreCase = true) == true) {
                             onCancel()
                         }
