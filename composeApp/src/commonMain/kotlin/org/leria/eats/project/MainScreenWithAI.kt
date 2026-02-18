@@ -198,7 +198,9 @@ fun MainScreenWithAI(
                             onRefresh = { viewModel.refreshOrders() },
                             onOrderClick = { order -> viewModel.selectOrder(order) },
                             onBackToList = { viewModel.clearOrderSelection() },
-                            onToggleFavorite = { order -> viewModel.toggleFavoriteOrder(order) }
+                            onToggleFavorite = { order -> viewModel.toggleFavoriteOrder(order) },
+                            isFiltered = uiState.isFilterEnabled,
+                            onFilterToggle = { viewModel.toggleFilter() }
                         )
                     }
 

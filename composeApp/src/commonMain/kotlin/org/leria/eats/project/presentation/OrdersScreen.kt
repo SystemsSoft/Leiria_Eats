@@ -28,7 +28,9 @@ fun OrdersScreen(
     onRefresh: () -> Unit = {},
     onOrderClick: (Order) -> Unit = {},
     onBackToList: () -> Unit = {},
-    onToggleFavorite: (Order) -> Unit
+    onToggleFavorite: (Order) -> Unit,
+    isFiltered: Boolean,
+    onFilterToggle: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -113,8 +115,17 @@ fun OrdersScreen(
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
                 } else {
-                    IconButton(onClick = onRefresh) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Atualizar", tint = MaterialTheme.colorScheme.onBackground)
+                    Row {
+                        IconButton(onClick = onFilterToggle) {
+                            Icon(
+                                Icons.Default.FilterList,
+                                contentDescription = "Filtrar por entregues",
+                                tint = if (isFiltered) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                        IconButton(onClick = onRefresh) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Atualizar", tint = MaterialTheme.colorScheme.onBackground)
+                        }
                     }
                 }
             }
@@ -136,7 +147,8 @@ fun OrdersScreen(
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(orders.reversed()) { order ->
+                    val filteredOrders = if (isFiltered) orders.filter { it.status == "Entregue" } else orders
+                    items(filteredOrders) { order ->
                         OrderItemCard(
                             order = order,
                             onClick = { onOrderClick(order) },

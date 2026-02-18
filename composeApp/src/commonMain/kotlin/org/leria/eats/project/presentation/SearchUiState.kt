@@ -27,6 +27,7 @@ data class SearchUiState(
     val currentTab: MainTab = MainTab.HOME,
     val orderHistory: List<Order> = emptyList(),
     val userProfile: UserProfile = UserProfile(),
+    val isFilterEnabled: Boolean = false,
 
     val checkoutUrl: String? = null
 ) {

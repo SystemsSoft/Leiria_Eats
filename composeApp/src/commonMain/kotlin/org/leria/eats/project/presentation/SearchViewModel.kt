@@ -207,6 +207,10 @@ class SearchViewModel(
         _uiState.update { it.copy(selectedOrder = null) }
     }
 
+    fun toggleFilter() {
+        _uiState.update { it.copy(isFilterEnabled = !it.isFilterEnabled) }
+    }
+
     fun checkout() {
         val currentState = _uiState.value
         val restaurantId = currentState.cartRestaurantId
