@@ -229,6 +229,9 @@ fun MainScreenWithAI(
                                     permissionManager.askForPermission()
                                     callbackUpdateAddress("")
                                 }
+                            },
+                            onGetAddressFromMap = { lat, long ->
+                                locationService.getAddressFromCoordinates(lat, long)
                             }
                         )
                     }

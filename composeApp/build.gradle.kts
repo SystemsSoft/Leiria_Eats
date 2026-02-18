@@ -33,6 +33,9 @@ kotlin {
             implementation("io.insert-koin:koin-android:3.5.3")
 
             implementation("com.google.android.gms:play-services-location:21.0.1")
+            implementation("com.google.maps.android:maps-compose:2.11.4")
+            implementation("com.google.android.gms:play-services-maps:18.2.0")
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.0")
         }
 
         iosMain.dependencies {

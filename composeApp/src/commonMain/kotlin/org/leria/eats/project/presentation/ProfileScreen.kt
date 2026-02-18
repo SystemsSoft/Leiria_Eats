@@ -7,6 +7,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
@@ -24,17 +25,32 @@ import org.leria.eats.project.data.UserProfile
 fun ProfileScreen(
     userProfile: UserProfile,
     onSave: (String, String, String) -> Unit,
-    onGetLocation: ((String) -> Unit) -> Unit
+    onGetLocation: ((String) -> Unit) -> Unit,
+    onGetAddressFromMap: (Double, Double) -> String?,
 ) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
     var isLocating by remember { mutableStateOf(false) }
+    var showMapDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(userProfile) {
         if (userProfile.name.isNotEmpty()) name = userProfile.name
         if (userProfile.phone.isNotEmpty()) phone = userProfile.phone
         if (userProfile.address.isNotEmpty()) address = userProfile.address
+    }
+
+    if (showMapDialog) {
+        MapDialog(
+            onDismiss = { showMapDialog = false },
+            onLocationSelected = { lat, long ->
+                val selectedAddress = onGetAddressFromMap(lat, long)
+                if (selectedAddress != null) {
+                    address = selectedAddress
+                }
+                showMapDialog = false
+            }
+        )
     }
 
     Column(
@@ -95,28 +111,37 @@ fun ProfileScreen(
             label = { Text("Endereço de Entrega") },
             leadingIcon = { Icon(Icons.Default.Home, contentDescription = null) },
             trailingIcon = {
-                IconButton(
-                    onClick = {
-                        isLocating = true
-                        onGetLocation { foundAddress ->
-                            isLocating = false
-                            if (foundAddress.isNotEmpty()) {
-                                address = foundAddress
+                Row {
+                    IconButton(
+                        onClick = {
+                            isLocating = true
+                            onGetLocation { foundAddress ->
+                                isLocating = false
+                                if (foundAddress.isNotEmpty()) {
+                                    address = foundAddress
+                                }
                             }
+                        },
+                        enabled = !isLocating
+                    ) {
+                        if (isLocating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.LocationOn,
+                                contentDescription = "Usar localização atual",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
-                    },
-                    enabled = !isLocating
-                ) {
-                    if (isLocating) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
+                    }
+                    IconButton(onClick = { showMapDialog = true }) {
                         Icon(
-                            Icons.Default.LocationOn,
-                            contentDescription = "Usar localização atual",
+                            Icons.Default.Map,
+                            contentDescription = "Selecionar no mapa",
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -188,3 +213,9 @@ fun ProfileTextField(
         modifier = Modifier.fillMaxWidth()
     )
 }
+
+@Composable
+expect fun MapDialog(
+    onDismiss: () -> Unit,
+    onLocationSelected: (Double, Double) -> Unit
+)

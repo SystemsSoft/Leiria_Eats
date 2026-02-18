@@ -52,17 +52,11 @@ class AndroidLocationService(private val context: Context) : LocationService {
         }
     }
 
-    // Função auxiliar para traduzir GPS -> Texto
-    private fun getAddressFromLocation(location: Location): String {
+    override fun getAddressFromCoordinates(latitude: Double, longitude: Double): String? {
         return try {
             val geocoder = Geocoder(context, Locale.getDefault())
-
             @Suppress("DEPRECATION")
-            val addresses = geocoder.getFromLocation(
-                location.latitude,
-                location.longitude,
-                1
-            )
+            val addresses = geocoder.getFromLocation(latitude, longitude, 1)
 
             if (!addresses.isNullOrEmpty()) {
                 val address = addresses[0]
@@ -82,5 +76,10 @@ class AndroidLocationService(private val context: Context) : LocationService {
             e.printStackTrace()
             "Erro de conexão (Internet)"
         }
+    }
+
+    // Função auxiliar para traduzir GPS -> Texto
+    private fun getAddressFromLocation(location: Location): String {
+        return getAddressFromCoordinates(location.latitude, location.longitude) ?: "Endereço não encontrado"
     }
 }
