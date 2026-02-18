@@ -187,6 +187,10 @@ fun AddressItem(address: Address, onEdit: (Address) -> Unit, onDelete: (Address)
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
     ) {
         Row(
             modifier = Modifier
