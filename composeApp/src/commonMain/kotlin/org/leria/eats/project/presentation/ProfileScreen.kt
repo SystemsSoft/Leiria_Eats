@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
@@ -81,99 +82,93 @@ fun ProfileScreen(
         )
     }
 
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(100.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                modifier = Modifier.size(50.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            "Meu Perfil",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        ProfileTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = "Nome Completo",
-            icon = Icons.Default.Person
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ProfileTextField(
-            value = phone,
-            onValueChange = { phone = it },
-            label = "Telefone / WhatsApp",
-            icon = Icons.Default.Phone,
-            keyboardType = KeyboardType.Phone
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                "Meus Endereços",
-                style = MaterialTheme.typography.titleLarge,
-            )
-            IconButton(onClick = { showAddAddressDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Adicionar Endereço")
-            }
-        }
-        
-        LazyColumn(modifier = Modifier.weight(1f)) {
-            items(addresses) { address ->
-                AddressItem(
-                    address = address,
-                    onEdit = { addressToEdit = it },
-                    onDelete = { addresses = addresses - it }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Button(
-            onClick = {
-                onSave(name, phone, addresses)
-            },
-            colors = ButtonDefaults.buttonColors(
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { onSave(name, phone, addresses) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
-            ),
+            ) {
+                Icon(Icons.Default.Check, contentDescription = "Salvar Dados")
+            }
+        }
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            shape = MaterialTheme.shapes.medium
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(paddingValues)
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Salvar Dados", fontWeight = FontWeight.Bold)
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    modifier = Modifier.size(50.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                "Meu Perfil",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            ProfileTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = "Nome Completo",
+                icon = Icons.Default.Person
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ProfileTextField(
+                value = phone,
+                onValueChange = { phone = it },
+                label = "Telefone / WhatsApp",
+                icon = Icons.Default.Phone,
+                keyboardType = KeyboardType.Phone
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "Meus Endereços",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                IconButton(onClick = { showAddAddressDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = "Adicionar Endereço")
+                }
+            }
+            
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(addresses) { address ->
+                    AddressItem(
+                        address = address,
+                        onEdit = { addressToEdit = it },
+                        onDelete = { addresses = addresses - it }
+                    )
+                }
+            }
         }
     }
 }
