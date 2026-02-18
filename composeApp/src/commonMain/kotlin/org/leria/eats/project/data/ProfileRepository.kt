@@ -1,6 +1,5 @@
 package org.leria.eats.project.data
 
-
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -8,32 +7,43 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class ProfileRepository(private val dataStore: DataStore<Preferences>) {
 
-    // Chaves para salvar os dados
     private val ID_KEY = stringPreferencesKey("user_id")
     private val NAME_KEY = stringPreferencesKey("user_name")
-    private val ADDRESS_KEY = stringPreferencesKey("user_address")
     private val PHONE_KEY = stringPreferencesKey("user_phone")
+    private val ADDRESSES_KEY = stringPreferencesKey("user_addresses")
     private val FAVORITE_ORDERS_KEY = stringSetPreferencesKey("favorite_orders")
 
-
     val userProfileFlow: Flow<UserProfile> = dataStore.data.map { preferences ->
+        val addressesJson = preferences[ADDRESSES_KEY] ?: "[]"
+        val addresses = try {
+            Json.decodeFromString<List<Address>>(addressesJson)
+        } catch (e: Exception) {
+            emptyList()
+        }
         UserProfile(
             id = preferences[ID_KEY] ?: "",
             name = preferences[NAME_KEY] ?: "",
             phone = preferences[PHONE_KEY] ?: "",
-            address = preferences[ADDRESS_KEY] ?: ""
+            addresses = addresses
         )
     }
 
-    suspend fun saveProfile(id: String, name: String, phone: String, address: String) {
+    suspend fun saveProfile(
+        id: String,
+        name: String,
+        phone: String,
+        addresses: List<Address>, ) {
         dataStore.edit { preferences ->
+            val addressesJson = Json.encodeToString(addresses)
             preferences[ID_KEY] = id
             preferences[NAME_KEY] = name
             preferences[PHONE_KEY] = phone
-            preferences[ADDRESS_KEY] = address
+            preferences[ADDRESSES_KEY] = addressesJson
         }
     }
 

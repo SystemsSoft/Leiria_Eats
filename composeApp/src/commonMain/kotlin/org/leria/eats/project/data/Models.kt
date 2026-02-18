@@ -79,9 +79,15 @@ data class OrderItem(
 )
 
 @Serializable
+data class Address(
+    val name: String,
+    val address: String
+)
+
+@Serializable
 data class UserProfile(
     val id: String = "",
     val name: String = "",
     val phone: String = "",
-    val address: String = ""
+    val addresses: List<Address> = emptyList()
 )

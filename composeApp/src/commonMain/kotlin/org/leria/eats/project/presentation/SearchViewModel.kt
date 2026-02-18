@@ -39,19 +39,22 @@ class SearchViewModel(
         startStatusPolling()
         observeFavoriteOrders()
     }
-    
+
     fun onLocationClicked() {
         viewModelScope.launch {
-            val address = locationService.getCurrentAddress()
-            if (!address.isNullOrBlank()) {
+            val addressString = locationService.getCurrentAddress()
+            if (!addressString.isNullOrBlank()) {
                 val currentUserProfile = _uiState.value.userProfile
-                val updatedProfile = currentUserProfile.copy(address = address)
-                _uiState.update { it.copy(userProfile = updatedProfile) }
+                val newAddress = Address("Endereço Atual", addressString)
+                val updatedAddresses = currentUserProfile.addresses.toMutableList().apply {
+                    add(newAddress)
+                }
+                updateUserProfile(currentUserProfile.name, currentUserProfile.phone, updatedAddresses)
             }
         }
     }
 
-     private fun observeFavoriteOrders() {
+    private fun observeFavoriteOrders() {
         viewModelScope.launch {
             favoriteOrderIdsFlow.collect { favoriteIds ->
                 _uiState.update { currentState ->
@@ -92,7 +95,7 @@ class SearchViewModel(
     private suspend fun refreshOrdersInternal() {
         val userId = _uiState.value.userProfile.id
         if (userId.isBlank()) return
-        
+
         try {
             val updatedOrders = apiClient.getCustomerOrders(userId)
             val favoriteIds = favoriteOrderIdsFlow.first()
@@ -100,7 +103,7 @@ class SearchViewModel(
                 order.copy(isFavorite = favoriteIds.contains(order.id))
             }
             _uiState.update { it.copy(orderHistory = ordersWithFavorites) }
-            
+
             val selectedId = _uiState.value.selectedOrder?.id
             if (selectedId != null) {
                 val updatedSelected = ordersWithFavorites.find { it.id == selectedId }
@@ -118,12 +121,11 @@ class SearchViewModel(
         sendSearch()
     }
 
-    fun updateUserProfile(name: String, phone: String, address: String) {
+    fun updateUserProfile(name: String, phone: String, addresses: List<Address>) {
         viewModelScope.launch {
             val currentId = _uiState.value.userProfile.id
             val newId = if (currentId.isBlank()) "U-${(10000..99999).random()}" else currentId
-            profileRepository.saveProfile(newId, name, phone, address)
-            _uiState.update { it.copy(userProfile = UserProfile(newId, name, phone, address)) }
+            profileRepository.saveProfile(newId, name, phone, addresses)
         }
     }
 
@@ -224,7 +226,7 @@ class SearchViewModel(
             _uiState.update { it.copy(error = "Erro: Restaurante não encontrado.") }
             return
         }
-        if (currentState.userProfile.name.isBlank() || currentState.userProfile.address.isBlank()) {
+        if (currentState.userProfile.name.isBlank() || currentState.userProfile.addresses.isEmpty()) {
             _uiState.update { it.copy(error = "Por favor, preencha seu Nome e Endereço no Perfil.") }
             onTabSelected(MainTab.PROFILE)
             return
@@ -249,7 +251,7 @@ class SearchViewModel(
             val request = OrderRequest(
                 user_id = currentState.userProfile.id,
                 user_name = currentState.userProfile.name,
-                user_address = currentState.userProfile.address,
+                user_address = currentState.userProfile.addresses.first().address,
                 user_phone = currentState.userProfile.phone,
                 restaurant_id = restaurantId,
                 restaurant_name = restaurant.name,

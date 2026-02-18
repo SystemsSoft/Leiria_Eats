@@ -217,8 +217,8 @@ fun MainScreenWithAI(
                     MainTab.PROFILE -> {
                         ProfileScreen(
                             userProfile = uiState.userProfile,
-                            onSave = { name, phone, address ->
-                                viewModel.updateUserProfile(name, phone, address)
+                            onSave = { name, phone, addresses ->
+                                viewModel.updateUserProfile(name, phone, addresses)
                                 viewModel.onTabSelected(MainTab.HOME)
                             },
                             onGetLocation = { callbackUpdateAddress ->
