@@ -302,20 +302,6 @@ class SearchViewModel(
         }
     }
 
-    private fun fechtRestaurant(id: Int) {
-        viewModelScope.launch {
-            apiClient.getCompanyById(id)?.let { companyResponse ->
-                val restaurant = Restaurant(
-                    id = companyResponse.id,
-                    name = companyResponse.name,
-                    category = companyResponse.category,
-                    image_url = companyResponse.imageUrl
-                )
-                _uiState.value.restaurant = restaurant
-            }
-        }
-    }
-
     fun onPaymentResult(isSuccess: Boolean, orderId: String?) {
         if (isSuccess) {
             _uiState.update {
