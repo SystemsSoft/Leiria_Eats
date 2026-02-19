@@ -46,7 +46,8 @@ data class CompanyResponse(
     val name: String,
     val category: String,
     @SerialName("image_url")
-    val imageUrl: String
+    val imageUrl: String,
+    val products: List<Product> = emptyList()
 )
 
 

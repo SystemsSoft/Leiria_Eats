@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.leria.eats.project.data.*
+import org.leria.eats.project.data.Restaurant
 
 class SearchViewModel(
     private val apiClient: LeriaApiClient,
@@ -185,6 +186,27 @@ class SearchViewModel(
                     cartRestaurantId =  product.restaurant_id,
                     cartMessage = "${product.name} adicionado à sacola."
                 )
+            }
+        }
+        fetchCompanyById(product.restaurant_id)
+    }
+
+    private fun fetchCompanyById(id: Int) {
+        viewModelScope.launch {
+            val company = apiClient.getCompanyById(id)
+            _uiState.update {
+                if(it.selectedRestaurant == null) {
+                    it.copy(
+                        restaurant =   Restaurant(
+                            id = company?.id?:0,
+                    name = company?.name?:"",
+                    category = company?.category?:"",
+                    image_url = company?.imageUrl?:""
+                    )
+                    )
+                } else {
+                    it.copy()
+                }
             }
         }
     }
