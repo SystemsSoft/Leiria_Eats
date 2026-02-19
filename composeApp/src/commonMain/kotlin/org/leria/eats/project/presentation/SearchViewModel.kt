@@ -169,7 +169,7 @@ class SearchViewModel(
             try {
                 val response = apiClient.searchRestaurants(currentQuery)
                 _uiState.update {
-                    it.copy(isLoading = false, aiReply = response.reply, restaurants = response.results, textInput = "")
+                    it.copy(isLoading = false, aiReply = response.reply, restaurants = response.restaurantResults, textInput = "")
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Erro ao conectar: ${e.message}") }
@@ -180,9 +180,22 @@ class SearchViewModel(
 
     fun addToCart(product: Product) {
         _uiState.update { currentState ->
-            val restaurantId = currentState.cartRestaurantId ?: currentState.selectedRestaurant?.id
-            currentState.copy(cartItems = currentState.cartItems + product, cartRestaurantId = restaurantId)
+            val cartRestaurantId = currentState.cartRestaurantId
+            val productRestaurantId = product.restaurant_id
+
+            if (cartRestaurantId != null && cartRestaurantId != productRestaurantId) {
+                currentState.copy(cartError = "Não pode adicionar produtos de restaurantes diferentes.")
+            } else {
+                currentState.copy(
+                    cartItems = currentState.cartItems + product,
+                    cartRestaurantId = productRestaurantId
+                )
+            }
         }
+    }
+
+    fun clearCartError() {
+        _uiState.update { it.copy(cartError = null) }
     }
 
     fun removeFromCart(product: Product) {
@@ -232,7 +245,7 @@ class SearchViewModel(
 
         val currentState = _uiState.value
         val restaurantId = currentState.cartRestaurantId
-    
+
         if (restaurantId == null) {
             _uiState.update { it.copy(isLoading = false, error = "Erro: ID do restaurante não encontrado.") }
             return
@@ -276,15 +289,15 @@ class SearchViewModel(
                 restaurant_category = restaurant.category,
                 items = orderItems
             )
-            
+
             val sessionResponse = apiClient.initiateCheckout(request)
 
             if (sessionResponse == null) {
                 _uiState.update { it.copy(isLoading = false, error = "Erro ao iniciar pagamento.") }
                 return@launch
             }
-            
-            _uiState.update { 
+
+            _uiState.update {
                 it.copy(isLoading = false, checkoutUrl = sessionResponse.url)
             }
         }

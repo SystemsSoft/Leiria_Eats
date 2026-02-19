@@ -29,7 +29,8 @@ data class SearchUiState(
     val userProfile: UserProfile = UserProfile(),
     val isFilterEnabled: Boolean = false,
     val checkoutUrl: String? = null,
-    val isAddressSheetVisible: Boolean = false
+    val isAddressSheetVisible: Boolean = false,
+    val cartError: String? = null
 ) {
     val cartTotal: Double get() = cartItems.sumOf { it.price }
     val cartCount: Int get() = cartItems.size

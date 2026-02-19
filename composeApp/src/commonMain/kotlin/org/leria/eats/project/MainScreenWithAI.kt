@@ -40,6 +40,14 @@ fun MainScreenWithAI(
     val voiceText by voiceRecognizer.results.collectAsState()
     val isListening by voiceRecognizer.isListening.collectAsState()
     val permissionStatus by permissionManager.status.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.cartError) {
+        uiState.cartError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearCartError()
+        }
+    }
 
     LaunchedEffect(voiceText) {
         if (isListening && voiceText.isNotEmpty()) {
@@ -123,6 +131,7 @@ fun MainScreenWithAI(
             }
 
             Scaffold(
+                snackbarHost = { SnackbarHost(snackbarHostState) },
                 bottomBar = {
                     NavigationBar(
                         containerColor = MaterialTheme.colorScheme.surface,
