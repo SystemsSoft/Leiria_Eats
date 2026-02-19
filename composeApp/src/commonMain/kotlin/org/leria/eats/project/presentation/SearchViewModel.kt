@@ -200,7 +200,8 @@ class SearchViewModel(
             } else {
                 currentState.copy(
                     cartItems = currentState.cartItems + product,
-                    cartRestaurantId = productRestaurantId
+                    cartRestaurantId = productRestaurantId,
+                    cartMessage = "${product.name} adicionado à sacola."
                 )
             }
         }
@@ -208,6 +209,10 @@ class SearchViewModel(
 
     fun clearCartError() {
         _uiState.update { it.copy(cartError = null) }
+    }
+
+    fun clearCartMessage() {
+        _uiState.update { it.copy(cartMessage = null) }
     }
 
     fun removeFromCart(product: Product) {
