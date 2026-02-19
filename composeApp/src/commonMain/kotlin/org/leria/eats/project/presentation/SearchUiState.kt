@@ -21,6 +21,7 @@ data class SearchUiState(
     val productResults: List<Product> = emptyList(),
     val error: String? = null,
     val selectedRestaurant: Restaurant? = null,
+    var restaurant: Restaurant? = null,
     val selectedCategory: String? = null,
     val selectedOrder: Order? = null,
     val cartRestaurantId: Int? = null,
@@ -34,18 +35,7 @@ data class SearchUiState(
     val cartError: String? = null,
     val cartMessage: String? = null
 ) {
-    val cartTotal: Double get() = cartItems.sumOf { it.price }
     val cartCount: Int get() = cartItems.size
     val favoriteOrders: List<Order> get() = orderHistory.filter { it.isFavorite }
 
-
-    // Filtra os produtos do restaurante selecionado com base na categoria
-    val filteredProducts: List<Product>
-        get() = selectedRestaurant?.products?.filter {
-            selectedCategory == null || it.category == selectedCategory
-        } ?: emptyList()
-
-    // Obtém as categorias únicas do restaurante selecionado
-    val categories: List<String>
-        get() = selectedRestaurant?.products?.map { it.category }?.distinct()?.sorted() ?: emptyList()
 }

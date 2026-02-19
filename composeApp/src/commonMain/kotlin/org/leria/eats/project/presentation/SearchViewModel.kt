@@ -177,15 +177,12 @@ class SearchViewModel(
 
     fun addToCart(product: Product) {
         _uiState.update { currentState ->
-            val cartRestaurantId = currentState.cartRestaurantId
-            val productRestaurantId = product.restaurant_id
-
-            if (cartRestaurantId != null && cartRestaurantId != productRestaurantId) {
+            if (currentState.cartRestaurantId != null && currentState.cartRestaurantId !=  product.restaurant_id) {
                 currentState.copy(cartError = "Não pode adicionar produtos de restaurantes diferentes.")
             } else {
                 currentState.copy(
                     cartItems = currentState.cartItems + product,
-                    cartRestaurantId = productRestaurantId,
+                    cartRestaurantId =  product.restaurant_id,
                     cartMessage = "${product.name} adicionado à sacola."
                 )
             }
@@ -285,7 +282,7 @@ class SearchViewModel(
                 user_name = currentState.userProfile.name,
                 user_address = selectedAddress.address,
                 user_phone = currentState.userProfile.phone,
-                restaurant_id = restaurantId,
+                restaurant_id = restaurant.id,
                 restaurant_name = restaurant.name,
                 restaurant_image_url = restaurant.image_url,
                 restaurant_category = restaurant.category,
@@ -301,6 +298,20 @@ class SearchViewModel(
 
             _uiState.update {
                 it.copy(isLoading = false, checkoutUrl = sessionResponse.url)
+            }
+        }
+    }
+
+    private fun fechtRestaurant(id: Int) {
+        viewModelScope.launch {
+            apiClient.getCompanyById(id)?.let { companyResponse ->
+                val restaurant = Restaurant(
+                    id = companyResponse.id,
+                    name = companyResponse.name,
+                    category = companyResponse.category,
+                    image_url = companyResponse.imageUrl
+                )
+                _uiState.value.restaurant = restaurant
             }
         }
     }

@@ -71,4 +71,21 @@ class LeriaApiClient {
             emptyList()
         }
     }
+
+    suspend fun getCompanyById(idCompany: Int): CompanyResponse? {
+        return try {
+            val response = client.get("$baseUrl/companies/$idCompany")
+
+            if (response.status.value == 200) {
+                response.body()
+            } else {
+                val errorBody: String = response.body()
+                println("⚠️ Erro ${response.status.value} ao buscar empresa: $errorBody")
+                null
+            }
+        } catch (e: Exception) {
+            println("🚨 Falha crítica no GET: ${e.message}")
+            null
+        }
+    }
 }

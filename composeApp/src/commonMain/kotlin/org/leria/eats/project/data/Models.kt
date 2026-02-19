@@ -41,6 +41,16 @@ data class SearchResponse(
 )
 
 @Serializable
+data class CompanyResponse(
+    val id: Int,
+    val name: String,
+    val category: String,
+    @SerialName("image_url")
+    val imageUrl: String
+)
+
+
+@Serializable
 data class OrderRequest(
     val user_id: String,
     val user_name: String,
