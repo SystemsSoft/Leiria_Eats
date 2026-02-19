@@ -217,9 +217,9 @@ class SearchViewModel(
 
     fun removeFromCart(product: Product) {
         _uiState.update { currentState ->
-            val currentList = currentState.cartItems.toMutableList()
-            currentList.remove(product)
-            currentState.copy(cartItems = currentList)
+            val updatedCart = currentState.cartItems.toMutableList().apply { remove(product) }
+            val newRestaurantId = if (updatedCart.isEmpty()) null else currentState.cartRestaurantId
+            currentState.copy(cartItems = updatedCart, cartRestaurantId = newRestaurantId)
         }
     }
 
