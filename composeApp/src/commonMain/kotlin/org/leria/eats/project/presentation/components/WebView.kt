@@ -8,5 +8,6 @@ expect fun WebView(
     modifier: Modifier,
     url: String,
     onSuccess: (orderId: String) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onLoadingChanged: (Boolean) -> Unit = {}
 )
