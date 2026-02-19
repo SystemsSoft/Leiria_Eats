@@ -23,7 +23,8 @@ import androidx.compose.runtime.setValue
 fun CartScreen(
     cartItems: List<Product>,
     onRemoveItem: (Product) -> Unit,
-    onCheckout: () -> Unit
+    onCheckout: () -> Unit,
+    isLoading: Boolean = false
 ) {
     val total = cartItems.sumOf { it.price }
     var showConfirmDialog by remember { mutableStateOf(false) }
@@ -90,6 +91,7 @@ fun CartScreen(
 
                     Button(
                         onClick = { showConfirmDialog = true },
+                        enabled = !isLoading,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
@@ -97,7 +99,20 @@ fun CartScreen(
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         shape = MaterialTheme.shapes.medium
                     ) {
-                        Text("Finalizar Pedido", fontWeight = FontWeight.Bold)
+                        if (isLoading) {
+                            // show a small progress and text
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Preparando pagamento", fontWeight = FontWeight.Bold)
+                            }
+                        } else {
+                            Text("Finalizar Pedido", fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }

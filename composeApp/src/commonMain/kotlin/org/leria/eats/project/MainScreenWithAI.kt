@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -14,7 +15,9 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -51,7 +54,8 @@ fun MainScreenWithAI(
     // Use animated visibility to smoothly transition between main UI and WebView
     Box(modifier = Modifier.fillMaxSize()) {
         var webViewLoading by remember { mutableStateOf(false) }
-        // Note: system back handling for WebView should be implemented in Android-specific code if desired.
+
+        // Smooth transition for WebView (already present)
         AnimatedVisibility(
             visible = uiState.checkoutUrl != null,
             enter = fadeIn() + slideInHorizontally(initialOffsetX = { fullWidth -> fullWidth }),
@@ -67,10 +71,36 @@ fun MainScreenWithAI(
                 )
             }
         }
-        // Overlay progress indicator while WebView is loading
+
+        // Overlay progress indicator while WebView internal resources are loading
         if (webViewLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+        }
+
+        // New: show a full-screen animated loading overlay after user confirms (e.g., confirmCheckout)
+        // This covers the period between starting the checkout request and receiving the checkoutUrl
+        AnimatedVisibility(
+            // only show loading overlay when we're waiting for checkoutUrl and the address bottom sheet is not visible
+            visible = uiState.isLoading && uiState.checkoutUrl == null && !uiState.isAddressSheetVisible,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(56.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Preparando pagamento...", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                }
             }
         }
 
@@ -227,7 +257,8 @@ fun MainScreenWithAI(
                             CartScreen(
                                 cartItems = uiState.cartItems,
                                 onRemoveItem = { product -> viewModel.removeFromCart(product) },
-                                onCheckout = { viewModel.checkout() }
+                                onCheckout = { viewModel.checkout() },
+                                isLoading = uiState.isLoading
                             )
                         }
 
