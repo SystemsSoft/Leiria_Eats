@@ -272,6 +272,7 @@ fun MainScreenWithAI(
                         MainTab.CART -> {
                             CartScreen(
                                 cartItems = uiState.cartItems,
+                                restaurantSelected = uiState.selectedRestaurant,
                                 onRemoveItem = { product -> viewModel.removeFromCart(product) },
                                 onCheckout = { viewModel.checkout() },
                                 isLoading = uiState.isLoading

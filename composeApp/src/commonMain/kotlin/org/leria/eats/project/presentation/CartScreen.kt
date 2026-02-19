@@ -18,13 +18,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import org.leria.eats.project.data.Restaurant
 
 @Composable
 fun CartScreen(
     cartItems: List<Product>,
     onRemoveItem: (Product) -> Unit,
     onCheckout: () -> Unit,
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
+    restaurantSelected: Restaurant?
 ) {
     val total = cartItems.sumOf { it.price }
     var showConfirmDialog by remember { mutableStateOf(false) }
@@ -35,13 +37,25 @@ fun CartScreen(
             .background(MaterialTheme.colorScheme.background)
             .padding(24.dp)
     ) {
-        Text(
-            text = "Minha Sacola",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 16.dp).align(Alignment.CenterHorizontally)
-        )
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = restaurantSelected?.name?:"",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "A sua melhor opção para refeições deliciosas e rápidas.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                )
+            }
+        }
 
         if (cartItems.isEmpty()) {
             // Empty State
@@ -154,7 +168,17 @@ fun CartItemRow(product: Product, onRemove: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(product.name, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                Text(
+                    product.name,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    product.description,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp
+                )
                 Text(
                     "R$ ${product.price}0",
                     color = MaterialTheme.colorScheme.primary,
