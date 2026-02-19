@@ -182,7 +182,7 @@ fun HomeScreen(
                             }
                             item {
                                 LazyVerticalGrid(
-                                    columns = GridCells.Fixed(2),
+                                    columns = GridCells.Fixed(3),
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     verticalArrangement = Arrangement.spacedBy(16.dp),
                                     modifier = Modifier.heightIn(max = 1000.dp)
@@ -322,65 +322,78 @@ fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
 
 @Composable
 fun ProductGridItem(product: Product, onAddToCart: () -> Unit) {
-    Card(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column {
-            Box(modifier = Modifier.aspectRatio(1.5f)) {
-                KamelImage(
-                    resource = asyncPainterResource(data = product.image_url ?: ""),
-                    contentDescription = product.name,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    onLoading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) } },
-                    onFailure = { Box(Modifier.fillMaxSize().background(Color.DarkGray)) }
-                )
-            }
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+        Card(
+            modifier = Modifier
+                .aspectRatio(1f) // Changed from 1.5f to 1f to match RestaurantGridItem
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            elevation = CardDefaults.cardElevation(2.dp)
+        ) {
+            KamelImage(
+                resource = asyncPainterResource(data = product.image_url ?: ""),
+                contentDescription = product.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                onLoading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) } },
+                onFailure = { Box(Modifier.fillMaxSize().background(Color.DarkGray)) }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text(
+                text = product.name,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 12.sp, // Changed from 14.sp
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = product.description,
+                fontSize = 10.sp, // Changed from 12.sp
+                maxLines = 1, // Changed from 2
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f) // Changed from onSurface
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = product.name,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    text = formatCurrency(product.price),
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 12.sp // Changed from 14.sp
                 )
-                Text(
-                    text = product.description,
-                    fontSize = 12.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                IconButton(
+                    onClick = onAddToCart,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
                 ) {
-                    Text(
-                        text = formatCurrency(product.price),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 14.sp
+                    Icon(
+                        imageVector = Icons.Default.AddShoppingCart,
+                        contentDescription = "Adicionar ao carrinho",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
                     )
-                    IconButton(
-                        onClick = onAddToCart,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AddShoppingCart,
-                            contentDescription = "Adicionar ao carrinho",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
                 }
             }
         }
