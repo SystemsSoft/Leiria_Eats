@@ -4,11 +4,13 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
@@ -16,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -29,6 +32,7 @@ import io.kamel.image.asyncPainterResource
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
+import org.leria.eats.project.presentation.util.formatCurrency
 
 @Composable
 fun HomeScreen(
@@ -56,7 +60,7 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) {
-        if (uiState.restaurants.isEmpty()) {
+        if (uiState.restaurantResults.isEmpty() && uiState.productResults.isEmpty()) {
             onTextChange("ver todos")
             onSendClick()
         }
@@ -66,7 +70,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 4.dp), // reduzida a padding vertical para aproximar o cabeçalho do topo
+            .padding(horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
@@ -79,11 +83,9 @@ fun HomeScreen(
                 resource = asyncPainterResource(data = "https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo%3Dpato.png"),
                 contentDescription = "Logo",
                 modifier = Modifier
-                    // menor para reduzir espaço abaixo do logo
                     .size(180.dp)
                     .offset(
                         x = (80 * (1 - animProgress.value)).dp,
-                        // reduzido o deslocamento vertical da animação para evitar grande lacuna
                         y = ((-10) * (1 - animProgress.value)).dp
                     )
                     .graphicsLayer {
@@ -95,19 +97,16 @@ fun HomeScreen(
             )
         }
 
-        // Resposta da IA (Destaque)
         Text(
             text = if (uiState.selectedRestaurant == null) uiState.aiReply else "Cardápio de ${uiState.selectedRestaurant?.name}",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             textAlign = TextAlign.Center,
             modifier = Modifier
-                // remover espaçamento superior para ficar imediatamente abaixo do logo
                 .padding(top = 0.dp)
                 .fillMaxWidth()
         )
-        
-        // --- CONTEÚDO ---
+
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (uiState.selectedRestaurant != null) {
                 RestaurantDetailScreen(
@@ -126,37 +125,75 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.align(Alignment.Center)
                     )
-                } else if (uiState.restaurants.isNotEmpty()) {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "Sugestões encontradas:",
-                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                "Limpar",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 12.sp,
-                                modifier = Modifier.clickable { onClearSearch() }
-                            )
+                } else if (uiState.restaurantResults.isNotEmpty() || uiState.productResults.isNotEmpty()) {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "Sugestões encontradas:",
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    "Limpar",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.clickable { onClearSearch() }
+                                )
+                            }
                         }
 
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(3),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(uiState.restaurants) { restaurant ->
-                                RestaurantGridItem(
-                                    restaurant = restaurant,
-                                    onClick = { onRestaurantClick(restaurant) }
+                        if (uiState.restaurantResults.isNotEmpty()) {
+                            item {
+                                Text(
+                                    "Restaurantes",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 12.dp)
                                 )
+                            }
+                            item {
+                                LazyVerticalGrid(
+                                    columns = GridCells.Fixed(3),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                                    modifier = Modifier.heightIn(max = 1000.dp)
+                                ) {
+                                    items(uiState.restaurantResults) { restaurant ->
+                                        RestaurantGridItem(
+                                            restaurant = restaurant,
+                                            onClick = { onRestaurantClick(restaurant) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        if (uiState.productResults.isNotEmpty()) {
+                             item {
+                                Text(
+                                    "Produtos",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 12.dp)
+                                )
+                            }
+                            item {
+                                LazyVerticalGrid(
+                                    columns = GridCells.Fixed(2),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                                    modifier = Modifier.heightIn(max = 1000.dp)
+                                ) {
+                                    items(uiState.productResults) { product ->
+                                        ProductGridItem(
+                                            product = product,
+                                            onAddToCart = { onAddToCart(product) }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -166,7 +203,6 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // --- CAMPO DE TEXTO ---
         if (uiState.selectedRestaurant == null) {
             OutlinedTextField(
                 value = uiState.textInput,
@@ -280,6 +316,73 @@ fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+        }
+    }
+}
+
+@Composable
+fun ProductGridItem(product: Product, onAddToCart: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column {
+            Box(modifier = Modifier.aspectRatio(1.5f)) {
+                KamelImage(
+                    resource = asyncPainterResource(data = product.image_url ?: ""),
+                    contentDescription = product.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    onLoading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) } },
+                    onFailure = { Box(Modifier.fillMaxSize().background(Color.DarkGray)) }
+                )
+            }
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = product.name,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = product.description,
+                    fontSize = 12.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = formatCurrency(product.price),
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 14.sp
+                    )
+                    IconButton(
+                        onClick = onAddToCart,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AddShoppingCart,
+                            contentDescription = "Adicionar ao carrinho",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }

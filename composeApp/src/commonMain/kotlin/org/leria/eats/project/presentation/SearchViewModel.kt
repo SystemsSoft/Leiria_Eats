@@ -153,7 +153,13 @@ class SearchViewModel(
 
     fun clearSearch() {
         _uiState.update {
-            it.copy(restaurants = emptyList(), aiReply = "O que lhe apetece hoje?", textInput = "", error = null)
+            it.copy(
+                restaurantResults = emptyList(),
+                productResults = emptyList(),
+                aiReply = "O que lhe apetece hoje?",
+                textInput = "",
+                error = null
+            )
         }
     }
 
@@ -169,7 +175,13 @@ class SearchViewModel(
             try {
                 val response = apiClient.searchRestaurants(currentQuery)
                 _uiState.update {
-                    it.copy(isLoading = false, aiReply = response.reply, restaurants = response.restaurantResults, textInput = "")
+                    it.copy(
+                        isLoading = false,
+                        aiReply = response.reply,
+                        restaurantResults = response.restaurantResults,
+                        productResults = response.productResults,
+                        textInput = ""
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Erro ao conectar: ${e.message}") }
@@ -250,7 +262,7 @@ class SearchViewModel(
             _uiState.update { it.copy(isLoading = false, error = "Erro: ID do restaurante não encontrado.") }
             return
         }
-        val restaurant = uiState.value.restaurants.find { it.id == restaurantId }
+        val restaurant = uiState.value.restaurantResults.find { it.id == restaurantId }
         if (restaurant == null) {
             _uiState.update { it.copy(isLoading = false, error = "Erro: Restaurante não encontrado.") }
             return
