@@ -20,7 +20,7 @@ val sharedModule = module {
 
     single { ProfileRepository(get()) }
 
-    viewModel { SearchViewModel(get(), get(), get()) }
+    viewModel { SearchViewModel(get(), get()) }
 
 }
 

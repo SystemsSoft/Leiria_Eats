@@ -11,12 +11,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.leria.eats.project.data.*
-import org.leria.eats.project.service.LocationService
 
 class SearchViewModel(
     private val apiClient: LeriaApiClient,
     private val profileRepository: ProfileRepository,
-    private val locationService: LocationService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -40,19 +38,6 @@ class SearchViewModel(
         observeFavoriteOrders()
     }
 
-    fun onLocationClicked() {
-        viewModelScope.launch {
-            val addressString = locationService.getCurrentAddress()
-            if (!addressString.isNullOrBlank()) {
-                val currentUserProfile = _uiState.value.userProfile
-                val newAddress = Address("Endereço Atual", addressString)
-                 val updatedAddresses = currentUserProfile.addresses.toMutableList().apply {
-                    add(newAddress)
-                }
-                updateUserProfile(currentUserProfile.name, currentUserProfile.phone, updatedAddresses)
-            }
-        }
-    }
 
     private fun observeFavoriteOrders() {
         viewModelScope.launch {
