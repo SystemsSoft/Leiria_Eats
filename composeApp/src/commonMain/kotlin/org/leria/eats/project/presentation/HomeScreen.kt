@@ -128,89 +128,110 @@ fun HomeScreen(
                         modifier = Modifier.align(Alignment.Center)
                     )
                 } else if (uiState.restaurantResults.isNotEmpty() || uiState.productResults.isNotEmpty()) {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "Sugestões encontradas:",
-                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                                    fontSize = 14.sp
-                                )
-
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        "Ver todos",
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontSize = 12.sp,
-                                        modifier = Modifier
-                                            .clickable {
-                                                if (!uiState.isLoading) {
-                                                    onTextChange("ver todos")
-                                                    onSendClick()
-                                                }
-                                            }
-                                            .padding(end = 8.dp)
-                                    )
-
-                                    Text(
-                                        "Limpar",
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontSize = 12.sp,
-                                        modifier = Modifier.clickable { onClearSearch() }
-                                    )
-                                }
-                            }
-                        }
-
-                        if (uiState.restaurantResults.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 12.dp)
+                            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .fillMaxSize()
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 8.dp)
+                        ) {
                             item {
-                                Text(
-                                    "Restaurantes",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 12.dp)
-                                )
-                            }
-                            item {
-                                LazyVerticalGrid(
-                                    columns = GridCells.Fixed(3),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                                    modifier = Modifier.heightIn(max = 1000.dp)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    items(uiState.restaurantResults) { restaurant ->
-                                        RestaurantGridItem(
-                                            restaurant = restaurant,
-                                            onClick = { onRestaurantClick(restaurant) }
+                                    Text(
+                                        "Sugestões encontradas:",
+                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                        fontSize = 14.sp
+                                    )
+
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            "Ver todos",
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontSize = 12.sp,
+                                            modifier = Modifier
+                                                .clickable {
+                                                    if (!uiState.isLoading) {
+                                                        onTextChange("ver todos")
+                                                        onSendClick()
+                                                    }
+                                                }
+                                                .padding(end = 8.dp)
+                                        )
+
+                                        Text(
+                                            "Limpar",
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontSize = 12.sp,
+                                            modifier = Modifier.clickable { onClearSearch() }
                                         )
                                     }
                                 }
                             }
-                        }
 
-                        if (uiState.productResults.isNotEmpty()) {
-                             item {
-                                Text(
-                                    "Produtos",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 12.dp)
-                                )
-                            }
-                            item {
-                                LazyVerticalGrid(
-                                    columns = GridCells.Fixed(3),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                                    modifier = Modifier.heightIn(max = 1000.dp)
-                                ) {
-                                    items(uiState.productResults) { product ->
-                                        ProductGridItem(
-                                            product = product,
-                                            onAddToCart = { onAddToCart(product) }
+                            if (uiState.restaurantResults.isNotEmpty()) {
+                                item {
+                                    Text(
+                                        "Restaurantes",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(
+                                            start = 4.dp,
+                                            top = 8.dp,
+                                            bottom = 12.dp
                                         )
+                                    )
+                                }
+                                item {
+                                    LazyVerticalGrid(
+                                        columns = GridCells.Fixed(3),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                                        modifier = Modifier.heightIn(max = 1000.dp)
+                                    ) {
+                                        items(uiState.restaurantResults) { restaurant ->
+                                            RestaurantGridItem(
+                                                restaurant = restaurant,
+                                                onClick = { onRestaurantClick(restaurant) }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (uiState.productResults.isNotEmpty()) {
+                                item {
+                                    Text(
+                                        "Produtos",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(
+                                            start = 4.dp,
+                                            top = 16.dp,
+                                            bottom = 12.dp
+                                        )
+                                    )
+                                }
+                                item {
+                                    LazyVerticalGrid(
+                                        columns = GridCells.Fixed(3),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                                        modifier = Modifier.heightIn(max = 1000.dp)
+                                    ) {
+                                        items(uiState.productResults) { product ->
+                                            ProductGridItem(
+                                                product = product,
+                                                onAddToCart = { onAddToCart(product) }
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -220,7 +241,7 @@ fun HomeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         if (uiState.selectedRestaurant == null) {
             OutlinedTextField(
