@@ -59,6 +59,8 @@ fun HomeScreen(
         )
     }
 
+    LaunchedEffect(permissionStatus) { /* no-op: keep compiler happy */ }
+
     LaunchedEffect(Unit) {
         if (uiState.restaurantResults.isEmpty() && uiState.productResults.isEmpty()) {
             onTextChange("ver todos")
@@ -98,7 +100,7 @@ fun HomeScreen(
         }
 
         Text(
-            text = if (uiState.selectedRestaurant == null) uiState.aiReply else "Cardápio de ${uiState.selectedRestaurant?.name}",
+            text = if (uiState.selectedRestaurant == null) uiState.aiReply else "Cardápio de ${uiState.selectedRestaurant.name}",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             textAlign = TextAlign.Center,
@@ -110,7 +112,7 @@ fun HomeScreen(
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (uiState.selectedRestaurant != null) {
                 RestaurantDetailScreen(
-                    restaurant = uiState.selectedRestaurant!!,
+                    restaurant = uiState.selectedRestaurant,
                     cartItems = uiState.cartItems,
                     selectedCategory = uiState.selectedCategory,
                     onCategorySelect = onCategorySelect,
@@ -138,12 +140,29 @@ fun HomeScreen(
                                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                                     fontSize = 14.sp
                                 )
-                                Text(
-                                    "Limpar",
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontSize = 12.sp,
-                                    modifier = Modifier.clickable { onClearSearch() }
-                                )
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        "Ver todos",
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier
+                                            .clickable {
+                                                if (!uiState.isLoading) {
+                                                    onTextChange("ver todos")
+                                                    onSendClick()
+                                                }
+                                            }
+                                            .padding(end = 8.dp)
+                                    )
+
+                                    Text(
+                                        "Limpar",
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.clickable { onClearSearch() }
+                                    )
+                                }
                             }
                         }
 
@@ -208,7 +227,7 @@ fun HomeScreen(
                 value = uiState.textInput,
                 onValueChange = onTextChange,
                 label = { Text(if (isListening) "Ouvindo..." else "Peça com sua voz ou digite...", color = MaterialTheme.colorScheme.onSurface.copy(0.6f)) },
-                placeholder = { Text(if (isListening) "Ouvindo..." else "Ex: Quero um hambúrguer com fritas", color = MaterialTheme.colorScheme.onSurface.copy(0.4f)) },
+                placeholder = { Text(if (isListening) "Ouvindo..." else "Ex: Pizza", color = MaterialTheme.colorScheme.onSurface.copy(0.4f)) },
                 enabled = !uiState.isLoading,
                 singleLine = true,
                 shape = RoundedCornerShape(24.dp),
@@ -227,7 +246,7 @@ fun HomeScreen(
                                 enabled = !uiState.isLoading
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Send,
+                                    imageVector = Icons.Filled.Send,
                                     contentDescription = "Enviar",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
