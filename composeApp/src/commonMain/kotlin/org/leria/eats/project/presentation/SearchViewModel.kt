@@ -195,14 +195,15 @@ class SearchViewModel(
         viewModelScope.launch {
             val company = apiClient.getCompanyById(id)
             _uiState.update {
-                if(it.selectedRestaurant == null) {
+                if (it.selectedRestaurant == null) {
                     it.copy(
-                        restaurant =   Restaurant(
-                            id = company?.id?:0,
-                    name = company?.name?:"",
-                    category = company?.category?:"",
-                    image_url = company?.imageUrl?:""
-                    )
+                        selectedRestaurant = Restaurant(
+                            id = company?.id ?: 0,
+                            name = company?.name ?: "",
+                            category = company?.category ?: "",
+                            image_url = company?.imageUrl ?: "",
+                            products = company?.products ?: listOf()
+                        )
                     )
                 } else {
                     it.copy()
