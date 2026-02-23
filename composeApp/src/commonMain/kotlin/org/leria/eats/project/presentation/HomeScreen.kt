@@ -379,7 +379,8 @@ fun ProductGridItem(product: Product, onAddToCart: () -> Unit) {
                 contentDescription = product.name,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
-                onLoading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) } },
+                onLoading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) } },
                 onFailure = { Box(Modifier.fillMaxSize().background(Color.DarkGray)) }
             )
         }
