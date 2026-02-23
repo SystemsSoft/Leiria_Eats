@@ -403,8 +403,8 @@ fun ProductGridItem(product: Product, onAddToCart: () -> Unit) {
 
             Text(
                 text = product.description,
-                fontSize = 10.sp, // Changed from 12.sp
-                maxLines = 1, // Changed from 2
+                fontSize = 10.sp,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f) // Changed from onSurface
             )
