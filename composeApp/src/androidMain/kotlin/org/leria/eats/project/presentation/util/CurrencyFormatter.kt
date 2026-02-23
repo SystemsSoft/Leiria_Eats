@@ -4,5 +4,6 @@ import java.text.NumberFormat
 import java.util.Locale
 
 actual fun formatCurrency(value: Double): String {
-    return NumberFormat.getCurrencyInstance(Locale("pt", "BR")).format(value)
+    // Use Portuguese (Portugal) locale so the currency symbol becomes Euro ("€")
+    return NumberFormat.getCurrencyInstance(Locale.forLanguageTag("pt-PT")).format(value)
 }

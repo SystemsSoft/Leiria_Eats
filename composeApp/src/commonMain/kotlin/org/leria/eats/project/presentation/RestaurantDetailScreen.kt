@@ -159,7 +159,7 @@ fun RestaurantDetailScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text("Ver Sacola ($totalCount)", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
-                            Text("Total: R$ ${totalParams}0", color = MaterialTheme.colorScheme.onPrimary.copy(0.7f), style = MaterialTheme.typography.bodySmall)
+                            Text("Total: € ${totalParams}0", color = MaterialTheme.colorScheme.onPrimary.copy(0.7f), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     Text("Finalizar", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
@@ -223,7 +223,7 @@ fun ProductItemWithCounter(
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "R$ ${product.price}0",
+                        text = "€ ${product.price}0",
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp

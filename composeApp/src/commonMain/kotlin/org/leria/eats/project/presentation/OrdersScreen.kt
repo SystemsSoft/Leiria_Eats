@@ -167,7 +167,7 @@ fun OrderDetailView(order: Order, onBack: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                         Text(
-                            text = "R$ ${item.price}0",
+                            text = "€ ${item.price}0",
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -188,7 +188,7 @@ fun OrderDetailView(order: Order, onBack: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Total", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text("R$ ${order.total}0", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text("€ ${order.total}0", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             }
         }
     }
@@ -280,7 +280,7 @@ fun OrderItemCard(
                 }
 
                 Text(
-                    text = "R$ ${order.total}0",
+                    text = "€ ${order.total}0",
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp

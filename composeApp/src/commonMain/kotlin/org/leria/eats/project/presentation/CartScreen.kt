@@ -84,7 +84,7 @@ fun CartScreen(
                     ) {
                         Text("Total do Pedido", color = MaterialTheme.colorScheme.onSurface)
                         Text(
-                            "R$ ${total}0",
+                            "€ ${total}0",
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
@@ -182,7 +182,7 @@ fun CartItemRow(product: Product, onRemove: () -> Unit) {
                     fontSize = 12.sp
                 )
                 Text(
-                    "R$ ${product.price}0",
+                    "€ ${product.price}0",
                     color = MaterialTheme.colorScheme.primary,
                     fontSize = 14.sp
                 )
