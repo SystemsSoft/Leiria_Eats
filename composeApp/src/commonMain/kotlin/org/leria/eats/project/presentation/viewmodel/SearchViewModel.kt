@@ -1,5 +1,4 @@
-package org.leria.eats.project.presentation
-
+package org.leria.eats.project.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,8 +9,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.leria.eats.project.data.*
+import org.leria.eats.project.data.Address
+import org.leria.eats.project.data.LeriaApiClient
+import org.leria.eats.project.data.Order
+import org.leria.eats.project.data.OrderItemRequest
+import org.leria.eats.project.data.OrderRequest
+import org.leria.eats.project.data.Product
+import org.leria.eats.project.data.ProfileRepository
 import org.leria.eats.project.data.Restaurant
+import org.leria.eats.project.presentation.MainTab
+import org.leria.eats.project.presentation.SearchUiState
 
 class SearchViewModel(
     private val apiClient: LeriaApiClient,

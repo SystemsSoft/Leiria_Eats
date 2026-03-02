@@ -9,7 +9,7 @@ import org.koin.dsl.module
 import org.leria.eats.project.data.LeriaApiClient
 import org.leria.eats.project.data.ProfileRepository
 import org.leria.eats.project.data.getDataStore
-import org.leria.eats.project.presentation.SearchViewModel
+import org.leria.eats.project.presentation.viewmodel.SearchViewModel
 
 expect val platformModule: Module
 

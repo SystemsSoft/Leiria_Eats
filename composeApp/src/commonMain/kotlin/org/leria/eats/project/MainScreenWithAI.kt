@@ -25,6 +25,7 @@ import org.leria.eats.project.permissions.PermissionManager
 import org.leria.eats.project.permissions.PermissionStatus
 import org.leria.eats.project.presentation.*
 import org.leria.eats.project.presentation.components.WebView
+import org.leria.eats.project.presentation.viewmodel.SearchViewModel
 import org.leria.eats.project.service.LocationService
 import org.leria.eats.project.voice.VoiceRecognizer
 
