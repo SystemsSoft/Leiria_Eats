@@ -6,7 +6,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
@@ -17,7 +19,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -28,6 +35,16 @@ import org.leria.eats.project.presentation.components.WebView
 import org.leria.eats.project.presentation.viewmodel.SearchViewModel
 import org.leria.eats.project.service.LocationService
 import org.leria.eats.project.voice.VoiceRecognizer
+
+// ─── Paleta KOMAAI ────────────────────────────────────────────────────────────
+private val KomaDeepBg   = Color(0xFF061510)
+private val KomaSurface  = Color(0xFF0A2218)
+private val KomaCard     = Color(0xFF0E2E20)
+private val KomaGold     = Color(0xFFFFC107)
+private val KomaGreen    = Color(0xFF4ADE80)
+private val KomaAmber    = Color(0xFFFFD54F)
+private val KomaText     = Color(0xFFF0FDF4)
+private val KomaMuted    = Color(0xFF6EE7A0)
 
 @Composable
 fun MainScreenWithAI(
@@ -141,94 +158,157 @@ fun MainScreenWithAI(
             Scaffold(
                 snackbarHost = { SnackbarHost(snackbarHostState) },
                 bottomBar = {
-                    NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    ) {
-                        val selectedColor = MaterialTheme.colorScheme.primary
-                        val unselectedColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-
-                        NavigationBarItem(
-                            icon = { Icon(Icons.Default.Home, contentDescription = "Início") },
-                            label = { Text("Início") },
-                            selected = uiState.currentTab == MainTab.HOME,
-                            onClick = { viewModel.onTabSelected(MainTab.HOME) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                                selectedTextColor = selectedColor,
-                                indicatorColor = selectedColor,
-                                unselectedIconColor = unselectedColor,
-                                unselectedTextColor = unselectedColor
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(KomaDeepBg)
+                            .border(
+                                width = 1.dp,
+                                brush = Brush.horizontalGradient(
+                                    listOf(
+                                        KomaGold.copy(alpha = 0.0f),
+                                        KomaGold.copy(alpha = 0.35f),
+                                        KomaGreen.copy(alpha = 0.25f),
+                                        KomaGold.copy(alpha = 0.0f)
+                                    )
+                                ),
+                                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
                             )
-                        )
+                            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    ) {
+                        NavigationBar(
+                            containerColor = Color.Transparent,
+                            contentColor = KomaMuted,
+                            tonalElevation = 0.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val selectedColor = KomaGold
+                            val unselectedColor = KomaMuted.copy(alpha = 0.55f)
 
-                        NavigationBarItem(
-                            icon = {
-                                BadgedBox(
-                                    badge = {
-                                        if (uiState.cartCount > 0) {
-                                            Badge(containerColor = selectedColor, contentColor = MaterialTheme.colorScheme.onPrimary) {
-                                                Text(uiState.cartCount.toString())
+                            // ── Início ────────────────────────────────────────
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Default.Home, contentDescription = "Início") },
+                                label = {
+                                    Text(
+                                        "Início",
+                                        fontSize = 10.sp,
+                                        fontWeight = if (uiState.currentTab == MainTab.HOME) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                selected = uiState.currentTab == MainTab.HOME,
+                                onClick = { viewModel.onTabSelected(MainTab.HOME) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = KomaDeepBg,
+                                    selectedTextColor = selectedColor,
+                                    indicatorColor = KomaGold,
+                                    unselectedIconColor = unselectedColor,
+                                    unselectedTextColor = unselectedColor
+                                )
+                            )
+
+                            // ── Sacola ────────────────────────────────────────
+                            NavigationBarItem(
+                                icon = {
+                                    BadgedBox(
+                                        badge = {
+                                            if (uiState.cartCount > 0) {
+                                                Badge(
+                                                    containerColor = KomaGreen,
+                                                    contentColor = KomaDeepBg
+                                                ) {
+                                                    Text(
+                                                        uiState.cartCount.toString(),
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 9.sp
+                                                    )
+                                                }
                                             }
                                         }
+                                    ) {
+                                        Icon(Icons.Default.ShoppingCart, contentDescription = "Sacola")
                                     }
-                                ) {
-                                    Icon(Icons.Default.ShoppingCart, contentDescription = "Sacola")
-                                }
-                            },
-                            label = { Text("Sacola") },
-                            selected = uiState.currentTab == MainTab.CART,
-                            onClick = { viewModel.onTabSelected(MainTab.CART) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                                selectedTextColor = selectedColor,
-                                indicatorColor = selectedColor,
-                                unselectedIconColor = unselectedColor,
-                                unselectedTextColor = unselectedColor
+                                },
+                                label = {
+                                    Text(
+                                        "Sacola",
+                                        fontSize = 10.sp,
+                                        fontWeight = if (uiState.currentTab == MainTab.CART) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                selected = uiState.currentTab == MainTab.CART,
+                                onClick = { viewModel.onTabSelected(MainTab.CART) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = KomaDeepBg,
+                                    selectedTextColor = selectedColor,
+                                    indicatorColor = KomaGold,
+                                    unselectedIconColor = unselectedColor,
+                                    unselectedTextColor = unselectedColor
+                                )
                             )
-                        )
 
-                        NavigationBarItem(
-                            icon = { Icon(Icons.Default.List, contentDescription = "Pedidos") },
-                            label = { Text("Pedidos") },
-                            selected = uiState.currentTab == MainTab.ORDERS,
-                            onClick = { viewModel.onTabSelected(MainTab.ORDERS) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                                selectedTextColor = selectedColor,
-                                indicatorColor = selectedColor,
-                                unselectedIconColor = unselectedColor,
-                                unselectedTextColor = unselectedColor
+                            // ── Pedidos ───────────────────────────────────────
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Default.List, contentDescription = "Pedidos") },
+                                label = {
+                                    Text(
+                                        "Pedidos",
+                                        fontSize = 10.sp,
+                                        fontWeight = if (uiState.currentTab == MainTab.ORDERS) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                selected = uiState.currentTab == MainTab.ORDERS,
+                                onClick = { viewModel.onTabSelected(MainTab.ORDERS) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = KomaDeepBg,
+                                    selectedTextColor = selectedColor,
+                                    indicatorColor = KomaGold,
+                                    unselectedIconColor = unselectedColor,
+                                    unselectedTextColor = unselectedColor
+                                )
                             )
-                        )
 
-                         NavigationBarItem(
-                            icon = { Icon(Icons.Default.Star, contentDescription = "Favoritos") },
-                            label = { Text("Favoritos") },
-                            selected = uiState.currentTab == MainTab.FAVORITES,
-                            onClick = { viewModel.onTabSelected(MainTab.FAVORITES) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                                selectedTextColor = selectedColor,
-                                indicatorColor = selectedColor,
-                                unselectedIconColor = unselectedColor,
-                                unselectedTextColor = unselectedColor
+                            // ── Favoritos ─────────────────────────────────────
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Default.Star, contentDescription = "Favoritos") },
+                                label = {
+                                    Text(
+                                        "Favoritos",
+                                        fontSize = 10.sp,
+                                        fontWeight = if (uiState.currentTab == MainTab.FAVORITES) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                selected = uiState.currentTab == MainTab.FAVORITES,
+                                onClick = { viewModel.onTabSelected(MainTab.FAVORITES) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = KomaDeepBg,
+                                    selectedTextColor = selectedColor,
+                                    indicatorColor = KomaGold,
+                                    unselectedIconColor = unselectedColor,
+                                    unselectedTextColor = unselectedColor
+                                )
                             )
-                        )
 
-                        NavigationBarItem(
-                            icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
-                            label = { Text("Perfil") },
-                            selected = uiState.currentTab == MainTab.PROFILE,
-                            onClick = { viewModel.onTabSelected(MainTab.PROFILE) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                                selectedTextColor = selectedColor,
-                                indicatorColor = selectedColor,
-                                unselectedIconColor = unselectedColor,
-                                unselectedTextColor = unselectedColor
+                            // ── Perfil ────────────────────────────────────────
+                            NavigationBarItem(
+                                icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
+                                label = {
+                                    Text(
+                                        "Perfil",
+                                        fontSize = 10.sp,
+                                        fontWeight = if (uiState.currentTab == MainTab.PROFILE) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                selected = uiState.currentTab == MainTab.PROFILE,
+                                onClick = { viewModel.onTabSelected(MainTab.PROFILE) },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = KomaDeepBg,
+                                    selectedTextColor = selectedColor,
+                                    indicatorColor = KomaGold,
+                                    unselectedIconColor = unselectedColor,
+                                    unselectedTextColor = unselectedColor
+                                )
                             )
-                        )
+                        }
                     }
                 }
             ) { paddingValues ->
@@ -264,10 +344,13 @@ fun MainScreenWithAI(
                                 onRestaurantClick = { restaurant -> viewModel.selectRestaurant(restaurant) },
                                 onCategorySelect = { category -> viewModel.selectCategory(category) },
                                 onClearSelection = { viewModel.clearSelection() },
+                                onClearSelectionAndCart = { viewModel.clearSelectionAndCart() },
                                 onAddToCart = { product -> viewModel.addToCart(product) },
                                 onRemoveFromCart = { product -> viewModel.removeFromCart(product) },
                                 onViewCart = { viewModel.onTabSelected(MainTab.CART) },
-                                onClearSearch = { viewModel.clearSearch() }
+                                onClearSearch = { viewModel.clearSearch() },
+                                onSearchTypeSelected = { showRestaurants -> viewModel.onSearchTypeSelected(showRestaurants) },
+                                onDismissSearchTypeSheet = { viewModel.dismissSearchTypeSheet() }
                             )
                         }
                         MainTab.CART -> {
@@ -276,7 +359,11 @@ fun MainScreenWithAI(
                                 restaurantSelected = uiState.selectedRestaurant,
                                 onRemoveItem = { product -> viewModel.removeFromCart(product) },
                                 onCheckout = { viewModel.checkout() },
-                                isLoading = uiState.isLoading
+                                isLoading = uiState.isLoading,
+                                onGoToRestaurant = { restaurant ->
+                                    viewModel.selectRestaurant(restaurant)
+                                    viewModel.onTabSelected(MainTab.HOME)
+                                }
                             )
                         }
 

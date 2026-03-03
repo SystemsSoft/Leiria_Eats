@@ -1,29 +1,48 @@
 package org.leria.eats.project.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import org.leria.eats.project.data.Product
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import org.leria.eats.project.data.Restaurant
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
+import org.leria.eats.project.data.Product
+import org.leria.eats.project.data.Restaurant
+import org.leria.eats.project.presentation.util.formatCurrency
+
+// ─── Paleta KOMAAI (shared) ───────────────────────────────────────────────────
+private val CartDeepBg    = Color(0xFF061510)   // Deep forest black-green
+private val CartSurface   = Color(0xFF0A2218)   // Dark teal surface
+private val CartCard      = Color(0xFF0E2E20)   // Card teal
+private val CartPrimary   = Color(0xFFFFC107)   // KOMAAI Gold
+private val CartSecondary = Color(0xFF4ADE80)   // Modern lime-green
+private val CartAccent    = Color(0xFFFFD54F)   // Warm amber accent
+private val CartText      = Color(0xFFF0FDF4)   // Near-white green tint
+private val CartMuted     = Color(0xFF6EE7A0)   // Muted green
 
 @Composable
 fun CartScreen(
@@ -31,205 +50,328 @@ fun CartScreen(
     onRemoveItem: (Product) -> Unit,
     onCheckout: () -> Unit,
     isLoading: Boolean = false,
-    restaurantSelected: Restaurant?
+    restaurantSelected: Restaurant?,
+    onGoToRestaurant: ((Restaurant) -> Unit)? = null
 ) {
     val total = cartItems.sumOf { it.price }
     var showConfirmDialog by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
-            .padding(24.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CartDeepBg)
     ) {
-        restaurantSelected?.let { restaurant ->
-            RestaurantHeader(restaurant = restaurant, modifier = Modifier.padding(bottom = 16.dp))
-        }
+        // Ambient glow top
+        Box(
+            modifier = Modifier
+                .size(260.dp)
+                .offset(x = (-60).dp, y = (-40).dp)
+                .background(CartPrimary.copy(alpha = 0.07f), CircleShape)
+        )
 
-        if (cartItems.isEmpty()) {
-            // Empty State
-            Box(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp)
+                .padding(top = 24.dp, bottom = 16.dp)
+        ) {
+            // ── Header ────────────────────────────────────────────────────
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 20.dp)
             ) {
-                Text(
-                    "Sua sacola está vazia 😔",
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                    fontSize = 18.sp
-                )
-            }
-        } else {
-            // Item List
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(cartItems) { product ->
-                    CartItemRow(product, onRemove = { onRemoveItem(product) })
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            Brush.radialGradient(listOf(CartPrimary.copy(alpha = 0.3f), Color.Transparent)),
+                            CircleShape
+                        )
+                        .border(1.dp, CartPrimary.copy(alpha = 0.4f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.ShoppingBag, contentDescription = null, tint = CartPrimary, modifier = Modifier.size(20.dp))
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text("A minha sacola", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = CartText)
+                    Text(
+                        if (cartItems.isEmpty()) "Vazia" else "${cartItems.size} ${if (cartItems.size == 1) "item" else "itens"}",
+                        fontSize = 12.sp, color = CartMuted
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // ── Restaurant header ─────────────────────────────────────────
+            restaurantSelected?.let { restaurant ->
+                RestaurantHeader(
+                    restaurant = restaurant,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                    showGoToRestaurant = cartItems.isNotEmpty() && onGoToRestaurant != null,
+                    onGoToRestaurant = { onGoToRestaurant?.invoke(restaurant) }
+                )
+            }
 
-            // Order Summary
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(
-                        alpha = 0.5f
-                    )
-                ), modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Total do Pedido", color = MaterialTheme.colorScheme.onSurface)
-                        Text(
-                            "€ ${total}0",
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
+            if (cartItems.isEmpty()) {
+                // ── Empty state ───────────────────────────────────────────
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .background(CartCard, CircleShape)
+                                .border(1.dp, CartPrimary.copy(alpha = 0.2f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.ShoppingBag, contentDescription = null, tint = CartMuted, modifier = Modifier.size(32.dp))
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("A sua sacola está vazia", color = CartText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text("Pesquise um prato ou restaurante", color = CartMuted, fontSize = 13.sp)
                     }
+                }
+            } else {
+                // ── Item list ─────────────────────────────────────────────
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(cartItems) { product ->
+                        CartItemRow(product, onRemove = { onRemoveItem(product) })
+                    }
+                }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                    Button(
-                        onClick = { showConfirmDialog = true },
-                        enabled = !isLoading,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        ),
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        if (isLoading) {
-                            // show a small progress and text
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    strokeWidth = 2.dp,
-                                    modifier = Modifier.size(18.dp)
+                // ── Order summary ─────────────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(CartCard)
+                        .border(1.dp, CartPrimary.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
+                        .padding(20.dp)
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Total do Pedido", color = CartMuted, fontSize = 14.sp)
+                            Text(
+                                formatCurrency(total),
+                                color = CartSecondary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Checkout button
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(
+                                    if (!isLoading)
+                                        Brush.horizontalGradient(listOf(CartPrimary, Color(0xFFE65100)))
+                                    else
+                                        Brush.horizontalGradient(listOf(CartCard, CartCard))
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Preparando pagamento", fontWeight = FontWeight.Bold)
+                                .clickable(enabled = !isLoading) { showConfirmDialog = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isLoading) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(color = CartPrimary, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text("Preparando pagamento…", color = CartMuted, fontWeight = FontWeight.SemiBold)
+                                }
+                            } else {
+                                Text("Finalizar Pedido ✦", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             }
-                        } else {
-                            Text("Finalizar Pedido", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
         }
+    }
 
-        // Confirmation dialog shown when user taps checkout
-        if (showConfirmDialog) {
-            AlertDialog(
-                onDismissRequest = { showConfirmDialog = false },
-                title = { Text("Confirmar pagamento") },
-                text = { Text("Você será redirecionado para o pagamento do pedido. Deseja continuar?") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        showConfirmDialog = false
-                        onCheckout()
-                    }) {
-                        Text("Continuar")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showConfirmDialog = false }) {
-                        Text("Cancelar")
-                    }
+    // ── Confirmation dialog ────────────────────────────────────────────────────
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            containerColor = CartCard,
+            titleContentColor = CartText,
+            textContentColor = CartMuted,
+            title = { Text("Confirmar pagamento", fontWeight = FontWeight.Bold) },
+            text = { Text("Será redirecionado para o pagamento. Deseja continuar?") },
+            confirmButton = {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Brush.horizontalGradient(listOf(CartPrimary, Color(0xFFE65100))))
+                        .clickable { showConfirmDialog = false; onCheckout() }
+                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                ) {
+                    Text("Continuar", color = Color.White, fontWeight = FontWeight.SemiBold)
                 }
-            )
-        }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) {
+                    Text("Cancelar", color = CartMuted)
+                }
+            }
+        )
     }
 }
 
 @Composable
 fun CartItemRow(product: Product, onRemove: () -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(
-                alpha = 0.5f
-            )
-        ), shape = MaterialTheme.shapes.medium
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CartCard)
+            .border(1.dp, CartPrimary.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
+            .padding(12.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             product.image_url?.let {
-                KamelImage(
-                    resource = asyncPainterResource(it),
-                    contentDescription = product.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(60.dp).clip(RoundedCornerShape(8.dp))
-                )
+                Box(
+                    modifier = Modifier
+                        .size(62.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CartSurface)
+                ) {
+                    KamelImage(
+                        resource = asyncPainterResource(it),
+                        contentDescription = product.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     product.name,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
+                    color = CartText,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     product.description,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
+                    color = CartMuted,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "€ ${product.price}0",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontSize = 14.sp
+                    formatCurrency(product.price),
+                    color = CartSecondary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
                 )
             }
-            IconButton(onClick = onRemove) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Remover",
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(CartAccent.copy(alpha = 0.12f))
+                    .border(1.dp, CartAccent.copy(alpha = 0.3f), CircleShape)
+                    .clickable { onRemove() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = "Remover", tint = CartAccent, modifier = Modifier.size(16.dp))
             }
         }
     }
 }
 
 @Composable
-fun RestaurantHeader(restaurant: Restaurant, modifier: Modifier = Modifier) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium
+fun RestaurantHeader(
+    restaurant: Restaurant,
+    modifier: Modifier = Modifier,
+    showGoToRestaurant: Boolean = false,
+    onGoToRestaurant: () -> Unit = {}
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(CartCard)
+            .border(
+                1.dp,
+                Brush.horizontalGradient(listOf(CartPrimary.copy(alpha = 0.4f), CartSecondary.copy(alpha = 0.3f))),
+                RoundedCornerShape(16.dp)
+            )
+            .padding(12.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            restaurant.image_url?.let {
-                KamelImage(
-                    resource = asyncPainterResource(it),
-                    contentDescription = restaurant.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(60.dp).clip(RoundedCornerShape(8.dp))
-                )
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(CartSurface)
+            ) {
+                restaurant.image_url?.let {
+                    KamelImage(
+                        resource = asyncPainterResource(it),
+                        contentDescription = restaurant.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = restaurant.name,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
+                    color = CartText,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = restaurant.category,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    color = CartMuted,
+                    fontSize = 12.sp
                 )
+            }
+            if (showGoToRestaurant) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CartPrimary.copy(alpha = 0.15f))
+                        .border(1.dp, CartPrimary.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                        .clickable { onGoToRestaurant() }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Restaurant, contentDescription = null, tint = CartPrimary, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Cardápio", color = CartPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
             }
         }
     }

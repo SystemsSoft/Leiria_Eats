@@ -144,6 +144,17 @@ class SearchViewModel(
         _uiState.update { it.copy(selectedRestaurant = null, selectedCategory = null) }
     }
 
+    fun clearSelectionAndCart() {
+        _uiState.update {
+            it.copy(
+                selectedRestaurant = null,
+                selectedCategory = null,
+                cartItems = emptyList(),
+                cartRestaurantId = null
+            )
+        }
+    }
+
     fun clearSearch() {
         _uiState.update {
             it.copy(
@@ -167,19 +178,80 @@ class SearchViewModel(
         viewModelScope.launch {
             try {
                 val response = apiClient.searchRestaurants(currentQuery)
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        aiReply = response.reply,
-                        restaurantResults = response.restaurantResults,
-                        productResults = response.productResults,
-                        textInput = ""
-                    )
+
+                val hasBoth = response.restaurantResults.isNotEmpty() && response.productResults.isNotEmpty()
+                val isProductOnly = response.restaurantResults.isEmpty() && response.productResults.isNotEmpty()
+
+                if (hasBoth) {
+                    // Guarda resultados pendentes e pede ao utilizador para escolher
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            aiReply = response.reply,
+                            textInput = "",
+                            pendingRestaurantResults = response.restaurantResults,
+                            pendingProductResults = response.productResults,
+                            showSearchTypeSheet = true
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            aiReply = response.reply,
+                            restaurantResults = response.restaurantResults,
+                            productResults = response.productResults,
+                            textInput = ""
+                        )
+                    }
+                    if (isProductOnly) {
+                        response.productResults.forEach { product -> addToCart(product) }
+                        onTabSelected(MainTab.CART)
+                    }
                 }
+
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Erro ao conectar: ${e.message}") }
                 e.printStackTrace()
             }
+        }
+    }
+
+    fun onSearchTypeSelected(showRestaurants: Boolean) {
+        val state = _uiState.value
+        if (showRestaurants) {
+            _uiState.update {
+                it.copy(
+                    showSearchTypeSheet = false,
+                    restaurantResults = state.pendingRestaurantResults,
+                    productResults = emptyList(),
+                    pendingRestaurantResults = emptyList(),
+                    pendingProductResults = emptyList()
+                )
+            }
+        } else {
+            val products = state.pendingProductResults
+            _uiState.update {
+                it.copy(
+                    showSearchTypeSheet = false,
+                    restaurantResults = emptyList(),
+                    productResults = products,
+                    pendingRestaurantResults = emptyList(),
+                    pendingProductResults = emptyList()
+                )
+            }
+            products.forEach { product -> addToCart(product) }
+            onTabSelected(MainTab.CART)
+        }
+    }
+
+    fun dismissSearchTypeSheet() {
+        _uiState.update {
+            it.copy(
+                showSearchTypeSheet = false,
+                pendingRestaurantResults = emptyList(),
+                pendingProductResults = emptyList()
+            )
         }
     }
 

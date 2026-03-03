@@ -33,7 +33,10 @@ data class SearchUiState(
     val checkoutUrl: String? = null,
     val isAddressSheetVisible: Boolean = false,
     val cartError: String? = null,
-    val cartMessage: String? = null
+    val cartMessage: String? = null,
+    val showSearchTypeSheet: Boolean = false,
+    val pendingRestaurantResults: List<Restaurant> = emptyList(),
+    val pendingProductResults: List<Product> = emptyList()
 ) {
     val cartCount: Int get() = cartItems.size
     val favoriteOrders: List<Order> get() = orderHistory.filter { it.isFavorite }

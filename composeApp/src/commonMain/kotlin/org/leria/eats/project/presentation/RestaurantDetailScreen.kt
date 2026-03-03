@@ -1,6 +1,7 @@
 package org.leria.eats.project.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,9 +13,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -25,6 +31,17 @@ import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
+import org.leria.eats.project.presentation.util.formatCurrency
+
+// ─── Paleta KOMAAI ───────────────────────────────────────────────────────────
+private val RdDeepBg    = Color(0xFF061510)   // Deep forest black-green
+private val RdSurface   = Color(0xFF0A2218)   // Dark teal surface
+private val RdCard      = Color(0xFF0E2E20)   // Card teal
+private val RdPrimary   = Color(0xFFFFC107)   // KOMAAI Gold
+private val RdSecondary = Color(0xFF4ADE80)   // Modern lime-green
+private val RdAccent    = Color(0xFFFFD54F)   // Warm amber accent
+private val RdText      = Color(0xFFF0FDF4)   // Near-white green tint
+private val RdMuted     = Color(0xFF6EE7A0)   // Muted green
 
 @Composable
 fun RestaurantDetailScreen(
@@ -33,13 +50,51 @@ fun RestaurantDetailScreen(
     selectedCategory: String?,
     onCategorySelect: (String?) -> Unit,
     onBack: () -> Unit,
+    onBackAndClearCart: () -> Unit,
     onAdd: (Product) -> Unit,
     onRemove: (Product) -> Unit,
     onViewCart: () -> Unit
 ) {
     val totalParams = cartItems.sumOf { it.price }
     val totalCount = cartItems.size
-    
+    var showBackDialog by remember { mutableStateOf(false) }
+
+    // ── Back confirmation dialog ──────────────────────────────────────────────
+    if (showBackDialog) {
+        AlertDialog(
+            onDismissRequest = { showBackDialog = false },
+            containerColor = RdCard,
+            titleContentColor = RdText,
+            textContentColor = RdMuted,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = RdAccent, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Deseja voltar?", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Text("A sua sacola tem produtos de ${restaurant.name}. Se voltar, a sacola será esvaziada.\n\nTem a certeza que deseja voltar?")
+            },
+            confirmButton = {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Brush.horizontalGradient(listOf(RdAccent, Color(0xFFE65100))))
+                        .clickable { showBackDialog = false; onBackAndClearCart() }
+                        .padding(horizontal = 18.dp, vertical = 9.dp)
+                ) {
+                    Text("Sim, voltar", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBackDialog = false }) {
+                    Text("Cancelar", color = RdMuted)
+                }
+            }
+        )
+    }
+
     val categories = listOf("Todos") + restaurant.products.map { it.category }.distinct().sorted()
     val filteredProducts = if (selectedCategory == null || selectedCategory == "Todos") {
         restaurant.products
@@ -47,122 +102,186 @@ fun RestaurantDetailScreen(
         restaurant.products.filter { it.category == selectedCategory }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(bottom = if (totalCount > 0) 80.dp else 0.dp)
+            .background(RdDeepBg)
     ) {
-        // --- CABEÇALHO ---
-        Row(
+        // Ambient glow
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f), CircleShape).size(36.dp)
-            ) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(
-                    text = restaurant.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "${restaurant.category} • ⭐ ${restaurant.rating}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                )
-            }
-        }
+                .size(280.dp)
+                .offset(x = (-40).dp, y = (-40).dp)
+                .background(RdPrimary.copy(alpha = 0.06f), CircleShape)
+        )
 
-        // --- FILTRO DE CATEGORIAS ---
-        LazyRow(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(horizontal = 4.dp)
+                .fillMaxSize()
+                .padding(bottom = if (totalCount > 0) 80.dp else 0.dp)
         ) {
-            items(categories) { category ->
-                val isSelected = (selectedCategory == category) || (selectedCategory == null && category == "Todos")
-                
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onCategorySelect(if (category == "Todos") null else category) },
-                    label = { Text(category) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                        labelColor = MaterialTheme.colorScheme.onSurface,
-                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    border = null
-                )
-            }
-        }
-
-        // --- LISTA DE PRATOS ---
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            if (filteredProducts.isNotEmpty()) {
-                item {
-                    Text(
-                        "Cardápio",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 4.dp, top = 8.dp)
+            // ── Cabeçalho ─────────────────────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(listOf(RdSurface, RdDeepBg))
                     )
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Back button
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(RdCard)
+                            .border(1.dp, RdPrimary.copy(alpha = 0.3f), CircleShape)
+                            .clickable {
+                                if (cartItems.isNotEmpty()) showBackDialog = true else onBack()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = RdText, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = restaurant.name,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = RdText,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = restaurant.category,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = RdMuted
+                            )
+                            Text(" · ", color = RdMuted, fontSize = 12.sp)
+                            Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB800), modifier = Modifier.size(12.dp))
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = "${restaurant.rating}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = RdMuted
+                            )
+                        }
+                    }
                 }
             }
 
-            items(filteredProducts) { product ->
-                val qty = cartItems.count { it.name == product.name }
-
-                ProductItemWithCounter(
-                    product = product,
-                    quantity = qty,
-                    onAdd = { onAdd(product) },
-                    onRemove = { onRemove(product) }
-                )
-            }
-        }
-    }
-
-    if (totalCount > 0) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Surface(
-                color = MaterialTheme.colorScheme.primary,
-                shape = RoundedCornerShape(12.dp),
+            // ── Filtro de categorias ───────────────────────────────────────────
+            LazyRow(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(16.dp)
-                    .clickable { onViewCart() }
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary)
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text("Ver Sacola ($totalCount)", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
-                            Text("Total: € ${totalParams}0", color = MaterialTheme.colorScheme.onPrimary.copy(0.7f), style = MaterialTheme.typography.bodySmall)
+                items(categories) { category ->
+                    val isSelected = (selectedCategory == category) || (selectedCategory == null && category == "Todos")
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                if (isSelected)
+                                    Brush.horizontalGradient(listOf(RdPrimary, Color(0xFFE65100)))
+                                else
+                                    Brush.horizontalGradient(listOf(RdCard, RdCard))
+                            )
+                            .border(
+                                1.dp,
+                                if (isSelected) Color.Transparent else RdPrimary.copy(alpha = 0.2f),
+                                RoundedCornerShape(20.dp)
+                            )
+                            .clickable { onCategorySelect(if (category == "Todos") null else category) }
+                            .padding(horizontal = 14.dp, vertical = 7.dp)
+                    ) {
+                        Text(
+                            text = category,
+                            color = if (isSelected) Color.White else RdMuted,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+
+            // ── Lista de pratos ────────────────────────────────────────────────
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (filteredProducts.isNotEmpty()) {
+                    item {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(bottom = 4.dp, top = 4.dp)
+                        ) {
+                            Box(modifier = Modifier.width(3.dp).height(16.dp).background(RdPrimary, RoundedCornerShape(2.dp)))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Cardápio", color = RdText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
                     }
-                    Text("Finalizar", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                }
+
+                items(filteredProducts) { product ->
+                    val qty = cartItems.count { it.name == product.name }
+                    ProductItemWithCounter(
+                        product = product,
+                        quantity = qty,
+                        onAdd = { onAdd(product) },
+                        onRemove = { onRemove(product) }
+                    )
+                }
+            }
+        }
+
+        // ── Cart FAB ──────────────────────────────────────────────────────────
+        if (totalCount > 0) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Brush.horizontalGradient(listOf(RdPrimary, Color(0xFFE65100))))
+                        .clickable { onViewCart() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(26.dp)
+                                    .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("$totalCount", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text("Ver Sacola", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        }
+                        Text(formatCurrency(totalParams), color = Color.White.copy(alpha = 0.9f), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    }
                 }
             }
         }
@@ -176,28 +295,34 @@ fun ProductItemWithCounter(
     onAdd: () -> Unit,
     onRemove: () -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
-        shape = RoundedCornerShape(12.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(RdCard)
+            .border(1.dp, RdPrimary.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
+            .padding(12.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (!product.image_url.isNullOrBlank()) {
-                KamelImage(
-                    resource = asyncPainterResource(data = product.image_url),
-                    contentDescription = null,
+                Box(
                     modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.DarkGray),
-                    contentScale = ContentScale.Crop,
-                    onLoading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp) } },
-                    onFailure = { Box(Modifier.fillMaxSize().background(Color.DarkGray)) }
-                )
+                        .size(76.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(RdSurface)
+                ) {
+                    KamelImage(
+                        resource = asyncPainterResource(data = product.image_url),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        onLoading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = RdPrimary) } },
+                        onFailure = { Box(Modifier.fillMaxSize().background(RdSurface)) }
+                    )
+                }
                 Spacer(modifier = Modifier.width(12.dp))
             }
 
@@ -205,75 +330,84 @@ fun ProductItemWithCounter(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = product.name,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = RdText,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = product.description,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    fontSize = 12.sp,
+                    color = RdMuted,
+                    fontSize = 11.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
+
+                Spacer(modifier = Modifier.height(6.dp))
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "€ ${product.price}0",
-                        color = MaterialTheme.colorScheme.primary,
+                        text = formatCurrency(product.price),
+                        color = RdSecondary,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                        fontSize = 13.sp
                     )
-                    
+
                     if (product.preparationTime.isNotBlank()) {
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
                         Icon(
                             imageVector = Icons.Default.Timer,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            modifier = Modifier.size(14.dp)
+                            tint = RdMuted,
+                            modifier = Modifier.size(12.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
                         Text(
                             text = product.preparationTime,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            fontSize = 11.sp
+                            color = RdMuted,
+                            fontSize = 10.sp
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
             // SELETOR DE QUANTIDADE
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (quantity > 0) {
-                    IconButton(
-                        onClick = onRemove,
-                        modifier = Modifier.size(24.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(RdAccent.copy(alpha = 0.15f))
+                            .border(1.dp, RdAccent.copy(alpha = 0.4f), CircleShape)
+                            .clickable { onRemove() },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Remove, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Remove, null, tint = RdAccent, modifier = Modifier.size(14.dp))
                     }
                     Text(
                         text = quantity.toString(),
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = RdText,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                        fontSize = 15.sp,
+                        modifier = Modifier.widthIn(min = 20.dp)
                     )
                 }
-                
-                IconButton(
-                    onClick = onAdd,
-                    modifier = Modifier.size(24.dp)
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(RdPrimary, RdSecondary)))
+                        .clickable { onAdd() },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(14.dp))
                 }
             }
         }
