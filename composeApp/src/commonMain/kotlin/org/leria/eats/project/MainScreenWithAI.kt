@@ -10,8 +10,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
@@ -38,12 +38,8 @@ import org.leria.eats.project.voice.VoiceRecognizer
 
 // ─── Paleta KOMAAI ────────────────────────────────────────────────────────────
 private val KomaDeepBg   = Color(0xFF061510)
-private val KomaSurface  = Color(0xFF0A2218)
-private val KomaCard     = Color(0xFF0E2E20)
 private val KomaGold     = Color(0xFFFFC107)
 private val KomaGreen    = Color(0xFF4ADE80)
-private val KomaAmber    = Color(0xFFFFD54F)
-private val KomaText     = Color(0xFFF0FDF4)
 private val KomaMuted    = Color(0xFF6EE7A0)
 
 @Composable
@@ -107,7 +103,7 @@ fun MainScreenWithAI(
 
         // Overlay progress indicator while WebView internal resources are loading
         if (webViewLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         }
@@ -248,7 +244,7 @@ fun MainScreenWithAI(
 
                             // ── Pedidos ───────────────────────────────────────
                             NavigationBarItem(
-                                icon = { Icon(Icons.Default.List, contentDescription = "Pedidos") },
+                                icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Pedidos") },
                                 label = {
                                     Text(
                                         "Pedidos",
@@ -341,7 +337,7 @@ fun MainScreenWithAI(
                                     viewModel.sendSearch()
                                 },
                                 onTextChange = { viewModel.onQueryChange(it) },
-                                onRestaurantClick = { restaurant -> viewModel.selectRestaurant(restaurant) },
+                                onRestaurantClick = { restaurant -> viewModel.selectRestaurantOrAddToCart(restaurant) },
                                 onCategorySelect = { category -> viewModel.selectCategory(category) },
                                 onClearSelection = { viewModel.clearSelection() },
                                 onClearSelectionAndCart = { viewModel.clearSelectionAndCart() },
@@ -362,6 +358,18 @@ fun MainScreenWithAI(
                                 isLoading = uiState.isLoading,
                                 onGoToRestaurant = { restaurant ->
                                     viewModel.selectRestaurant(restaurant)
+                                    viewModel.onTabSelected(MainTab.HOME)
+                                },
+                                cartAiMessage = uiState.cartAiMessage,
+                                onDismissAiMessage = { viewModel.clearCartAiMessage() },
+                                onSuggestAnotherRestaurant = {
+                                    viewModel.suggestAnotherRestaurant()
+                                },
+                                onAddMoreFromSame = {
+                                    viewModel.clearCartAiMessage()
+                                    uiState.selectedRestaurant?.let { r ->
+                                        viewModel.selectRestaurant(r)
+                                    }
                                     viewModel.onTabSelected(MainTab.HOME)
                                 }
                             )

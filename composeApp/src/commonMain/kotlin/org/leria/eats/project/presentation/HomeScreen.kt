@@ -78,12 +78,6 @@ fun HomeScreen(
 ) {
     LaunchedEffect(permissionStatus) { }
 
-    LaunchedEffect(Unit) {
-        if (uiState.restaurantResults.isEmpty() && uiState.productResults.isEmpty()) {
-            onTextChange("ver todos")
-            onSendClick()
-        }
-    }
 
     // Pulsing glow animation
     val glowAlpha by rememberInfiniteTransition(label = "glow").animateFloat(
@@ -130,6 +124,7 @@ fun HomeScreen(
                                 uiState = uiState,
                                 onRestaurantClick = onRestaurantClick,
                                 onAddToCart = onAddToCart,
+                                onViewCart = onViewCart,
                                 onClearSearch = onClearSearch,
                                 onTextChange = onTextChange,
                                 onSendClick = onSendClick
@@ -388,23 +383,7 @@ private fun AiThinkingIndicator(modifier: Modifier = Modifier) {
 // ─── Empty state ──────────────────────────────────────────────────────────────
 @Composable
 private fun AiEmptyState(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        val suggestions = listOf("🍕 Pizza", "🍣 Sushi", "🍔 Burger", "🥗 Salada")
-        Text("Sugestões rápidas", color = AiTextMuted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 12.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(suggestions) { s ->
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(AiCard)
-                        .border(1.dp, AiPrimary.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                ) {
-                    Text(s, color = AiText, fontSize = 13.sp)
-                }
-            }
-        }
-    }
+    Box(modifier = modifier)
 }
 
 // ─── Results body ─────────────────────────────────────────────────────────────
@@ -413,6 +392,7 @@ private fun AiResultsBody(
     uiState: SearchUiState,
     onRestaurantClick: (Restaurant) -> Unit,
     onAddToCart: (Product) -> Unit,
+    onViewCart: () -> Unit,
     onClearSearch: () -> Unit,
     onTextChange: (String) -> Unit,
     onSendClick: () -> Unit
@@ -490,7 +470,10 @@ private fun AiResultsBody(
                             .heightIn(max = 1000.dp)
                     ) {
                         items(uiState.productResults) { product ->
-                            ProductGridItem(product = product, onAddToCart = { onAddToCart(product) })
+                            ProductGridItem(product = product, onAddToCart = {
+                                onAddToCart(product)
+                                onViewCart()
+                            })
                         }
                     }
                 }

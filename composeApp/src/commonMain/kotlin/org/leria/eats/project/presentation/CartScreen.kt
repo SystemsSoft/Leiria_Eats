@@ -1,5 +1,10 @@
 package org.leria.eats.project.presentation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,11 +14,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,7 +59,11 @@ fun CartScreen(
     onCheckout: () -> Unit,
     isLoading: Boolean = false,
     restaurantSelected: Restaurant?,
-    onGoToRestaurant: ((Restaurant) -> Unit)? = null
+    onGoToRestaurant: ((Restaurant) -> Unit)? = null,
+    cartAiMessage: String? = null,
+    onDismissAiMessage: () -> Unit = {},
+    onSuggestAnotherRestaurant: () -> Unit = {},
+    onAddMoreFromSame: () -> Unit = {}
 ) {
     val total = cartItems.sumOf { it.price }
     var showConfirmDialog by remember { mutableStateOf(false) }
@@ -110,6 +122,23 @@ fun CartScreen(
                     showGoToRestaurant = cartItems.isNotEmpty() && onGoToRestaurant != null,
                     onGoToRestaurant = { onGoToRestaurant?.invoke(restaurant) }
                 )
+            }
+
+            // ── AI Chat Bubble ────────────────────────────────────────────
+            AnimatedVisibility(
+                visible = cartAiMessage != null,
+                enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+                exit = fadeOut() + slideOutVertically(targetOffsetY = { -it })
+            ) {
+                cartAiMessage?.let { message ->
+                    CartAiChatBubble(
+                        message = message,
+                        onDismiss = onDismissAiMessage,
+                        onSuggestAnotherRestaurant = onSuggestAnotherRestaurant,
+                        onAddMoreFromSame = onAddMoreFromSame,
+                        modifier = Modifier.padding(bottom = 14.dp)
+                    )
+                }
             }
 
             if (cartItems.isEmpty()) {
@@ -371,6 +400,161 @@ fun RestaurantHeader(
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Cardápio", color = CartPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
+                }
+            }
+        }
+    }
+}
+
+// ─── AI Chat Bubble in Cart ───────────────────────────────────────────────────
+private val CartAiBotBubble = Color(0xFF0D2419)
+private val CartAiPrimary   = Color(0xFFFFC107)
+private val CartAiSecondary = Color(0xFF4ADE80)
+private val CartAiText      = Color(0xFFF0FDF4)
+private val CartAiMuted     = Color(0xFF6EE7A0)
+private val CartAiCard2     = Color(0xFF0E2E20)
+
+@Composable
+fun CartAiChatBubble(
+    message: String,
+    onDismiss: () -> Unit,
+    onSuggestAnotherRestaurant: () -> Unit,
+    onAddMoreFromSame: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val displayedText = remember { mutableStateOf("") }
+
+    LaunchedEffect(message) {
+        displayedText.value = ""
+        for (i in message.indices) {
+            displayedText.value = message.substring(0, i + 1)
+            kotlinx.coroutines.delay(14)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp))
+            .background(
+                Brush.horizontalGradient(listOf(CartAiBotBubble, CartAiCard2))
+            )
+            .border(
+                1.dp,
+                Brush.horizontalGradient(listOf(CartAiPrimary.copy(alpha = 0.35f), CartAiSecondary.copy(alpha = 0.25f))),
+                RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp)
+            )
+            .padding(14.dp)
+    ) {
+        Column {
+            // Top row: AI icon + label + dismiss
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(CartAiPrimary.copy(alpha = 0.35f), Color.Transparent)
+                                ),
+                                CircleShape
+                            )
+                            .border(1.dp, CartAiPrimary.copy(alpha = 0.45f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = CartAiPrimary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "KOMAAI",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CartAiPrimary
+                    )
+                }
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Fechar",
+                        tint = CartAiMuted,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Typewriter message
+            Text(
+                text = displayedText.value,
+                fontSize = 13.sp,
+                color = CartAiText,
+                lineHeight = 19.sp
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Action buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Suggest another restaurant
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(CartAiPrimary.copy(alpha = 0.18f), CartAiPrimary.copy(alpha = 0.08f))
+                            )
+                        )
+                        .border(1.dp, CartAiPrimary.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                        .clickable { onSuggestAnotherRestaurant() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "🍽️ Outro restaurante",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CartAiPrimary
+                    )
+                }
+
+                // Add more from same restaurant
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(CartAiSecondary.copy(alpha = 0.18f), CartAiSecondary.copy(alpha = 0.08f))
+                            )
+                        )
+                        .border(1.dp, CartAiSecondary.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                        .clickable { onAddMoreFromSame() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "➕ Mais do mesmo",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CartAiSecondary
+                    )
                 }
             }
         }

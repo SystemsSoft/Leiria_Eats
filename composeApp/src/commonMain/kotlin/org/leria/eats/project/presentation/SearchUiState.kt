@@ -34,6 +34,9 @@ data class SearchUiState(
     val isAddressSheetVisible: Boolean = false,
     val cartError: String? = null,
     val cartMessage: String? = null,
+    val cartAiMessage: String? = null,
+    val lastSearchQuery: String = "",
+    val isSuggestionMode: Boolean = false,
     val showSearchTypeSheet: Boolean = false,
     val pendingRestaurantResults: List<Restaurant> = emptyList(),
     val pendingProductResults: List<Product> = emptyList()

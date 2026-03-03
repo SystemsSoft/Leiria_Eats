@@ -41,7 +41,6 @@ class SearchViewModel(
             profileRepository.userProfileFlow.first { it.id.isNotBlank() }
             refreshOrdersInternal()
         }
-        loadInitialRestaurants()
         startStatusPolling()
         observeFavoriteOrders()
     }
@@ -110,8 +109,7 @@ class SearchViewModel(
     }
 
     private fun loadInitialRestaurants() {
-        _uiState.update { it.copy(textInput = "ver todos") }
-        sendSearch()
+        // sem pesquisa automática no arranque
     }
 
     fun updateUserProfile(name: String, phone: String, addresses: List<Address>) {
@@ -134,6 +132,46 @@ class SearchViewModel(
 
     fun selectRestaurant(restaurant: Restaurant) {
         _uiState.update { it.copy(selectedRestaurant = restaurant, selectedCategory = null) }
+    }
+
+    fun selectRestaurantOrAddToCart(restaurant: Restaurant) {
+        if (_uiState.value.isSuggestionMode) {
+            // Modo sugestão: buscar produtos e adicionar à sacola
+            _uiState.update { it.copy(isLoading = true, isSuggestionMode = false) }
+            viewModelScope.launch {
+                val company = apiClient.getCompanyById(restaurant.id)
+                val resolvedRestaurant = if (company != null) Restaurant(
+                    id = company.id,
+                    name = company.name,
+                    category = company.category,
+                    image_url = company.imageUrl,
+                    products = company.products
+                ) else restaurant
+                val products = resolvedRestaurant.products
+                if (products.isNotEmpty()) {
+                    // Adiciona à sacola directamente sem chamar fetchCompanyById de novo
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            cartItems = currentState.cartItems + products,
+                            cartRestaurantId = resolvedRestaurant.id,
+                            selectedRestaurant = resolvedRestaurant
+                        )
+                    }
+                    val productNames = products.take(3).joinToString(", ") { it.name }
+                    val aiMsg = buildString {
+                        append("✅ Adicionei à sua sacola: $productNames")
+                        if (products.size > 3) append(" e mais ${products.size - 3} itens")
+                        append(".\n\n💡 Quer que sugira outro restaurante com pratos semelhantes, ou gostaria de adicionar mais alguma coisa deste restaurante?")
+                    }
+                    _uiState.update { it.copy(isLoading = false, cartAiMessage = aiMsg) }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, selectedRestaurant = resolvedRestaurant) }
+                }
+                onTabSelected(MainTab.CART)
+            }
+        } else {
+            selectRestaurant(restaurant)
+        }
     }
 
     fun selectCategory(category: String?) {
@@ -174,7 +212,7 @@ class SearchViewModel(
             clearSearch()
             return
         }
-        _uiState.update { it.copy(isLoading = true, error = null) }
+        _uiState.update { it.copy(isLoading = true, error = null, isSuggestionMode = false) }
         viewModelScope.launch {
             try {
                 val response = apiClient.searchRestaurants(currentQuery)
@@ -189,23 +227,39 @@ class SearchViewModel(
                             isLoading = false,
                             aiReply = response.reply,
                             textInput = "",
+                            lastSearchQuery = currentQuery,
                             pendingRestaurantResults = response.restaurantResults,
                             pendingProductResults = response.productResults,
                             showSearchTypeSheet = true
                         )
                     }
                 } else {
+                    val resolvedReply = if (currentQuery.trim().equals("ver todos", ignoreCase = true))
+                        "Todos os restaurantes disponíveis"
+                    else
+                        response.reply
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            aiReply = response.reply,
+                            aiReply = resolvedReply,
                             restaurantResults = response.restaurantResults,
                             productResults = response.productResults,
-                            textInput = ""
+                            textInput = "",
+                            lastSearchQuery = currentQuery
                         )
                     }
                     if (isProductOnly) {
                         response.productResults.forEach { product -> addToCart(product) }
+                        val productNames = response.productResults
+                            .take(3)
+                            .joinToString(", ") { it.name }
+                        val aiMsg = buildString {
+                            append("✅ Adicionei à sua sacola: $productNames")
+                            if (response.productResults.size > 3)
+                                append(" e mais ${response.productResults.size - 3} itens")
+                            append(".\n\n💡 Quer que sugira outro restaurante com pratos semelhantes, ou gostaria de adicionar mais alguma coisa deste restaurante?")
+                        }
+                        _uiState.update { it.copy(cartAiMessage = aiMsg) }
                         onTabSelected(MainTab.CART)
                     }
                 }
@@ -241,6 +295,14 @@ class SearchViewModel(
                 )
             }
             products.forEach { product -> addToCart(product) }
+            val productNames = products.take(3).joinToString(", ") { it.name }
+            val aiMsg = buildString {
+                append("✅ Adicionei à sua sacola: $productNames")
+                if (products.size > 3) append(" e mais ${products.size - 3} itens")
+                append(".\n\n")
+                append("💡 Quer que sugira outro restaurante com pratos semelhantes, ou gostaria de adicionar mais alguma coisa deste restaurante?")
+            }
+            _uiState.update { it.copy(cartAiMessage = aiMsg) }
             onTabSelected(MainTab.CART)
         }
     }
@@ -299,6 +361,48 @@ class SearchViewModel(
         _uiState.update { it.copy(cartMessage = null) }
     }
 
+    fun clearCartAiMessage() {
+        _uiState.update { it.copy(cartAiMessage = null) }
+    }
+
+    fun suggestAnotherRestaurant() {
+        val lastQuery = _uiState.value.lastSearchQuery.trim()
+        val suggestionQuery = if (lastQuery.isNotBlank()) "sugestão $lastQuery" else "sugestão"
+        // Clear restaurant detail, cart and AI message, go HOME immediately
+        _uiState.update {
+            it.copy(
+                isLoading = true,
+                error = null,
+                cartAiMessage = null,
+                cartItems = emptyList(),
+                cartRestaurantId = null,
+                selectedRestaurant = null,
+                selectedCategory = null,
+                isSuggestionMode = true,
+                currentTab = MainTab.HOME
+            )
+        }
+        viewModelScope.launch {
+            try {
+                val response = apiClient.searchRestaurants(suggestionQuery)
+                val label = if (lastQuery.isNotBlank()) lastQuery else "restaurantes"
+                // Show results on HomeScreen – never auto-add to cart
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        aiReply = "Outras opções que também pode gostar, além de $label",
+                        restaurantResults = response.restaurantResults,
+                        productResults = response.productResults,
+                        textInput = ""
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "Erro ao conectar: ${e.message}") }
+                e.printStackTrace()
+            }
+        }
+    }
+
     fun removeFromCart(product: Product) {
         _uiState.update { currentState ->
             val updatedCart = currentState.cartItems.toMutableList().apply { remove(product) }
@@ -351,22 +455,43 @@ class SearchViewModel(
             _uiState.update { it.copy(isLoading = false, error = "Erro: ID do restaurante não encontrado.") }
             return
         }
-        val restaurant = uiState.value.restaurantResults.find { it.id == restaurantId }
-        if (restaurant == null) {
-            _uiState.update { it.copy(isLoading = false, error = "Erro: Restaurante não encontrado.") }
-            return
-        }
+
         if (currentState.userProfile.name.isBlank()) {
             _uiState.update { it.copy(isLoading = false, error = "Por favor, preencha seu Nome no Perfil.") }
             onTabSelected(MainTab.PROFILE)
             return
         }
+
         if (currentState.cartItems.isEmpty()) {
             _uiState.update { it.copy(isLoading = false) }
             return
         }
 
         viewModelScope.launch {
+            // Procura o restaurante nos resultados ou no selectedRestaurant
+            var restaurant = uiState.value.restaurantResults.find { it.id == restaurantId }
+                ?: currentState.selectedRestaurant?.takeIf { it.id == restaurantId }
+
+            if (restaurant == null) {
+                // Último recurso: ir buscar à API
+                val company = apiClient.getCompanyById(restaurantId)
+                if (company != null) {
+                    restaurant = Restaurant(
+                        id = company.id,
+                        name = company.name,
+                        category = company.category,
+                        image_url = company.imageUrl,
+                        products = company.products
+                    )
+                    _uiState.update { it.copy(selectedRestaurant = restaurant) }
+                }
+            }
+
+            if (restaurant == null) {
+                _uiState.update { it.copy(isLoading = false, error = "Erro: Restaurante não encontrado.") }
+                return@launch
+            }
+
             val orderItems = currentState.cartItems.groupBy { it }.map { (product, products) ->
                 OrderItemRequest(
                     product_id = product.id,
