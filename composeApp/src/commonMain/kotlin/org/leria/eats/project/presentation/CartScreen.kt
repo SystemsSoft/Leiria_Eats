@@ -65,7 +65,7 @@ fun CartScreen(
     onSuggestAnotherRestaurant: () -> Unit = {},
     onAddMoreFromSame: () -> Unit = {}
 ) {
-    val total = cartItems.sumOf { it.price }
+    val total = cartItems.sumOf { it.price * it.quantity }
     var showConfirmDialog by remember { mutableStateOf(false) }
 
     Box(
@@ -276,19 +276,38 @@ fun CartItemRow(product: Product, onRemove: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            product.image_url?.let {
-                Box(
-                    modifier = Modifier
-                        .size(62.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(CartSurface)
-                ) {
-                    KamelImage(
-                        resource = asyncPainterResource(it),
-                        contentDescription = product.name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
+            Box(modifier = Modifier.size(62.dp)) {
+                product.image_url?.let {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(CartSurface)
+                    ) {
+                        KamelImage(
+                            resource = asyncPainterResource(it),
+                            contentDescription = product.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+                if (product.quantity > 1) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .size(18.dp)
+                            .clip(CircleShape)
+                            .background(CartPrimary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${product.quantity}",
+                            color = Color.Black,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.width(12.dp))
@@ -309,12 +328,22 @@ fun CartItemRow(product: Product, onRemove: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    formatCurrency(product.price),
-                    color = CartSecondary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        formatCurrency(product.price * product.quantity),
+                        color = CartSecondary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                    if (product.quantity > 1) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            "(${product.quantity} × ${formatCurrency(product.price)})",
+                            color = CartMuted,
+                            fontSize = 10.sp
+                        )
+                    }
+                }
             }
             Box(
                 modifier = Modifier

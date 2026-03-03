@@ -19,7 +19,8 @@ data class Product(
     val restaurant_id: Int = 0,
     val category: String = "",
     @SerialName("preparation_time")
-    val preparationTime: String = ""
+    val preparationTime: String = "",
+    val quantity: Int = 1
 )
 
 @Serializable

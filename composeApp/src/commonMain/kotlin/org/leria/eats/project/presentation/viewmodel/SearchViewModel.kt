@@ -319,12 +319,21 @@ class SearchViewModel(
 
     fun addToCart(product: Product) {
         _uiState.update { currentState ->
-            if (currentState.cartRestaurantId != null && currentState.cartRestaurantId !=  product.restaurant_id) {
+            if (currentState.cartRestaurantId != null && currentState.cartRestaurantId != product.restaurant_id) {
                 currentState.copy(cartError = "Não pode adicionar produtos de restaurantes diferentes.")
             } else {
+                val existing = currentState.cartItems.find { it.id == product.id }
+                val updatedCart = if (existing != null) {
+                    currentState.cartItems.map {
+                        if (it.id == product.id) it.copy(quantity = it.quantity + product.quantity)
+                        else it
+                    }
+                } else {
+                    currentState.cartItems + product
+                }
                 currentState.copy(
-                    cartItems = currentState.cartItems + product,
-                    cartRestaurantId =  product.restaurant_id,
+                    cartItems = updatedCart,
+                    cartRestaurantId = product.restaurant_id,
                     cartMessage = "${product.name} adicionado à sacola."
                 )
             }
@@ -405,7 +414,9 @@ class SearchViewModel(
 
     fun removeFromCart(product: Product) {
         _uiState.update { currentState ->
-            val updatedCart = currentState.cartItems.toMutableList().apply { remove(product) }
+            val updatedCart = currentState.cartItems
+                .map { if (it.id == product.id) it.copy(quantity = it.quantity - 1) else it }
+                .filter { it.quantity > 0 }
             val newRestaurantId = if (updatedCart.isEmpty()) null else currentState.cartRestaurantId
             currentState.copy(cartItems = updatedCart, cartRestaurantId = newRestaurantId)
         }
@@ -492,10 +503,10 @@ class SearchViewModel(
                 return@launch
             }
 
-            val orderItems = currentState.cartItems.groupBy { it }.map { (product, products) ->
+            val orderItems = currentState.cartItems.map { product ->
                 OrderItemRequest(
                     product_id = product.id,
-                    quantity = products.size,
+                    quantity = product.quantity,
                     observation = null,
                     product_name = product.name,
                     price = product.price,
