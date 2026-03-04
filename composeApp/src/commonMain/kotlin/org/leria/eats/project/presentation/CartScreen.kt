@@ -441,8 +441,11 @@ fun CartAiChatBubble(
     voiceRecognizer: VoiceRecognizer = koinInject()
 ) {
     val displayedText = remember { mutableStateOf("") }
+    val ctaText = remember { mutableStateOf("") }
     val voiceText by voiceRecognizer.results.collectAsState()
     val isListening by voiceRecognizer.isListening.collectAsState()
+
+    val ctaFullText = "💬 Se estiver tudo certo, clique ou fale 'finalizar pedido', e enviarei seu pedido para o restaurante usando a forma de pagamento e endereço padrão."
 
     // Stop TTS when the composable leaves the composition
     DisposableEffect(Unit) {
@@ -454,22 +457,32 @@ fun CartAiChatBubble(
 
     LaunchedEffect(message) {
         displayedText.value = ""
+        ctaText.value = ""
         tts.stop()
         voiceRecognizer.stopListening()
 
         // Start speaking immediately, in parallel with the typewriter animation
         if (!isMuted) {
-            // Add CTA text to the original message
-            val fullMessage = "$message\n\n💬 Se estiver tudo certo, clique ou fale 'finalizar pedido', e enviarei seu pedido para o restaurante usando a forma de pagamento e endereço padrão."
+            val fullMessage = "$message\n\n$ctaFullText"
             tts.speak(stripEmojisForTts(fullMessage))
         }
 
+        // Type main message first
         for (i in message.indices) {
             displayedText.value = message.substring(0, i + 1)
             kotlinx.coroutines.delay(14)
         }
 
-        // Start voice recognition after typewriter finishes
+        // Small pause before CTA
+        kotlinx.coroutines.delay(300)
+
+        // Type CTA text
+        for (i in ctaFullText.indices) {
+            ctaText.value = ctaFullText.substring(0, i + 1)
+            kotlinx.coroutines.delay(14)
+        }
+
+        // Start voice recognition after all text is fully typed
         kotlinx.coroutines.delay(500)
         voiceRecognizer.startListening()
     }
@@ -564,35 +577,38 @@ fun CartAiChatBubble(
                 lineHeight = 19.sp
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // Show CTA text only after it starts typing
+            if (ctaText.value.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // CTA text with microphone indicator
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(CartAiCard2.copy(alpha = 0.6f))
-                    .border(1.dp, CartAiSecondary.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-                    .padding(10.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (isListening) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(CartAiSecondary, CircleShape)
+                // CTA text with microphone indicator
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CartAiCard2.copy(alpha = 0.6f))
+                        .border(1.dp, CartAiSecondary.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                        .padding(10.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isListening) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(CartAiSecondary, CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(
+                            text = if (isListening && ctaText.value == ctaFullText)
+                                "🎤 Ouvindo... Diga 'finalizar pedido' para confirmar"
+                            else
+                                ctaText.value,
+                            fontSize = 11.sp,
+                            color = if (isListening && ctaText.value == ctaFullText) CartAiSecondary else CartAiText.copy(alpha = 0.85f),
+                            lineHeight = 16.sp
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text(
-                        text = if (isListening)
-                            "🎤 Ouvindo... Diga 'finalizar pedido' para confirmar"
-                        else
-                            "💬 Se estiver tudo certo, clique ou fale 'finalizar pedido', e enviarei seu pedido para o restaurante usando a forma de pagamento e endereço padrão.",
-                        fontSize = 11.sp,
-                        color = if (isListening) CartAiSecondary else CartAiText.copy(alpha = 0.85f),
-                        lineHeight = 16.sp
-                    )
                 }
             }
 
