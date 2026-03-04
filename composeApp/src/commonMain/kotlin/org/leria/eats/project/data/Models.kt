@@ -94,7 +94,8 @@ data class OrderItem(
 @Serializable
 data class Address(
     val name: String,
-    val address: String
+    val address: String,
+    val isDefault: Boolean = false
 )
 
 @Serializable

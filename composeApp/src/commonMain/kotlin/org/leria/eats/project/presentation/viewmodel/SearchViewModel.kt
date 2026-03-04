@@ -459,7 +459,17 @@ class SearchViewModel(
             onTabSelected(MainTab.PROFILE)
             return
         }
-        _uiState.update { it.copy(isAddressSheetVisible = true) }
+
+        // Check if there's a default address
+        val defaultAddress = currentState.userProfile.addresses.find { it.isDefault }
+
+        if (defaultAddress != null) {
+            // Use default address directly
+            confirmCheckout(defaultAddress)
+        } else {
+            // Show address selection sheet if no default
+            _uiState.update { it.copy(isAddressSheetVisible = true) }
+        }
     }
 
     fun dismissAddressSheet() {
