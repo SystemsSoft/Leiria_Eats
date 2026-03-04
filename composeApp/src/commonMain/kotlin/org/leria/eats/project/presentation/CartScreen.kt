@@ -479,13 +479,13 @@ fun CartAiChatBubble(
     LaunchedEffect(message) {
         displayedText.value = ""
         tts.stop()
+        // Start speaking immediately, in parallel with the typewriter animation
+        if (!isMuted) {
+            tts.speak(stripEmojisForTts(message))
+        }
         for (i in message.indices) {
             displayedText.value = message.substring(0, i + 1)
             kotlinx.coroutines.delay(14)
-        }
-        // Auto-speak after typewriter finishes (only if not muted)
-        if (!isMuted) {
-            tts.speak(stripEmojisForTts(message))
         }
     }
 
