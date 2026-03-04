@@ -470,5 +470,15 @@ fun MainScreenWithAI(
                 }
             }
         }
+
+        // Save Payment Method Sheet
+        if (uiState.showSavePaymentSheet) {
+            SavePaymentMethodSheet(
+                onDismiss = { viewModel.dismissSavePaymentSheet() },
+                onConfirm = { savePaymentMethod ->
+                    viewModel.proceedToCheckout(savePaymentMethod)
+                }
+            )
+        }
     }
 }

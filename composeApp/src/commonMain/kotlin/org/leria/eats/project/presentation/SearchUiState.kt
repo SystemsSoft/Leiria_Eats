@@ -39,7 +39,8 @@ data class SearchUiState(
     val isSuggestionMode: Boolean = false,
     val showSearchTypeSheet: Boolean = false,
     val pendingRestaurantResults: List<Restaurant> = emptyList(),
-    val pendingProductResults: List<Product> = emptyList()
+    val pendingProductResults: List<Product> = emptyList(),
+    val showSavePaymentSheet: Boolean = false
 ) {
     val cartCount: Int get() = cartItems.size
     val favoriteOrders: List<Order> get() = orderHistory.filter { it.isFavorite }

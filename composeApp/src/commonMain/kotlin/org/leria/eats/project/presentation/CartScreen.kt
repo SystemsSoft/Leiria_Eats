@@ -674,3 +674,111 @@ fun CartAiChatBubble(
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SavePaymentMethodSheet(
+    onDismiss: () -> Unit,
+    onConfirm: (savePaymentMethod: Boolean) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = CartCard,
+        contentColor = CartText
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 40.dp, top = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Icon
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .background(CartPrimary.copy(alpha = 0.15f), CircleShape)
+                    .border(1.dp, CartPrimary.copy(alpha = 0.3f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "💳",
+                    fontSize = 32.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Title
+            Text(
+                text = "Salvar cartão como padrão?",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = CartText
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Description
+            Text(
+                text = "Deseja usar esse cartão como padrão para usarmos sempre que você fizer um pedido?",
+                fontSize = 14.sp,
+                color = CartMuted,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                lineHeight = 20.sp
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // No button
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(CartSurface)
+                        .border(1.dp, CartMuted.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                        .clickable { onConfirm(false) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Não, obrigado",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CartMuted
+                    )
+                }
+
+                // Yes button
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(CartPrimary, Color(0xFFE65100))
+                            )
+                        )
+                        .clickable { onConfirm(true) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Sim, salvar",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+    }
+}

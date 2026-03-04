@@ -464,11 +464,26 @@ class SearchViewModel(
         val defaultAddress = currentState.userProfile.addresses.find { it.isDefault }
 
         if (defaultAddress != null) {
-            // Use default address directly
-            confirmCheckout(defaultAddress)
+            // Show save payment method sheet before checkout
+            _uiState.update { it.copy(showSavePaymentSheet = true) }
         } else {
             // Show address selection sheet if no default
             _uiState.update { it.copy(isAddressSheetVisible = true) }
+        }
+    }
+
+    fun dismissSavePaymentSheet() {
+        _uiState.update { it.copy(showSavePaymentSheet = false) }
+    }
+
+    fun proceedToCheckout(savePaymentMethod: Boolean) {
+        _uiState.update { it.copy(showSavePaymentSheet = false) }
+
+        val currentState = _uiState.value
+        val defaultAddress = currentState.userProfile.addresses.find { it.isDefault }
+
+        if (defaultAddress != null) {
+            confirmCheckout(defaultAddress, savePaymentMethod)
         }
     }
 
@@ -476,7 +491,7 @@ class SearchViewModel(
         _uiState.update { it.copy(isAddressSheetVisible = false) }
     }
 
-    fun confirmCheckout(selectedAddress: Address) {
+    fun confirmCheckout(selectedAddress: Address, savePaymentMethod: Boolean = false) {
         _uiState.update { it.copy(isAddressSheetVisible = false, isLoading = true, error = null) }
 
         val currentState = _uiState.value
@@ -544,7 +559,8 @@ class SearchViewModel(
                 restaurant_name = restaurant.name,
                 restaurant_image_url = restaurant.image_url,
                 restaurant_category = restaurant.category,
-                items = orderItems
+                items = orderItems,
+                save_payment_method = savePaymentMethod
             )
 
             val sessionResponse = apiClient.initiateCheckout(request)
