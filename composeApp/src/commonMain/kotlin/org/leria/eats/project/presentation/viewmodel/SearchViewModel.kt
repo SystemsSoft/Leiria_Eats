@@ -28,13 +28,22 @@ class SearchViewModel(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
+    private fun buildGreeting(name: String): String {
+        val firstName = name.trim().split(" ").firstOrNull { it.isNotBlank() }
+        return if (!firstName.isNullOrBlank())
+            "Olá ${firstName.replaceFirstChar { it.uppercaseChar() }}! O que vamos comer hoje?"
+        else
+            "Olá! O que vamos comer hoje?"
+    }
+
     private val favoriteOrderIdsFlow = profileRepository.favoriteOrderIdsFlow
 
 
     init {
         viewModelScope.launch {
             profileRepository.userProfileFlow.collect { profile ->
-                _uiState.update { it.copy(userProfile = profile) }
+                val greeting = buildGreeting(profile.name)
+                _uiState.update { it.copy(userProfile = profile, aiReply = greeting) }
             }
         }
         viewModelScope.launch {
@@ -194,11 +203,12 @@ class SearchViewModel(
     }
 
     fun clearSearch() {
+        val greeting = buildGreeting(_uiState.value.userProfile.name)
         _uiState.update {
             it.copy(
                 restaurantResults = emptyList(),
                 productResults = emptyList(),
-                aiReply = "O que lhe apetece hoje?",
+                aiReply = greeting,
                 textInput = "",
                 error = null
             )
