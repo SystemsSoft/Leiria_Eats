@@ -19,13 +19,18 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import org.koin.compose.koinInject
+import org.leria.eats.project.voice.TextToSpeechService
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -436,6 +441,17 @@ fun RestaurantHeader(
 }
 
 // ─── AI Chat Bubble in Cart ───────────────────────────────────────────────────
+
+/** Remove emojis and special symbols so TTS reads only plain text. */
+private fun stripEmojisForTts(text: String): String =
+    text
+        .replace(Regex("[\\p{So}\\p{Sm}\\p{Sk}\\p{Sc}]"), "") // Unicode symbols
+        .replace(Regex("[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]"), "") // surrogate emoji pairs
+        .replace(Regex("[\u2600-\u27FF]"), "")  // misc symbols, dingbats, arrows
+        .replace(Regex("[\uFE00-\uFE0F]"), "")  // variation selectors
+        .replace(Regex("\\s{2,}"), " ")
+        .trim()
+
 private val CartAiBotBubble = Color(0xFF0D2419)
 private val CartAiPrimary   = Color(0xFFFFC107)
 private val CartAiSecondary = Color(0xFF4ADE80)
@@ -449,16 +465,28 @@ fun CartAiChatBubble(
     onDismiss: () -> Unit,
     onSuggestAnotherRestaurant: () -> Unit,
     onAddMoreFromSame: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    tts: TextToSpeechService = koinInject()
 ) {
     val displayedText = remember { mutableStateOf("") }
+    var isSpeaking by remember { mutableStateOf(false) }
+
+    // Stop TTS when the composable leaves the composition
+    DisposableEffect(Unit) {
+        onDispose { tts.stop() }
+    }
 
     LaunchedEffect(message) {
         displayedText.value = ""
+        tts.stop()
+        isSpeaking = false
         for (i in message.indices) {
             displayedText.value = message.substring(0, i + 1)
             kotlinx.coroutines.delay(14)
         }
+        // Auto-speak after typewriter finishes
+        isSpeaking = true
+        tts.speak(stripEmojisForTts(message))
     }
 
     Box(
@@ -510,16 +538,39 @@ fun CartAiChatBubble(
                         color = CartAiPrimary
                     )
                 }
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Fechar",
-                        tint = CartAiMuted,
-                        modifier = Modifier.size(16.dp)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Speaker toggle button
+                    IconButton(
+                        onClick = {
+                            if (isSpeaking) {
+                                tts.stop()
+                                isSpeaking = false
+                            } else {
+                                isSpeaking = true
+                                tts.speak(stripEmojisForTts(message))
+                            }
+                        },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isSpeaking) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
+                            contentDescription = if (isSpeaking) "Parar voz" else "Ouvir mensagem",
+                            tint = if (isSpeaking) CartAiSecondary else CartAiMuted,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Fechar",
+                            tint = CartAiMuted,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
 

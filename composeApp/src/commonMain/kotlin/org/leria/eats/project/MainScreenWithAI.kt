@@ -35,6 +35,7 @@ import org.leria.eats.project.presentation.components.WebView
 import org.leria.eats.project.presentation.viewmodel.SearchViewModel
 import org.leria.eats.project.service.LocationService
 import org.leria.eats.project.voice.VoiceRecognizer
+import org.leria.eats.project.voice.TextToSpeechService
 
 // ─── Paleta KOMAAI ────────────────────────────────────────────────────────────
 private val KomaDeepBg   = Color(0xFF061510)
@@ -51,10 +52,18 @@ fun MainScreenWithAI(
     val scope = rememberCoroutineScope()
     val uiState by viewModel.uiState.collectAsState()
     val voiceRecognizer = koinInject<VoiceRecognizer>()
+    val tts = koinInject<TextToSpeechService>()
     val voiceText by voiceRecognizer.results.collectAsState()
     val isListening by voiceRecognizer.isListening.collectAsState()
     val permissionStatus by permissionManager.status.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Falar a saudação quando o nome for carregado
+    LaunchedEffect(uiState.aiReply) {
+        if (uiState.aiReply.startsWith("Olá") || uiState.aiReply.startsWith("Outras opções")) {
+            tts.speak(uiState.aiReply)
+        }
+    }
 
     LaunchedEffect(uiState.cartError) {
         uiState.cartError?.let {
