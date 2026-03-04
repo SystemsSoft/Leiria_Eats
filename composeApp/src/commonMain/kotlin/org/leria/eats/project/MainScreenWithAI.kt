@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,12 +59,18 @@ fun MainScreenWithAI(
     val isListening by voiceRecognizer.isListening.collectAsState()
     val permissionStatus by permissionManager.status.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var isMuted by remember { mutableStateOf(false) }
 
     // Falar a saudação quando o nome for carregado
     LaunchedEffect(uiState.aiReply) {
-        if (uiState.aiReply.startsWith("Olá") || uiState.aiReply.startsWith("Outras opções")) {
+        if (!isMuted && (uiState.aiReply.startsWith("Olá") || uiState.aiReply.startsWith("Outras opções"))) {
             tts.speak(uiState.aiReply)
         }
+    }
+
+    // Stop TTS immediately when muted
+    LaunchedEffect(isMuted) {
+        if (isMuted) tts.stop()
     }
 
     LaunchedEffect(uiState.cartError) {
@@ -293,6 +301,33 @@ fun MainScreenWithAI(
                                 )
                             )
 
+                            // ── Som ───────────────────────────────────────────
+                            NavigationBarItem(
+                                icon = {
+                                    Icon(
+                                        imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                                        contentDescription = if (isMuted) "Ativar som" else "Desativar som"
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        if (isMuted) "Som off" else "Som",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Normal
+                                    )
+                                },
+                                selected = false,
+                                onClick = { isMuted = !isMuted },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = KomaDeepBg,
+                                    selectedTextColor = selectedColor,
+                                    indicatorColor = KomaGold,
+                                    unselectedIconColor = if (isMuted) KomaMuted.copy(alpha = 0.4f) else KomaMuted.copy(alpha = 0.55f),
+                                    unselectedTextColor = if (isMuted) KomaMuted.copy(alpha = 0.4f) else KomaMuted.copy(alpha = 0.55f)
+                                )
+                            )
+
+
                             // ── Perfil ────────────────────────────────────────
                             NavigationBarItem(
                                 icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
@@ -380,7 +415,8 @@ fun MainScreenWithAI(
                                         viewModel.selectRestaurant(r)
                                     }
                                     viewModel.onTabSelected(MainTab.HOME)
-                                }
+                                },
+                                isMuted = isMuted
                             )
                         }
 

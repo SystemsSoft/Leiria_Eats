@@ -19,8 +19,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingBag
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -68,7 +66,8 @@ fun CartScreen(
     cartAiMessage: String? = null,
     onDismissAiMessage: () -> Unit = {},
     onSuggestAnotherRestaurant: () -> Unit = {},
-    onAddMoreFromSame: () -> Unit = {}
+    onAddMoreFromSame: () -> Unit = {},
+    isMuted: Boolean = false
 ) {
     val total = cartItems.sumOf { it.price * it.quantity }
     var showConfirmDialog by remember { mutableStateOf(false) }
@@ -141,6 +140,7 @@ fun CartScreen(
                         onDismiss = onDismissAiMessage,
                         onSuggestAnotherRestaurant = onSuggestAnotherRestaurant,
                         onAddMoreFromSame = onAddMoreFromSame,
+                        isMuted = isMuted,
                         modifier = Modifier.padding(bottom = 14.dp)
                     )
                 }
@@ -465,11 +465,11 @@ fun CartAiChatBubble(
     onDismiss: () -> Unit,
     onSuggestAnotherRestaurant: () -> Unit,
     onAddMoreFromSame: () -> Unit,
+    isMuted: Boolean = false,
     modifier: Modifier = Modifier,
     tts: TextToSpeechService = koinInject()
 ) {
     val displayedText = remember { mutableStateOf("") }
-    var isSpeaking by remember { mutableStateOf(false) }
 
     // Stop TTS when the composable leaves the composition
     DisposableEffect(Unit) {
@@ -479,14 +479,21 @@ fun CartAiChatBubble(
     LaunchedEffect(message) {
         displayedText.value = ""
         tts.stop()
-        isSpeaking = false
         for (i in message.indices) {
             displayedText.value = message.substring(0, i + 1)
             kotlinx.coroutines.delay(14)
         }
-        // Auto-speak after typewriter finishes
-        isSpeaking = true
-        tts.speak(stripEmojisForTts(message))
+        // Auto-speak after typewriter finishes (only if not muted)
+        if (!isMuted) {
+            tts.speak(stripEmojisForTts(message))
+        }
+    }
+
+    // React to mute toggled while message is already showing
+    LaunchedEffect(isMuted) {
+        if (isMuted) {
+            tts.stop()
+        }
     }
 
     Box(
@@ -538,39 +545,16 @@ fun CartAiChatBubble(
                         color = CartAiPrimary
                     )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Speaker toggle button
-                    IconButton(
-                        onClick = {
-                            if (isSpeaking) {
-                                tts.stop()
-                                isSpeaking = false
-                            } else {
-                                isSpeaking = true
-                                tts.speak(stripEmojisForTts(message))
-                            }
-                        },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isSpeaking) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
-                            contentDescription = if (isSpeaking) "Parar voz" else "Ouvir mensagem",
-                            tint = if (isSpeaking) CartAiSecondary else CartAiMuted,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Fechar",
-                            tint = CartAiMuted,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Fechar",
+                        tint = CartAiMuted,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
 
