@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -26,9 +27,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import org.koin.compose.koinInject
 import org.leria.eats.project.voice.TextToSpeechService
+import org.leria.eats.project.voice.VoiceRecognizer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,7 +62,6 @@ fun CartScreen(
     cartItems: List<Product>,
     onRemoveItem: (Product) -> Unit,
     onCheckout: () -> Unit,
-    isLoading: Boolean = false,
     restaurantSelected: Restaurant?,
     onGoToRestaurant: ((Restaurant) -> Unit)? = null,
     cartAiMessage: String? = null,
@@ -70,7 +71,6 @@ fun CartScreen(
     isMuted: Boolean = false
 ) {
     val total = cartItems.sumOf { it.price * it.quantity }
-    var showConfirmDialog by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -122,6 +122,7 @@ fun CartScreen(
             restaurantSelected?.let { restaurant ->
                 RestaurantHeader(
                     restaurant = restaurant,
+                    total = total,
                     modifier = Modifier.padding(bottom = 16.dp),
                     showGoToRestaurant = cartItems.isNotEmpty() && onGoToRestaurant != null,
                     onGoToRestaurant = { onGoToRestaurant?.invoke(restaurant) }
@@ -140,6 +141,7 @@ fun CartScreen(
                         onDismiss = onDismissAiMessage,
                         onSuggestAnotherRestaurant = onSuggestAnotherRestaurant,
                         onAddMoreFromSame = onAddMoreFromSame,
+                        onCheckout = onCheckout,
                         isMuted = isMuted,
                         modifier = Modifier.padding(bottom = 14.dp)
                     )
@@ -178,92 +180,44 @@ fun CartScreen(
                         CartItemRow(product, onRemove = { onRemoveItem(product) })
                     }
                 }
+            }
+        }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // ── Order summary ─────────────────────────────────────────
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(CartCard)
-                        .border(1.dp, CartPrimary.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
-                        .padding(20.dp)
+        // ── Floating Action Button ───────────────────────────────────────
+        if (cartItems.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 24.dp, end = 20.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(CartPrimary, Color(0xFFE65100))
+                        )
+                    )
+                    .clickable { onCheckout() }
+                    .padding(horizontal = 20.dp, vertical = 14.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Total do Pedido", color = CartMuted, fontSize = 14.sp)
-                            Text(
-                                formatCurrency(total),
-                                color = CartSecondary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Checkout button
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(
-                                    if (!isLoading)
-                                        Brush.horizontalGradient(listOf(CartPrimary, Color(0xFFE65100)))
-                                    else
-                                        Brush.horizontalGradient(listOf(CartCard, CartCard))
-                                )
-                                .clickable(enabled = !isLoading) { showConfirmDialog = true },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (isLoading) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    CircularProgressIndicator(color = CartPrimary, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text("Preparando pagamento…", color = CartMuted, fontWeight = FontWeight.SemiBold)
-                                }
-                            } else {
-                                Text("Finalizar Pedido ✦", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            }
-                        }
-                    }
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Finalizar Pedido",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Finalizar Pedido",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
                 }
             }
         }
-    }
-
-    // ── Confirmation dialog ────────────────────────────────────────────────────
-    if (showConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showConfirmDialog = false },
-            containerColor = CartCard,
-            titleContentColor = CartText,
-            textContentColor = CartMuted,
-            title = { Text("Confirmar pagamento", fontWeight = FontWeight.Bold) },
-            text = { Text("Será redirecionado para o pagamento. Deseja continuar?") },
-            confirmButton = {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Brush.horizontalGradient(listOf(CartPrimary, Color(0xFFE65100))))
-                        .clickable { showConfirmDialog = false; onCheckout() }
-                        .padding(horizontal = 20.dp, vertical = 10.dp)
-                ) {
-                    Text("Continuar", color = Color.White, fontWeight = FontWeight.SemiBold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showConfirmDialog = false }) {
-                    Text("Cancelar", color = CartMuted)
-                }
-            }
-        )
     }
 }
 
@@ -368,6 +322,7 @@ fun CartItemRow(product: Product, onRemove: () -> Unit) {
 @Composable
 fun RestaurantHeader(
     restaurant: Restaurant,
+    total: Double,
     modifier: Modifier = Modifier,
     showGoToRestaurant: Boolean = false,
     onGoToRestaurant: () -> Unit = {}
@@ -418,6 +373,20 @@ fun RestaurantHeader(
                     color = CartMuted,
                     fontSize = 12.sp
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Total: ",
+                        color = CartMuted,
+                        fontSize = 11.sp
+                    )
+                    Text(
+                        text = formatCurrency(total),
+                        color = CartSecondary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
             }
             if (showGoToRestaurant) {
                 Spacer(modifier = Modifier.width(8.dp))
@@ -465,27 +434,54 @@ fun CartAiChatBubble(
     onDismiss: () -> Unit,
     onSuggestAnotherRestaurant: () -> Unit,
     onAddMoreFromSame: () -> Unit,
+    onCheckout: () -> Unit,
     isMuted: Boolean = false,
     modifier: Modifier = Modifier,
-    tts: TextToSpeechService = koinInject()
+    tts: TextToSpeechService = koinInject(),
+    voiceRecognizer: VoiceRecognizer = koinInject()
 ) {
     val displayedText = remember { mutableStateOf("") }
+    val voiceText by voiceRecognizer.results.collectAsState()
+    val isListening by voiceRecognizer.isListening.collectAsState()
 
     // Stop TTS when the composable leaves the composition
     DisposableEffect(Unit) {
-        onDispose { tts.stop() }
+        onDispose {
+            tts.stop()
+            voiceRecognizer.stopListening()
+        }
     }
 
     LaunchedEffect(message) {
         displayedText.value = ""
         tts.stop()
+        voiceRecognizer.stopListening()
+
         // Start speaking immediately, in parallel with the typewriter animation
         if (!isMuted) {
-            tts.speak(stripEmojisForTts(message))
+            // Add CTA text to the original message
+            val fullMessage = "$message\n\n💬 Se estiver tudo certo, clique ou fale 'finalizar pedido', e enviarei seu pedido para o restaurante usando a forma de pagamento e endereço padrão."
+            tts.speak(stripEmojisForTts(fullMessage))
         }
+
         for (i in message.indices) {
             displayedText.value = message.substring(0, i + 1)
             kotlinx.coroutines.delay(14)
+        }
+
+        // Start voice recognition after typewriter finishes
+        kotlinx.coroutines.delay(500)
+        voiceRecognizer.startListening()
+    }
+
+    // Detect "finalizar pedido" in voice input
+    LaunchedEffect(voiceText) {
+        val normalized = voiceText.lowercase().trim()
+        if (normalized.contains("finalizar pedido") ||
+            normalized.contains("finalize pedido") ||
+            normalized.contains("finalizar o pedido")) {
+            voiceRecognizer.stopListening()
+            onCheckout()
         }
     }
 
@@ -568,6 +564,38 @@ fun CartAiChatBubble(
                 lineHeight = 19.sp
             )
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // CTA text with microphone indicator
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(CartAiCard2.copy(alpha = 0.6f))
+                    .border(1.dp, CartAiSecondary.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                    .padding(10.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isListening) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(CartAiSecondary, CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text(
+                        text = if (isListening)
+                            "🎤 Ouvindo... Diga 'finalizar pedido' para confirmar"
+                        else
+                            "💬 Se estiver tudo certo, clique ou fale 'finalizar pedido', e enviarei seu pedido para o restaurante usando a forma de pagamento e endereço padrão.",
+                        fontSize = 11.sp,
+                        color = if (isListening) CartAiSecondary else CartAiText.copy(alpha = 0.85f),
+                        lineHeight = 16.sp
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(14.dp))
 
             // Action buttons
@@ -587,7 +615,10 @@ fun CartAiChatBubble(
                             )
                         )
                         .border(1.dp, CartAiPrimary.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
-                        .clickable { onSuggestAnotherRestaurant() },
+                        .clickable {
+                            voiceRecognizer.stopListening()
+                            onSuggestAnotherRestaurant()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -610,7 +641,10 @@ fun CartAiChatBubble(
                             )
                         )
                         .border(1.dp, CartAiSecondary.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
-                        .clickable { onAddMoreFromSame() },
+                        .clickable {
+                            voiceRecognizer.stopListening()
+                            onAddMoreFromSame()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(

@@ -399,7 +399,6 @@ fun MainScreenWithAI(
                                 restaurantSelected = uiState.selectedRestaurant,
                                 onRemoveItem = { product -> viewModel.removeFromCart(product) },
                                 onCheckout = { viewModel.checkout() },
-                                isLoading = uiState.isLoading,
                                 onGoToRestaurant = { restaurant ->
                                     viewModel.selectRestaurant(restaurant)
                                     viewModel.onTabSelected(MainTab.HOME)
