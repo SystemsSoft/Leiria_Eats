@@ -463,9 +463,18 @@ class SearchViewModel(
         // Check if there's a default address
         val defaultAddress = currentState.userProfile.addresses.find { it.isDefault }
 
+        // Check if user has saved payment methods
+        val hasSavedPaymentMethods = currentState.userProfile.savedPaymentMethods.isNotEmpty()
+
         if (defaultAddress != null) {
-            // Show save payment method sheet before checkout
-            _uiState.update { it.copy(showSavePaymentSheet = true) }
+            if (hasSavedPaymentMethods) {
+                // User has saved payment methods, proceed directly with auto-payment
+                // Backend will handle charging the saved card
+                confirmCheckout(defaultAddress, savePaymentMethod = true)
+            } else {
+                // User doesn't have saved payment methods, show sheet to ask
+                _uiState.update { it.copy(showSavePaymentSheet = true) }
+            }
         } else {
             // Show address selection sheet if no default
             _uiState.update { it.copy(isAddressSheetVisible = true) }
@@ -492,7 +501,14 @@ class SearchViewModel(
     }
 
     fun confirmCheckout(selectedAddress: Address, savePaymentMethod: Boolean = false) {
-        _uiState.update { it.copy(isAddressSheetVisible = false, isLoading = true, error = null) }
+        _uiState.update {
+            it.copy(
+                isAddressSheetVisible = false,
+                isLoading = true,
+                error = null,
+                pendingSavePaymentMethod = savePaymentMethod
+            )
+        }
 
         val currentState = _uiState.value
         val restaurantId = currentState.cartRestaurantId
@@ -593,6 +609,9 @@ class SearchViewModel(
 
     fun onPaymentResult(isSuccess: Boolean, orderId: String?) {
         if (isSuccess) {
+            val shouldFetchMethods = _uiState.value.pendingSavePaymentMethod
+            val userId = _uiState.value.userProfile.id
+
             _uiState.update {
                 it.copy(
                     isLoading = false,
@@ -600,12 +619,27 @@ class SearchViewModel(
                     cartItems = emptyList(),
                     cartRestaurantId = null,
                     currentTab = MainTab.ORDERS,
-                    error = null
+                    error = null,
+                    pendingSavePaymentMethod = false
                 )
             }
+
+            // Fetch saved payment methods if user chose to save
+            if (shouldFetchMethods && userId.isNotBlank()) {
+                viewModelScope.launch {
+                    fetchSavedPaymentMethods(userId)
+                }
+            }
+
             refreshOrders()
         } else {
-            _uiState.update { it.copy(checkoutUrl = null, error = if (orderId == null) "Pagamento cancelado." else "Erro: ID do pedido não encontrado.") }
+            _uiState.update {
+                it.copy(
+                    checkoutUrl = null,
+                    pendingSavePaymentMethod = false,
+                    error = if (orderId == null) "Pagamento cancelado." else "Erro: ID do pedido não encontrado."
+                )
+            }
         }
     }
 
@@ -642,6 +676,13 @@ class SearchViewModel(
                             order.status in successStatuses -> {
                                 // Payment confirmed!
                                 paymentConfirmed = true
+
+                                // Fetch saved payment methods if user chose to save
+                                val shouldFetchMethods = _uiState.value.pendingSavePaymentMethod
+                                if (shouldFetchMethods) {
+                                    fetchSavedPaymentMethods(userId)
+                                }
+
                                 _uiState.update {
                                     it.copy(
                                         isProcessingAutoPayment = false,
@@ -650,7 +691,8 @@ class SearchViewModel(
                                         cartItems = emptyList(),
                                         cartRestaurantId = null,
                                         currentTab = MainTab.ORDERS,
-                                        error = null
+                                        error = null,
+                                        pendingSavePaymentMethod = false
                                     )
                                 }
                                 refreshOrders()
@@ -708,6 +750,22 @@ class SearchViewModel(
         viewModelScope.launch {
             refreshOrdersInternal()
             _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    private suspend fun fetchSavedPaymentMethods(userId: String) {
+        try {
+            val response = apiClient.getSavedPaymentMethods(userId)
+            if (response != null && response.hasSavedMethods) {
+                // Save to local repository
+                profileRepository.savePaymentMethods(response.methods)
+                println("✅ Métodos de pagamento salvos: ${response.methods.size}")
+            } else {
+                println("ℹ️ Nenhum método de pagamento encontrado")
+            }
+        } catch (e: Exception) {
+            println("⚠️ Erro ao buscar métodos de pagamento: ${e.message}")
+            // Don't block the flow, just log the error
         }
     }
 }

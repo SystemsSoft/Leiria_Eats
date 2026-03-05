@@ -43,7 +43,8 @@ data class SearchUiState(
     val showSavePaymentSheet: Boolean = false,
     val isProcessingAutoPayment: Boolean = false,
     val autoPaymentOrderId: Int? = null,
-    val autoPaymentIntentId: String? = null
+    val autoPaymentIntentId: String? = null,
+    val pendingSavePaymentMethod: Boolean = false
 ) {
     val cartCount: Int get() = cartItems.size
     val favoriteOrders: List<Order> get() = orderHistory.filter { it.isFavorite }

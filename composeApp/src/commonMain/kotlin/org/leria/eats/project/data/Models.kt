@@ -100,9 +100,31 @@ data class Address(
 )
 
 @Serializable
+data class SavedPaymentMethod(
+    val id: Int,
+    val brand: String,
+    val last4: String,
+    @SerialName("exp_month")
+    val expMonth: Int,
+    @SerialName("exp_year")
+    val expYear: Int,
+    @SerialName("stripe_payment_method_id")
+    val stripePaymentMethodId: String
+)
+
+@Serializable
+data class SavedPaymentMethodsResponse(
+    @SerialName("has_saved_methods")
+    val hasSavedMethods: Boolean,
+    val methods: List<SavedPaymentMethod> = emptyList()
+)
+
+@Serializable
 data class UserProfile(
     val id: String = "",
     val name: String = "",
     val phone: String = "",
-    val addresses: List<Address> = emptyList()
+    val addresses: List<Address> = emptyList(),
+    @SerialName("saved_payment_methods")
+    val savedPaymentMethods: List<SavedPaymentMethod> = emptyList()
 )

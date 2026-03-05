@@ -91,4 +91,21 @@ class LeriaApiClient {
             null
         }
     }
+
+    suspend fun getSavedPaymentMethods(userId: String): SavedPaymentMethodsResponse? {
+        return try {
+            val response = client.get("$baseUrl/users/$userId/saved-payment-methods")
+
+            if (response.status.value == 200) {
+                response.body()
+            } else {
+                val errorBody: String = response.body()
+                println("⚠️ Erro ${response.status.value} ao buscar métodos de pagamento: $errorBody")
+                null
+            }
+        } catch (e: Exception) {
+            println("🚨 Falha ao buscar métodos de pagamento: ${e.message}")
+            null
+        }
+    }
 }

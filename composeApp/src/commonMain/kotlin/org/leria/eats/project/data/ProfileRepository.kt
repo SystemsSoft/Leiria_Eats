@@ -17,6 +17,7 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
     private val PHONE_KEY = stringPreferencesKey("user_phone")
     private val ADDRESSES_KEY = stringPreferencesKey("user_addresses")
     private val FAVORITE_ORDERS_KEY = stringSetPreferencesKey("favorite_orders")
+    private val PAYMENT_METHODS_KEY = stringPreferencesKey("saved_payment_methods")
 
     val userProfileFlow: Flow<UserProfile> = dataStore.data.map { preferences ->
         val addressesJson = preferences[ADDRESSES_KEY] ?: "[]"
@@ -25,11 +26,18 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
         } catch (e: Exception) {
             emptyList()
         }
+        val paymentMethodsJson = preferences[PAYMENT_METHODS_KEY] ?: "[]"
+        val paymentMethods = try {
+            Json.decodeFromString<List<SavedPaymentMethod>>(paymentMethodsJson)
+        } catch (e: Exception) {
+            emptyList()
+        }
         UserProfile(
             id = preferences[ID_KEY] ?: "",
             name = preferences[NAME_KEY] ?: "",
             phone = preferences[PHONE_KEY] ?: "",
-            addresses = addresses
+            addresses = addresses,
+            savedPaymentMethods = paymentMethods
         )
     }
 
@@ -54,6 +62,13 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun saveFavoriteOrderIds(ids: Set<String>) {
         dataStore.edit { preferences ->
             preferences[FAVORITE_ORDERS_KEY] = ids
+        }
+    }
+
+    suspend fun savePaymentMethods(methods: List<SavedPaymentMethod>) {
+        dataStore.edit { preferences ->
+            val methodsJson = Json.encodeToString(methods)
+            preferences[PAYMENT_METHODS_KEY] = methodsJson
         }
     }
 }
