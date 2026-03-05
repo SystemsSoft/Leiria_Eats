@@ -14,7 +14,10 @@ import kotlinx.serialization.json.Json
 
 @Serializable
 data class PaymentIntentResponse(
-    val url: String
+    val url: String?,
+    val auto_paid: Boolean = false,
+    val order_id: Int? = null,
+    val payment_intent_id: String? = null
 )
 
 class LeriaApiClient {
@@ -28,7 +31,7 @@ class LeriaApiClient {
         }
     }
 
-    private val baseUrl = "http://192.168.29.3:8080"
+    private val baseUrl = "https://api.leiriaeats.com"
     suspend fun searchRestaurants(text: String): SearchResponse {
         val response = client.post("$baseUrl/search") {
             contentType(ContentType.Application.Json)

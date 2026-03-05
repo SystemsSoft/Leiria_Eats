@@ -570,8 +570,23 @@ class SearchViewModel(
                 return@launch
             }
 
-            _uiState.update {
-                it.copy(isLoading = false, checkoutUrl = sessionResponse.url)
+            // Handle auto_paid scenario (payment method already saved)
+            if (sessionResponse.auto_paid) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isProcessingAutoPayment = true,
+                        autoPaymentOrderId = sessionResponse.order_id,
+                        autoPaymentIntentId = sessionResponse.payment_intent_id
+                    )
+                }
+                // Start polling for payment confirmation
+                startPaymentPolling(currentState.userProfile.id, sessionResponse.order_id)
+            } else {
+                // Traditional checkout flow - redirect to Stripe Checkout URL
+                _uiState.update {
+                    it.copy(isLoading = false, checkoutUrl = sessionResponse.url)
+                }
             }
         }
     }
@@ -591,6 +606,98 @@ class SearchViewModel(
             refreshOrders()
         } else {
             _uiState.update { it.copy(checkoutUrl = null, error = if (orderId == null) "Pagamento cancelado." else "Erro: ID do pedido não encontrado.") }
+        }
+    }
+
+    private fun startPaymentPolling(userId: String, orderId: Int?) {
+        if (orderId == null) {
+            _uiState.update {
+                it.copy(
+                    isProcessingAutoPayment = false,
+                    error = "Erro: ID do pedido não encontrado."
+                )
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            var attempts = 0
+            val maxAttempts = 30 // 30 seconds max (30 * 1 second)
+            var paymentConfirmed = false
+
+            while (attempts < maxAttempts && !paymentConfirmed) {
+                delay(1000) // Wait 1 second between checks
+                attempts++
+
+                try {
+                    // Fetch latest orders to check if payment was confirmed
+                    val updatedOrders = apiClient.getCustomerOrders(userId)
+                    val order = updatedOrders.find { it.id == orderId.toString() }
+
+                    if (order != null) {
+                        val successStatuses = listOf("Em Preparo", "Confirmado", "Pago", "Saiu para Entrega", "Entregue")
+                        val failureStatuses = listOf("Falhou", "Cancelado", "Recusado")
+
+                        when {
+                            order.status in successStatuses -> {
+                                // Payment confirmed!
+                                paymentConfirmed = true
+                                _uiState.update {
+                                    it.copy(
+                                        isProcessingAutoPayment = false,
+                                        autoPaymentOrderId = null,
+                                        autoPaymentIntentId = null,
+                                        cartItems = emptyList(),
+                                        cartRestaurantId = null,
+                                        currentTab = MainTab.ORDERS,
+                                        error = null
+                                    )
+                                }
+                                refreshOrders()
+                                return@launch
+                            }
+                            order.status in failureStatuses -> {
+                                // Payment failed!
+                                paymentConfirmed = true // Stop polling
+                                _uiState.update {
+                                    it.copy(
+                                        isProcessingAutoPayment = false,
+                                        autoPaymentOrderId = null,
+                                        autoPaymentIntentId = null,
+                                        error = "Pagamento falhou. Por favor, tente novamente ou use outro cartão."
+                                    )
+                                }
+                                return@launch
+                            }
+                            // Otherwise status is still "Pendente", continue polling
+                        }
+                    }
+                } catch (e: Exception) {
+                    println("Erro ao verificar status do pagamento: ${e.message}")
+                }
+            }
+
+            // Timeout reached
+            if (!paymentConfirmed) {
+                _uiState.update {
+                    it.copy(
+                        isProcessingAutoPayment = false,
+                        autoPaymentOrderId = null,
+                        autoPaymentIntentId = null,
+                        error = "O pagamento está demorando mais do que o esperado. Verifique seus pedidos."
+                    )
+                }
+            }
+        }
+    }
+
+    fun cancelAutoPayment() {
+        _uiState.update {
+            it.copy(
+                isProcessingAutoPayment = false,
+                autoPaymentOrderId = null,
+                autoPaymentIntentId = null
+            )
         }
     }
 

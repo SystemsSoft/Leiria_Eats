@@ -150,6 +150,53 @@ fun MainScreenWithAI(
             }
         }
 
+        // Auto-payment processing overlay
+        AnimatedVisibility(
+            visible = uiState.isProcessingAutoPayment,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(24.dp)
+                ) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        "Processando pagamento...",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Aguarde enquanto confirmamos o pagamento com o cartão salvo.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Optional cancel button
+                    TextButton(
+                        onClick = { viewModel.cancelAutoPayment() }
+                    ) {
+                        Text("Voltar", color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+        }
+
         AnimatedVisibility(
             visible = uiState.checkoutUrl == null,
             enter = fadeIn() + slideInHorizontally(initialOffsetX = { fullWidth -> -fullWidth }),

@@ -40,7 +40,10 @@ data class SearchUiState(
     val showSearchTypeSheet: Boolean = false,
     val pendingRestaurantResults: List<Restaurant> = emptyList(),
     val pendingProductResults: List<Product> = emptyList(),
-    val showSavePaymentSheet: Boolean = false
+    val showSavePaymentSheet: Boolean = false,
+    val isProcessingAutoPayment: Boolean = false,
+    val autoPaymentOrderId: Int? = null,
+    val autoPaymentIntentId: String? = null
 ) {
     val cartCount: Int get() = cartItems.size
     val favoriteOrders: List<Order> get() = orderHistory.filter { it.isFavorite }
