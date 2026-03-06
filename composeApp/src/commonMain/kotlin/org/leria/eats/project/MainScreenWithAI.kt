@@ -453,6 +453,7 @@ fun MainScreenWithAI(
                                     viewModel.onTabSelected(MainTab.HOME)
                                 },
                                 cartAiMessage = uiState.cartAiMessage,
+                                cartAiMessageSpoken = uiState.cartAiMessageSpoken,
                                 onDismissAiMessage = { viewModel.clearCartAiMessage() },
                                 onSuggestAnotherRestaurant = {
                                     viewModel.suggestAnotherRestaurant()
@@ -464,6 +465,7 @@ fun MainScreenWithAI(
                                     }
                                     viewModel.onTabSelected(MainTab.HOME)
                                 },
+                                onMarkAiMessageAsSpoken = { viewModel.markCartAiMessageAsSpoken() },
                                 isMuted = isMuted
                             )
                         }

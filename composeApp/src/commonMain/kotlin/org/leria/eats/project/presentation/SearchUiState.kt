@@ -35,6 +35,7 @@ data class SearchUiState(
     val cartError: String? = null,
     val cartMessage: String? = null,
     val cartAiMessage: String? = null,
+    val cartAiMessageSpoken: Boolean = false, // Track if AI message has been spoken
     val lastSearchQuery: String = "",
     val isSuggestionMode: Boolean = false,
     val showSearchTypeSheet: Boolean = false,

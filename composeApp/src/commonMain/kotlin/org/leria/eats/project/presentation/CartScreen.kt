@@ -65,9 +65,11 @@ fun CartScreen(
     restaurantSelected: Restaurant?,
     onGoToRestaurant: ((Restaurant) -> Unit)? = null,
     cartAiMessage: String? = null,
+    cartAiMessageSpoken: Boolean = false,
     onDismissAiMessage: () -> Unit = {},
     onSuggestAnotherRestaurant: () -> Unit = {},
     onAddMoreFromSame: () -> Unit = {},
+    onMarkAiMessageAsSpoken: () -> Unit = {},
     isMuted: Boolean = false
 ) {
     val total = cartItems.sumOf { it.price * it.quantity }
@@ -143,6 +145,8 @@ fun CartScreen(
                         onAddMoreFromSame = onAddMoreFromSame,
                         onCheckout = onCheckout,
                         isMuted = isMuted,
+                        alreadySpoken = cartAiMessageSpoken,
+                        onMarkAsSpoken = onMarkAiMessageAsSpoken,
                         modifier = Modifier.padding(bottom = 14.dp)
                     )
                 }
@@ -436,6 +440,8 @@ fun CartAiChatBubble(
     onAddMoreFromSame: () -> Unit,
     onCheckout: () -> Unit,
     isMuted: Boolean = false,
+    alreadySpoken: Boolean = false,
+    onMarkAsSpoken: () -> Unit = {},
     modifier: Modifier = Modifier,
     tts: TextToSpeechService = koinInject(),
     voiceRecognizer: VoiceRecognizer = koinInject()
@@ -462,9 +468,11 @@ fun CartAiChatBubble(
         voiceRecognizer.stopListening()
 
         // Start speaking immediately, in parallel with the typewriter animation
-        if (!isMuted) {
+        // Only speak if not muted AND message hasn't been spoken before
+        if (!isMuted && !alreadySpoken) {
             val fullMessage = "$message\n\n$ctaFullText"
             tts.speak(stripEmojisForTts(fullMessage))
+            onMarkAsSpoken() // Mark as spoken after TTS starts
         }
 
         // Type main message first

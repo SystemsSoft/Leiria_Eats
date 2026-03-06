@@ -172,7 +172,7 @@ class SearchViewModel(
                         if (products.size > 3) append(" e mais ${products.size - 3} itens")
                         append(".\n\n💡 Quer que sugira outro restaurante com pratos semelhantes, ou gostaria de adicionar mais alguma coisa deste restaurante?")
                     }
-                    _uiState.update { it.copy(isLoading = false, cartAiMessage = aiMsg) }
+                    _uiState.update { it.copy(isLoading = false, cartAiMessage = aiMsg, cartAiMessageSpoken = false) }
                 } else {
                     _uiState.update { it.copy(isLoading = false, selectedRestaurant = resolvedRestaurant) }
                 }
@@ -269,7 +269,7 @@ class SearchViewModel(
                                 append(" e mais ${response.productResults.size - 3} itens")
                             append(".\n\n💡 Quer que sugira outro restaurante com pratos semelhantes, ou gostaria de adicionar mais alguma coisa deste restaurante?")
                         }
-                        _uiState.update { it.copy(cartAiMessage = aiMsg) }
+                        _uiState.update { it.copy(cartAiMessage = aiMsg, cartAiMessageSpoken = false) }
                         onTabSelected(MainTab.CART)
                     }
                 }
@@ -312,7 +312,7 @@ class SearchViewModel(
                 append(".\n\n")
                 append("💡 Quer que sugira outro restaurante com pratos semelhantes, ou gostaria de adicionar mais alguma coisa deste restaurante?")
             }
-            _uiState.update { it.copy(cartAiMessage = aiMsg) }
+            _uiState.update { it.copy(cartAiMessage = aiMsg, cartAiMessageSpoken = false) }
             onTabSelected(MainTab.CART)
         }
     }
@@ -382,6 +382,10 @@ class SearchViewModel(
 
     fun clearCartAiMessage() {
         _uiState.update { it.copy(cartAiMessage = null) }
+    }
+
+    fun markCartAiMessageAsSpoken() {
+        _uiState.update { it.copy(cartAiMessageSpoken = true) }
     }
 
     fun suggestAnotherRestaurant() {
