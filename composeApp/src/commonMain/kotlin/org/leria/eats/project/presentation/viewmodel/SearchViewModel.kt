@@ -590,12 +590,25 @@ class SearchViewModel(
             if (sessionResponse.auto_paid) {
                 // Go DIRECTLY to Orders screen - don't wait for confirmation
                 // Status will update in real-time on the Orders screen
+                val greeting = buildGreeting(currentState.userProfile.name)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         isProcessingAutoPayment = false, // No overlay
                         cartItems = emptyList(), // Clear cart immediately
                         cartRestaurantId = null,
+                        selectedRestaurant = null, // Clear selected restaurant
+                        cartAiMessage = null, // Clear AI chat bubble
+                        restaurantResults = emptyList(), // Clear restaurant search results
+                        productResults = emptyList(), // Clear product search results
+                        textInput = "", // Clear search input
+                        lastSearchQuery = "", // Clear last search query
+                        aiReply = greeting, // Reset to greeting
+                        isSuggestionMode = false, // Reset suggestion mode
+                        selectedCategory = null, // Clear selected category
+                        showSearchTypeSheet = false, // Clear search type sheet
+                        pendingRestaurantResults = emptyList(), // Clear pending restaurants
+                        pendingProductResults = emptyList(), // Clear pending products
                         currentTab = MainTab.ORDERS, // Go to Orders NOW!
                         error = null,
                         pendingSavePaymentMethod = false
@@ -621,6 +634,7 @@ class SearchViewModel(
         if (isSuccess) {
             val shouldFetchMethods = _uiState.value.pendingSavePaymentMethod
             val userId = _uiState.value.userProfile.id
+            val greeting = buildGreeting(_uiState.value.userProfile.name)
 
             _uiState.update {
                 it.copy(
@@ -628,6 +642,18 @@ class SearchViewModel(
                     checkoutUrl = null,
                     cartItems = emptyList(),
                     cartRestaurantId = null,
+                    selectedRestaurant = null, // Clear selected restaurant
+                    cartAiMessage = null, // Clear AI chat bubble
+                    restaurantResults = emptyList(), // Clear restaurant search results
+                    productResults = emptyList(), // Clear product search results
+                    textInput = "", // Clear search input
+                    lastSearchQuery = "", // Clear last search query
+                    aiReply = greeting, // Reset to greeting
+                    isSuggestionMode = false, // Reset suggestion mode
+                    selectedCategory = null, // Clear selected category
+                    showSearchTypeSheet = false, // Clear search type sheet
+                    pendingRestaurantResults = emptyList(), // Clear pending restaurants
+                    pendingProductResults = emptyList(), // Clear pending products
                     currentTab = MainTab.ORDERS,
                     error = null,
                     pendingSavePaymentMethod = false
