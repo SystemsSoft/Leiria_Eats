@@ -588,16 +588,26 @@ class SearchViewModel(
 
             // Handle auto_paid scenario (payment method already saved)
             if (sessionResponse.auto_paid) {
+                // Go DIRECTLY to Orders screen - don't wait for confirmation
+                // Status will update in real-time on the Orders screen
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        isProcessingAutoPayment = true,
-                        autoPaymentOrderId = sessionResponse.order_id,
-                        autoPaymentIntentId = sessionResponse.payment_intent_id
+                        isProcessingAutoPayment = false, // No overlay
+                        cartItems = emptyList(), // Clear cart immediately
+                        cartRestaurantId = null,
+                        currentTab = MainTab.ORDERS, // Go to Orders NOW!
+                        error = null,
+                        pendingSavePaymentMethod = false
                     )
                 }
-                // Start polling for payment confirmation
-                startPaymentPolling(currentState.userProfile.id, sessionResponse.order_id)
+
+                // Refresh orders immediately to show the new order (status: Pendente)
+                refreshOrders()
+
+                // Start background polling to update order status in real-time
+                // User will see status change from "Pendente" to "Em Preparo" automatically
+                startBackgroundPolling(currentState.userProfile.id)
             } else {
                 // Traditional checkout flow - redirect to Stripe Checkout URL
                 _uiState.update {
@@ -750,6 +760,23 @@ class SearchViewModel(
         viewModelScope.launch {
             refreshOrdersInternal()
             _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    private fun startBackgroundPolling(userId: String) {
+        viewModelScope.launch {
+            // Poll every 2 seconds for up to 30 seconds to catch status updates
+            repeat(15) { // 15 attempts * 2 seconds = 30 seconds
+                delay(2000) // Wait 2 seconds between updates
+
+                try {
+                    // Silently refresh orders in the background
+                    refreshOrdersInternal()
+                } catch (e: Exception) {
+                    println("⚠️ Background polling error: ${e.message}")
+                    // Don't show error to user, just continue
+                }
+            }
         }
     }
 
