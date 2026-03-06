@@ -47,9 +47,14 @@ data class SearchUiState(
     val autoPaymentIntentId: String? = null,
     val pendingSavePaymentMethod: Boolean = false,
     val pendingProfileNavigation: Boolean = false, // Flag to navigate to profile after TTS finishes
-    val orderJustPlaced: Boolean = false // Flag to trigger voice feedback when order is placed
+    val orderJustPlaced: Boolean = false, // Flag to trigger voice feedback when order is placed
+    val favoriteOrderNicknames: Map<String, String> = emptyMap()
 ) {
     val cartCount: Int get() = cartItems.size
-    val favoriteOrders: List<Order> get() = orderHistory.filter { it.isFavorite }
-
+    val favoriteOrders: List<Order> get() = orderHistory
+        .filter { it.isFavorite }
+        .map { order ->
+            val nick = favoriteOrderNicknames[order.id]
+            if (!nick.isNullOrBlank()) order.copy(nickname = nick) else order
+        }
 }

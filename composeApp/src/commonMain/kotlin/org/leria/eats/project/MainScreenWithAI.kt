@@ -579,7 +579,8 @@ fun MainScreenWithAI(
                                     selectedOrder = uiState.selectedOrder,
                                     onOrderClick = { order -> viewModel.selectOrder(order) },
                                     onToggleFavorite = { order -> viewModel.toggleFavoriteOrder(order) },
-                                    onBackToList = { viewModel.clearOrderSelection() }
+                                    onBackToList = { viewModel.clearOrderSelection() },
+                                    onSetNickname = { orderId, nickname -> viewModel.updateFavoriteOrderNickname(orderId, nickname) }
                                 )
                             }
 

@@ -19,6 +19,7 @@ data class Order(
     val deliveryAddress: String = "",
     val date: String = "Hoje",
     val isFavorite: Boolean = false,
+    val nickname: String = "",
 
     @SerialName("payment_intent_id")
     val paymentIntentId: String? = ""

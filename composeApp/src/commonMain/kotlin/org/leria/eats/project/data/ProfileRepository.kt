@@ -18,6 +18,7 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
     private val PHONE_KEY = stringPreferencesKey("user_phone")
     private val ADDRESSES_KEY = stringPreferencesKey("user_addresses")
     private val FAVORITE_ORDERS_KEY = stringSetPreferencesKey("favorite_orders")
+    private val FAVORITE_ORDER_NICKNAMES_KEY = stringPreferencesKey("favorite_order_nicknames")
     private val PAYMENT_METHODS_KEY = stringPreferencesKey("saved_payment_methods")
 
     val userProfileFlow: Flow<UserProfile> = dataStore.data.map { preferences ->
@@ -66,6 +67,27 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun saveFavoriteOrderIds(ids: Set<String>) {
         dataStore.edit { preferences ->
             preferences[FAVORITE_ORDERS_KEY] = ids
+        }
+    }
+
+    val favoriteOrderNicknamesFlow: Flow<Map<String, String>> = dataStore.data.map { preferences ->
+        val json = preferences[FAVORITE_ORDER_NICKNAMES_KEY] ?: "{}"
+        try {
+            Json.decodeFromString<Map<String, String>>(json)
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    suspend fun saveFavoriteOrderNickname(orderId: String, nickname: String) {
+        dataStore.edit { preferences ->
+            val current = try {
+                Json.decodeFromString<Map<String, String>>(preferences[FAVORITE_ORDER_NICKNAMES_KEY] ?: "{}")
+            } catch (e: Exception) {
+                emptyMap()
+            }
+            val updated = if (nickname.isBlank()) current - orderId else current + (orderId to nickname)
+            preferences[FAVORITE_ORDER_NICKNAMES_KEY] = Json.encodeToString(updated)
         }
     }
 

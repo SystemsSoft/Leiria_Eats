@@ -73,6 +73,7 @@ class SearchViewModel(
         }
         startStatusPolling()
         observeFavoriteOrders()
+        observeFavoriteOrderNicknames()
     }
 
 
@@ -98,6 +99,20 @@ class SearchViewModel(
                 currentFavorites + order.id
             }
             profileRepository.saveFavoriteOrderIds(newFavorites)
+        }
+    }
+
+    private fun observeFavoriteOrderNicknames() {
+        viewModelScope.launch {
+            profileRepository.favoriteOrderNicknamesFlow.collect { nicknames ->
+                _uiState.update { it.copy(favoriteOrderNicknames = nicknames) }
+            }
+        }
+    }
+
+    fun updateFavoriteOrderNickname(orderId: String, nickname: String) {
+        viewModelScope.launch {
+            profileRepository.saveFavoriteOrderNickname(orderId, nickname)
         }
     }
 
