@@ -31,13 +31,13 @@ class SearchViewModel(
     private fun buildGreeting(name: String): String {
         val firstName = name.trim().split(" ").firstOrNull { it.isNotBlank() }
         return if (!firstName.isNullOrBlank())
-            "Olá ${firstName.replaceFirstChar { it.uppercaseChar() }}! O que vamos comer hoje?"
+            "Olá ${firstName.replaceFirstChar { it.uppercaseChar() }}! O que lhe apetece comer hoje?"
         else
-            "Olá! O que vamos comer hoje?"
+            "Olá! O que lhe apetece comer hoje?"
     }
 
     private fun buildWelcomeMessage(): String {
-        return "Olá, seja bem-vindo! Sou seu assistente pessoal que decide os melhores pratos por você. Vou levá-lo ao seu perfil para conhecê-lo melhor e começarmos."
+        return "Olá, seja bem-vindo! Sou o seu assistente pessoal que decide os melhores pratos para si. Vou levá-lo ao seu perfil para o conhecer melhor e começarmos."
     }
 
     private val favoriteOrderIdsFlow = profileRepository.favoriteOrderIdsFlow
