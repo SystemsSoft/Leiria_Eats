@@ -418,6 +418,10 @@ class SearchViewModel(
         }
     }
 
+    fun resetOrderJustPlacedFlag() {
+        _uiState.update { it.copy(orderJustPlaced = false) }
+    }
+
     fun suggestAnotherRestaurant() {
         val lastQuery = _uiState.value.lastSearchQuery.trim()
         val suggestionQuery = if (lastQuery.isNotBlank()) "sugestão $lastQuery" else "sugestão"
@@ -645,7 +649,8 @@ class SearchViewModel(
                         pendingProductResults = emptyList(), // Clear pending products
                         currentTab = MainTab.ORDERS, // Go to Orders NOW!
                         error = null,
-                        pendingSavePaymentMethod = false
+                        pendingSavePaymentMethod = false,
+                        orderJustPlaced = true // Trigger voice feedback
                     )
                 }
 
@@ -690,7 +695,8 @@ class SearchViewModel(
                     pendingProductResults = emptyList(), // Clear pending products
                     currentTab = MainTab.ORDERS,
                     error = null,
-                    pendingSavePaymentMethod = false
+                    pendingSavePaymentMethod = false,
+                    orderJustPlaced = true // Trigger voice feedback
                 )
             }
 

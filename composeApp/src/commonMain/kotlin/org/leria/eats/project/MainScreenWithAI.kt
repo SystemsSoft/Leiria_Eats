@@ -98,6 +98,22 @@ fun MainScreenWithAI(
         }
     }
 
+    // Voice feedback when order is successfully placed
+    LaunchedEffect(uiState.orderJustPlaced) {
+        if (uiState.orderJustPlaced && !isMuted) {
+            // Small delay to ensure navigation is complete
+            delay(500)
+
+            // Speak success message in Portuguese from Portugal
+            val successMessage = "Pedido realizado com sucesso! Acompanhe agora o seu estado em Os Meus Pedidos."
+            tts.speak(successMessage)
+
+            // Reset flag after speaking
+            delay(1000)
+            viewModel.resetOrderJustPlacedFlag()
+        }
+    }
+
     // Stop TTS immediately when muted
     LaunchedEffect(isMuted) {
         if (isMuted) tts.stop()
