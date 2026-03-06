@@ -21,6 +21,13 @@ class AndroidTextToSpeechService(private val context: Context) : TextToSpeechSer
                     tts?.setLanguage(Locale.forLanguageTag("pt-BR"))
                     isReady = true
                 }
+
+                // Configure animated and spontaneous female voice
+                tts?.apply {
+                    setPitch(1.15f) // Slightly higher pitch for more animated feminine voice (default is 1.0)
+                    setSpeechRate(1.1f) // Slightly faster for spontaneous feel (default is 1.0)
+                }
+
                 pendingText?.let { speak(it) }
                 pendingText = null
             }
