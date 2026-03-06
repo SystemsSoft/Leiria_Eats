@@ -705,7 +705,7 @@ fun ProfileAiChatBubble(
     tts: org.leria.eats.project.voice.TextToSpeechService = org.koin.compose.koinInject()
 ) {
     val fullMessage = buildString {
-        append("✨ Que bom ter você aqui! Vamos configurar seu perfil juntos?\n\n")
+        append("✨ Que bom ter você aqui! Vamos configurar seu perfil juntos.\n\n")
         append("📝 Preencha seus dados pessoais e adicione pelo menos um endereço.\n\n")
         append("✨ Aqui está a parte legal: ")
         append("Quando você marcar um endereço como padrão, eu vou utilizá-lo automaticamente em todos os seus pedidos! ")
