@@ -31,9 +31,9 @@ class SearchViewModel(
     private fun buildGreeting(name: String): String {
         val firstName = name.trim().split(" ").firstOrNull { it.isNotBlank() }
         return if (!firstName.isNullOrBlank())
-            "Olá ${firstName.replaceFirstChar { it.uppercaseChar() }}! O que lhe apetece comer hoje?"
+            "Olá ${firstName.replaceFirstChar { it.uppercaseChar() }}! O que deseja comer hoje?"
         else
-            "Olá! O que lhe apetece comer hoje?"
+            "Olá! O que deseja comer hoje?"
     }
 
     private fun buildWelcomeMessage(): String {

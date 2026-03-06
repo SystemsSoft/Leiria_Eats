@@ -588,7 +588,7 @@ private fun BasicAiTextField(
         onValueChange = onValueChange,
         placeholder = {
             Text(
-                if (isListening) "🎤 A ouvir…" else "✨ Diga-me o que lhe apetece... vou escolher o melhor prato para si!",
+                if (isListening) "🎤 A ouvir…" else "✨ Diga-me o que deseja... vou escolher o melhor prato para si!",
                 color = AiTextMuted,
                 fontSize = 14.sp
             )
