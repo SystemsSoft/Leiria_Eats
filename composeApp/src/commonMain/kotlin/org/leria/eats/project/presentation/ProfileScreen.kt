@@ -53,6 +53,7 @@ fun ProfileScreen(
     onSave: (String, String, String, List<Address>) -> Unit,
     onGetLocation: ((String) -> Unit) -> Unit,
     onGetAddressFromMap: (Double, Double) -> String?,
+    isMuted: Boolean = false
 ) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -134,6 +135,16 @@ fun ProfileScreen(
                 .padding(top = 24.dp, bottom = 100.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // ── AI Assistant Message (only show when profile is not yet registered) ──
+            if (userProfile.name.isEmpty() || userProfile.addresses.isEmpty()) {
+                item {
+                    ProfileAiChatBubble(
+                        isMuted = isMuted,
+                        modifier = Modifier.padding(bottom = 20.dp)
+                    )
+                }
+            }
+
             item {
                 // ── Avatar ────────────────────────────────────────────────
                 Box(
@@ -684,6 +695,124 @@ fun ProfileTextField(
             ),
             modifier = Modifier.fillMaxWidth()
         )
+    }
+}
+
+@Composable
+fun ProfileAiChatBubble(
+    isMuted: Boolean = false,
+    modifier: Modifier = Modifier,
+    tts: org.leria.eats.project.voice.TextToSpeechService = org.koin.compose.koinInject()
+) {
+    val fullMessage = buildString {
+        append("✨ Que bom ter você aqui! Vamos configurar seu perfil juntos?\n\n")
+        append("📝 Preencha seus dados pessoais e adicione pelo menos um endereço.\n\n")
+        append("✨ Aqui está a parte legal: ")
+        append("Quando você marcar um endereço como padrão, eu vou utilizá-lo automaticamente em todos os seus pedidos! ")
+        append("O mesmo vale para o método de pagamento - quando você salvar um cartão ao fazer seu primeiro pedido, ")
+        append("eu vou reutilizá-lo nas próximas vezes.\n\n")
+        append("🎯 Dessa forma, seu único trabalho será me dizer o que você deseja comer, ")
+        append("e eu cuido do resto: pedido, endereço e pagamento, tudo automaticamente!\n\n")
+        append("🔄 Sempre que quiser alterar alguma coisa, é só retornar aqui no perfil.")
+    }
+
+    val displayedText = remember { mutableStateOf("") }
+    val hasSpoken = remember { mutableStateOf(false) }
+
+    // Typewriter animation and TTS
+    LaunchedEffect(Unit) {
+        if (!isMuted && !hasSpoken.value) {
+            // Strip emojis for TTS
+            val textForTts = fullMessage
+                .replace("👋", "")
+                .replace("📝", "")
+                .replace("✨", "")
+                .replace("🎯", "")
+                .replace("🔄", "")
+                .trim()
+            tts.speak(textForTts)
+            hasSpoken.value = true
+        }
+
+        // Typewriter effect
+        for (i in fullMessage.indices) {
+            displayedText.value = fullMessage.substring(0, i + 1)
+            kotlinx.coroutines.delay(8) // Faster animation
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            tts.stop()
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp))
+            .background(
+                Brush.horizontalGradient(
+                    listOf(
+                        PGold.copy(alpha = 0.15f),
+                        PGreen.copy(alpha = 0.10f)
+                    )
+                )
+            )
+            .border(
+                1.dp,
+                Brush.horizontalGradient(
+                    listOf(
+                        PGold.copy(alpha = 0.4f),
+                        PGreen.copy(alpha = 0.3f)
+                    )
+                ),
+                RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp)
+            )
+            .padding(16.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // AI Avatar
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(PGold.copy(alpha = 0.3f), PGreen.copy(alpha = 0.2f))
+                        ),
+                        CircleShape
+                    )
+                    .border(1.5.dp, PGold.copy(alpha = 0.5f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "✨",
+                    fontSize = 22.sp
+                )
+            }
+
+            // Message content
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    "KOMA AI",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = PGold,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+                Text(
+                    displayedText.value,
+                    fontSize = 13.sp,
+                    color = PText.copy(alpha = 0.95f),
+                    lineHeight = 18.sp
+                )
+            }
+        }
     }
 }
 
