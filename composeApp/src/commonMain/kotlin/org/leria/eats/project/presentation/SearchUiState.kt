@@ -45,7 +45,8 @@ data class SearchUiState(
     val isProcessingAutoPayment: Boolean = false,
     val autoPaymentOrderId: Int? = null,
     val autoPaymentIntentId: String? = null,
-    val pendingSavePaymentMethod: Boolean = false
+    val pendingSavePaymentMethod: Boolean = false,
+    val pendingProfileNavigation: Boolean = false // Flag to navigate to profile after TTS finishes
 ) {
     val cartCount: Int get() = cartItems.size
     val favoriteOrders: List<Order> get() = orderHistory.filter { it.isFavorite }

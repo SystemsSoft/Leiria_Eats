@@ -14,6 +14,7 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
 
     private val ID_KEY = stringPreferencesKey("user_id")
     private val NAME_KEY = stringPreferencesKey("user_name")
+    private val EMAIL_KEY = stringPreferencesKey("user_email")
     private val PHONE_KEY = stringPreferencesKey("user_phone")
     private val ADDRESSES_KEY = stringPreferencesKey("user_addresses")
     private val FAVORITE_ORDERS_KEY = stringSetPreferencesKey("favorite_orders")
@@ -35,6 +36,7 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
         UserProfile(
             id = preferences[ID_KEY] ?: "",
             name = preferences[NAME_KEY] ?: "",
+            email = preferences[EMAIL_KEY] ?: "",
             phone = preferences[PHONE_KEY] ?: "",
             addresses = addresses,
             savedPaymentMethods = paymentMethods
@@ -44,12 +46,14 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun saveProfile(
         id: String,
         name: String,
+        email: String,
         phone: String,
         addresses: List<Address>, ) {
         dataStore.edit { preferences ->
             val addressesJson = Json.encodeToString(addresses)
             preferences[ID_KEY] = id
             preferences[NAME_KEY] = name
+            preferences[EMAIL_KEY] = email
             preferences[PHONE_KEY] = phone
             preferences[ADDRESSES_KEY] = addressesJson
         }

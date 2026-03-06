@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
@@ -49,11 +50,12 @@ private val PMuted   = Color(0xFF6EE7A0)
 @Composable
 fun ProfileScreen(
     userProfile: UserProfile,
-    onSave: (String, String, List<Address>) -> Unit,
+    onSave: (String, String, String, List<Address>) -> Unit,
     onGetLocation: ((String) -> Unit) -> Unit,
     onGetAddressFromMap: (Double, Double) -> String?,
 ) {
     var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var addresses by remember { mutableStateOf<List<Address>>(emptyList()) }
     var showMapDialog by remember { mutableStateOf(false) }
@@ -62,6 +64,7 @@ fun ProfileScreen(
 
     LaunchedEffect(userProfile) {
         if (userProfile.name.isNotEmpty()) name = userProfile.name
+        if (userProfile.email.isNotEmpty()) email = userProfile.email
         if (userProfile.phone.isNotEmpty()) phone = userProfile.phone
         if (userProfile.addresses.isNotEmpty()) addresses = userProfile.addresses
     }
@@ -182,6 +185,14 @@ fun ProfileScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 ProfileTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = "Email",
+                    icon = Icons.Default.Email,
+                    keyboardType = KeyboardType.Email
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                ProfileTextField(
                     value = phone,
                     onValueChange = { phone = it },
                     label = "Telefone / WhatsApp",
@@ -284,7 +295,7 @@ fun ProfileScreen(
                 .height(54.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(Brush.horizontalGradient(listOf(PGold, Color(0xFFE65100))))
-                .clickable { onSave(name, phone, addresses) },
+                .clickable { onSave(name, email, phone, addresses) },
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {

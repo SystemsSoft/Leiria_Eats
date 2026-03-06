@@ -123,6 +123,7 @@ data class SavedPaymentMethodsResponse(
 data class UserProfile(
     val id: String = "",
     val name: String = "",
+    val email: String = "",
     val phone: String = "",
     val addresses: List<Address> = emptyList(),
     @SerialName("saved_payment_methods")

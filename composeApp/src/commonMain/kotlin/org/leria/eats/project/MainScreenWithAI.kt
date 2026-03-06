@@ -1,10 +1,13 @@
 package org.leria.eats.project
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -27,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -65,6 +69,32 @@ fun MainScreenWithAI(
     LaunchedEffect(uiState.aiReply) {
         if (!isMuted && (uiState.aiReply.startsWith("Olá") || uiState.aiReply.startsWith("Outras opções"))) {
             tts.speak(uiState.aiReply)
+        }
+    }
+
+    // Navigate to profile after TTS finishes for new users
+    LaunchedEffect(uiState.pendingProfileNavigation, uiState.aiReply, isMuted) {
+        if (uiState.pendingProfileNavigation) {
+            // Calculate estimated TTS duration based on text length
+            // Average speaking rate: ~150 words per minute = ~2.5 words per second
+            // Average Portuguese word length: ~5 characters
+            // So approximately: characters / 12.5 = seconds
+            val textLength = uiState.aiReply.length
+            val estimatedDurationMs = if (isMuted) {
+                // If muted, just wait for text animation (14ms per character)
+                (textLength * 14L) + 500L // Add small buffer
+            } else {
+                // If speaking, calculate based on speech rate
+                // Portuguese TTS is configured at 1.1x speed (Android) and 0.55 (iOS ~1.1x normal)
+                // Approximate: 13 characters per second at normal speed, ~14.3 at 1.1x
+                ((textLength / 14.3) * 1000).toLong() + 800L // Add buffer for processing
+            }
+
+            // Wait for TTS/animation to complete
+            delay(estimatedDurationMs)
+
+            // Navigate to profile screen
+            viewModel.completePendingProfileNavigation()
         }
     }
 
@@ -406,116 +436,161 @@ fun MainScreenWithAI(
                         .fillMaxSize()
                         .padding(paddingValues)
                 ) {
-                    when (uiState.currentTab) {
-                        MainTab.HOME -> {
-                            HomeScreen(
-                                uiState = uiState,
-                                isListening = isListening,
-                                permissionStatus = permissionStatus,
-                                onMicClick = {
-                                    when (permissionStatus) {
-                                        PermissionStatus.IDLE -> permissionManager.askForPermission()
-                                        PermissionStatus.DENIED -> permissionManager.openSettings()
-                                        PermissionStatus.GRANTED -> {
-                                            if (isListening) voiceRecognizer.stopListening()
-                                            else {
-                                                viewModel.onQueryChange("")
-                                                voiceRecognizer.startListening()
+                    // Animated content transition between tabs
+                    AnimatedContent(
+                        targetState = uiState.currentTab,
+                        transitionSpec = {
+                            // Smooth fade + slide animation based on navigation direction
+                            when {
+                                // Profile comes from the right (end of nav bar)
+                                targetState == MainTab.PROFILE && initialState != MainTab.PROFILE -> {
+                                    slideInHorizontally(
+                                        animationSpec = tween(400),
+                                        initialOffsetX = { it }
+                                    ) + fadeIn(animationSpec = tween(400)) togetherWith
+                                    slideOutHorizontally(
+                                        animationSpec = tween(400),
+                                        targetOffsetX = { -it / 3 }
+                                    ) + fadeOut(animationSpec = tween(400))
+                                }
+
+                                // Going back from Profile to other screens
+                                initialState == MainTab.PROFILE && targetState != MainTab.PROFILE -> {
+                                    slideInHorizontally(
+                                        animationSpec = tween(400),
+                                        initialOffsetX = { -it / 3 }
+                                    ) + fadeIn(animationSpec = tween(400)) togetherWith
+                                    slideOutHorizontally(
+                                        animationSpec = tween(400),
+                                        targetOffsetX = { it }
+                                    ) + fadeOut(animationSpec = tween(400))
+                                }
+
+                                // Default smooth fade for other tab transitions
+                                else -> {
+                                    fadeIn(animationSpec = tween(300)) togetherWith
+                                    fadeOut(animationSpec = tween(300))
+                                }
+                            }
+                        },
+                        label = "tab_transition"
+                    ) { currentTab ->
+                        when (currentTab) {
+                            MainTab.HOME -> {
+                                HomeScreen(
+                                    // ...existing code...
+                                    uiState = uiState,
+                                    isListening = isListening,
+                                    permissionStatus = permissionStatus,
+                                    onMicClick = {
+                                        when (permissionStatus) {
+                                            PermissionStatus.IDLE -> permissionManager.askForPermission()
+                                            PermissionStatus.DENIED -> permissionManager.openSettings()
+                                            PermissionStatus.GRANTED -> {
+                                                if (isListening) voiceRecognizer.stopListening()
+                                                else {
+                                                    viewModel.onQueryChange("")
+                                                    voiceRecognizer.startListening()
+                                                }
                                             }
                                         }
-                                    }
-                                },
-                                onSendClick = {
-                                    if (isListening) voiceRecognizer.stopListening()
-                                    viewModel.sendSearch()
-                                },
-                                onTextChange = { viewModel.onQueryChange(it) },
-                                onRestaurantClick = { restaurant -> viewModel.selectRestaurantOrAddToCart(restaurant) },
-                                onCategorySelect = { category -> viewModel.selectCategory(category) },
-                                onClearSelection = { viewModel.clearSelection() },
-                                onClearSelectionAndCart = { viewModel.clearSelectionAndCart() },
-                                onAddToCart = { product -> viewModel.addToCart(product) },
-                                onRemoveFromCart = { product -> viewModel.removeFromCart(product) },
-                                onViewCart = { viewModel.onTabSelected(MainTab.CART) },
-                                onClearSearch = { viewModel.clearSearch() },
-                                onSearchTypeSelected = { showRestaurants -> viewModel.onSearchTypeSelected(showRestaurants) },
-                                onDismissSearchTypeSheet = { viewModel.dismissSearchTypeSheet() }
-                            )
-                        }
-                        MainTab.CART -> {
-                            CartScreen(
-                                cartItems = uiState.cartItems,
-                                restaurantSelected = uiState.selectedRestaurant,
-                                onRemoveItem = { product -> viewModel.removeFromCart(product) },
-                                onCheckout = { viewModel.checkout() },
-                                onGoToRestaurant = { restaurant ->
-                                    viewModel.selectRestaurant(restaurant)
-                                    viewModel.onTabSelected(MainTab.HOME)
-                                },
-                                cartAiMessage = uiState.cartAiMessage,
-                                cartAiMessageSpoken = uiState.cartAiMessageSpoken,
-                                onDismissAiMessage = { viewModel.clearCartAiMessage() },
-                                onSuggestAnotherRestaurant = {
-                                    viewModel.suggestAnotherRestaurant()
-                                },
-                                onAddMoreFromSame = {
-                                    viewModel.clearCartAiMessage()
-                                    uiState.selectedRestaurant?.let { r ->
-                                        viewModel.selectRestaurant(r)
-                                    }
-                                    viewModel.onTabSelected(MainTab.HOME)
-                                },
-                                onMarkAiMessageAsSpoken = { viewModel.markCartAiMessageAsSpoken() },
-                                isMuted = isMuted
-                            )
-                        }
+                                    },
+                                    onSendClick = {
+                                        if (isListening) voiceRecognizer.stopListening()
+                                        viewModel.sendSearch()
+                                    },
+                                    onTextChange = { viewModel.onQueryChange(it) },
+                                    onRestaurantClick = { restaurant -> viewModel.selectRestaurantOrAddToCart(restaurant) },
+                                    onCategorySelect = { category -> viewModel.selectCategory(category) },
+                                    onClearSelection = { viewModel.clearSelection() },
+                                    onClearSelectionAndCart = { viewModel.clearSelectionAndCart() },
+                                    onAddToCart = { product -> viewModel.addToCart(product) },
+                                    onRemoveFromCart = { product -> viewModel.removeFromCart(product) },
+                                    onViewCart = { viewModel.onTabSelected(MainTab.CART) },
+                                    onClearSearch = { viewModel.clearSearch() },
+                                    onSearchTypeSelected = { showRestaurants -> viewModel.onSearchTypeSelected(showRestaurants) },
+                                    onDismissSearchTypeSheet = { viewModel.dismissSearchTypeSheet() }
+                                )
+                            }
+                            MainTab.CART -> {
+                                CartScreen(
+                                    // ...existing code...
+                                    cartItems = uiState.cartItems,
+                                    restaurantSelected = uiState.selectedRestaurant,
+                                    onRemoveItem = { product -> viewModel.removeFromCart(product) },
+                                    onCheckout = { viewModel.checkout() },
+                                    onGoToRestaurant = { restaurant ->
+                                        viewModel.selectRestaurant(restaurant)
+                                        viewModel.onTabSelected(MainTab.HOME)
+                                    },
+                                    cartAiMessage = uiState.cartAiMessage,
+                                    cartAiMessageSpoken = uiState.cartAiMessageSpoken,
+                                    onDismissAiMessage = { viewModel.clearCartAiMessage() },
+                                    onSuggestAnotherRestaurant = {
+                                        viewModel.suggestAnotherRestaurant()
+                                    },
+                                    onAddMoreFromSame = {
+                                        viewModel.clearCartAiMessage()
+                                        uiState.selectedRestaurant?.let { r ->
+                                            viewModel.selectRestaurant(r)
+                                        }
+                                        viewModel.onTabSelected(MainTab.HOME)
+                                    },
+                                    onMarkAiMessageAsSpoken = { viewModel.markCartAiMessageAsSpoken() },
+                                    isMuted = isMuted
+                                )
+                            }
 
-                        MainTab.ORDERS -> {
-                            OrdersScreen(
-                                orders = uiState.orderHistory,
-                                isLoading = uiState.isLoading,
-                                selectedOrder = uiState.selectedOrder,
-                                onRefresh = { viewModel.refreshOrders() },
-                                onOrderClick = { order -> viewModel.selectOrder(order) },
-                                onBackToList = { viewModel.clearOrderSelection() },
-                                onToggleFavorite = { order -> viewModel.toggleFavoriteOrder(order) },
-                                isFiltered = uiState.isFilterEnabled,
-                                onFilterToggle = { viewModel.toggleFilter() }
-                            )
-                        }
+                            MainTab.ORDERS -> {
+                                OrdersScreen(
+                                    // ...existing code...
+                                    orders = uiState.orderHistory,
+                                    isLoading = uiState.isLoading,
+                                    selectedOrder = uiState.selectedOrder,
+                                    onRefresh = { viewModel.refreshOrders() },
+                                    onOrderClick = { order -> viewModel.selectOrder(order) },
+                                    onBackToList = { viewModel.clearOrderSelection() },
+                                    onToggleFavorite = { order -> viewModel.toggleFavoriteOrder(order) },
+                                    isFiltered = uiState.isFilterEnabled,
+                                    onFilterToggle = { viewModel.toggleFilter() }
+                                )
+                            }
 
-                         MainTab.FAVORITES -> {
-                            FavoritesScreen(
-                                orders = uiState.favoriteOrders,
-                                selectedOrder = uiState.selectedOrder,
-                                onOrderClick = { order -> viewModel.selectOrder(order) },
-                                onToggleFavorite = { order -> viewModel.toggleFavoriteOrder(order) },
-                                onBackToList = { viewModel.clearOrderSelection() }
-                            )
-                        }
+                             MainTab.FAVORITES -> {
+                                FavoritesScreen(
+                                    // ...existing code...
+                                    orders = uiState.favoriteOrders,
+                                    selectedOrder = uiState.selectedOrder,
+                                    onOrderClick = { order -> viewModel.selectOrder(order) },
+                                    onToggleFavorite = { order -> viewModel.toggleFavoriteOrder(order) },
+                                    onBackToList = { viewModel.clearOrderSelection() }
+                                )
+                            }
 
-                        MainTab.PROFILE -> {
-                            ProfileScreen(
-                                userProfile = uiState.userProfile,
-                                onSave = { name, phone, addresses ->
-                                    viewModel.updateUserProfile(name, phone, addresses)
-                                    viewModel.onTabSelected(MainTab.HOME)
-                                },
-                                onGetLocation = { callbackUpdateAddress ->
-                                    if (permissionStatus == PermissionStatus.GRANTED) {
-                                        scope.launch {
-                                            val addressFound = locationService.getCurrentAddress()
-                                            callbackUpdateAddress(addressFound ?: "Localização não encontrada")
-                                         }
-                                    } else {
-                                        permissionManager.askForPermission()
-                                        callbackUpdateAddress("")
+                            MainTab.PROFILE -> {
+                                ProfileScreen(
+                                    // ...existing code...
+                                    userProfile = uiState.userProfile,
+                                    onSave = { name, email, phone, addresses ->
+                                        viewModel.updateUserProfile(name, email, phone, addresses)
+                                        viewModel.onTabSelected(MainTab.HOME)
+                                    },
+                                    onGetLocation = { callbackUpdateAddress ->
+                                        if (permissionStatus == PermissionStatus.GRANTED) {
+                                            scope.launch {
+                                                val addressFound = locationService.getCurrentAddress()
+                                                callbackUpdateAddress(addressFound ?: "Localização não encontrada")
+                                             }
+                                        } else {
+                                            permissionManager.askForPermission()
+                                            callbackUpdateAddress("")
+                                        }
+                                    },
+                                    onGetAddressFromMap = { lat, long ->
+                                        locationService.getAddressFromCoordinates(lat, long)
                                     }
-                                },
-                                onGetAddressFromMap = { lat, long ->
-                                    locationService.getAddressFromCoordinates(lat, long)
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }

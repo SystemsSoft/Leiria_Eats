@@ -36,14 +36,35 @@ class SearchViewModel(
             "Olá! O que vamos comer hoje?"
     }
 
+    private fun buildWelcomeMessage(): String {
+        return "Olá, seja bem-vindo! Sou seu assistente pessoal que decide os melhores pratos por você. Vou levá-lo ao seu perfil para conhecê-lo melhor e começarmos."
+    }
+
     private val favoriteOrderIdsFlow = profileRepository.favoriteOrderIdsFlow
 
 
     init {
         viewModelScope.launch {
             profileRepository.userProfileFlow.collect { profile ->
-                val greeting = buildGreeting(profile.name)
-                _uiState.update { it.copy(userProfile = profile, aiReply = greeting) }
+                // Check if user is registered (has name and at least one address)
+                val isUserRegistered = profile.name.isNotBlank() && profile.addresses.isNotEmpty()
+
+                if (isUserRegistered) {
+                    // User is registered, show normal greeting
+                    val greeting = buildGreeting(profile.name)
+                    _uiState.update { it.copy(userProfile = profile, aiReply = greeting) }
+                } else {
+                    // User is NOT registered, show welcome message
+                    // Don't navigate yet - wait for TTS to finish
+                    val welcomeMessage = buildWelcomeMessage()
+                    _uiState.update {
+                        it.copy(
+                            userProfile = profile,
+                            aiReply = welcomeMessage,
+                            pendingProfileNavigation = true // Set flag to navigate after TTS
+                        )
+                    }
+                }
             }
         }
         viewModelScope.launch {
@@ -121,11 +142,11 @@ class SearchViewModel(
         // sem pesquisa automática no arranque
     }
 
-    fun updateUserProfile(name: String, phone: String, addresses: List<Address>) {
+    fun updateUserProfile(name: String, email: String, phone: String, addresses: List<Address>) {
         viewModelScope.launch {
             val currentId = _uiState.value.userProfile.id
             val newId = if (currentId.isBlank()) "U-${(10000..99999).random()}" else currentId
-            profileRepository.saveProfile(newId, name, phone, addresses)
+            profileRepository.saveProfile(newId, name, email, phone, addresses)
         }
     }
 
@@ -386,6 +407,15 @@ class SearchViewModel(
 
     fun markCartAiMessageAsSpoken() {
         _uiState.update { it.copy(cartAiMessageSpoken = true) }
+    }
+
+    fun completePendingProfileNavigation() {
+        _uiState.update {
+            it.copy(
+                currentTab = MainTab.PROFILE,
+                pendingProfileNavigation = false
+            )
+        }
     }
 
     fun suggestAnotherRestaurant() {
