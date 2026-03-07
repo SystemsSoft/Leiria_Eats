@@ -24,13 +24,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.collectAsState
 import org.koin.compose.koinInject
 import org.leria.eats.project.voice.TextToSpeechService
-import org.leria.eats.project.voice.VoiceRecognizer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -143,7 +140,6 @@ fun CartScreen(
                         onDismiss = onDismissAiMessage,
                         onSuggestAnotherRestaurant = onSuggestAnotherRestaurant,
                         onAddMoreFromSame = onAddMoreFromSame,
-                        onCheckout = onCheckout,
                         isMuted = isMuted,
                         alreadySpoken = cartAiMessageSpoken,
                         onMarkAsSpoken = onMarkAiMessageAsSpoken,
@@ -438,71 +434,36 @@ fun CartAiChatBubble(
     onDismiss: () -> Unit,
     onSuggestAnotherRestaurant: () -> Unit,
     onAddMoreFromSame: () -> Unit,
-    onCheckout: () -> Unit,
     isMuted: Boolean = false,
     alreadySpoken: Boolean = false,
     onMarkAsSpoken: () -> Unit = {},
     modifier: Modifier = Modifier,
-    tts: TextToSpeechService = koinInject(),
-    voiceRecognizer: VoiceRecognizer = koinInject()
+    tts: TextToSpeechService = koinInject()
 ) {
     val displayedText = remember { mutableStateOf("") }
-    val ctaText = remember { mutableStateOf("") }
-    val voiceText by voiceRecognizer.results.collectAsState()
-    val isListening by voiceRecognizer.isListening.collectAsState()
-
-    val ctaFullText = "💬 Se estiver tudo certo, clique ou fale 'finalizar pedido', e enviarei seu pedido para o restaurante usando a forma de pagamento e endereço padrão."
 
     // Stop TTS when the composable leaves the composition
     DisposableEffect(Unit) {
         onDispose {
             tts.stop()
-            voiceRecognizer.stopListening()
         }
     }
 
     LaunchedEffect(message) {
         displayedText.value = ""
-        ctaText.value = ""
         tts.stop()
-        voiceRecognizer.stopListening()
 
         // Start speaking immediately, in parallel with the typewriter animation
         // Only speak if not muted AND message hasn't been spoken before
         if (!isMuted && !alreadySpoken) {
-            val fullMessage = "$message\n\n$ctaFullText"
-            tts.speak(stripEmojisForTts(fullMessage))
+            tts.speak(stripEmojisForTts(message))
             onMarkAsSpoken() // Mark as spoken after TTS starts
         }
 
-        // Type main message first
+        // Type main message
         for (i in message.indices) {
             displayedText.value = message.substring(0, i + 1)
             kotlinx.coroutines.delay(14)
-        }
-
-        // Small pause before CTA
-        kotlinx.coroutines.delay(300)
-
-        // Type CTA text
-        for (i in ctaFullText.indices) {
-            ctaText.value = ctaFullText.substring(0, i + 1)
-            kotlinx.coroutines.delay(14)
-        }
-
-        // Start voice recognition after all text is fully typed
-        kotlinx.coroutines.delay(500)
-        voiceRecognizer.startListening()
-    }
-
-    // Detect "finalizar pedido" in voice input
-    LaunchedEffect(voiceText) {
-        val normalized = voiceText.lowercase().trim()
-        if (normalized.contains("finalizar pedido") ||
-            normalized.contains("finalize pedido") ||
-            normalized.contains("finalizar o pedido")) {
-            voiceRecognizer.stopListening()
-            onCheckout()
         }
     }
 
@@ -585,40 +546,6 @@ fun CartAiChatBubble(
                 lineHeight = 19.sp
             )
 
-            // Show CTA text only after it starts typing
-            if (ctaText.value.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // CTA text with microphone indicator
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(CartAiCard2.copy(alpha = 0.6f))
-                        .border(1.dp, CartAiSecondary.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-                        .padding(10.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (isListening) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(CartAiSecondary, CircleShape)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Text(
-                            text = if (isListening && ctaText.value == ctaFullText)
-                                "🎤 Ouvindo... Diga 'finalizar pedido' para confirmar"
-                            else
-                                ctaText.value,
-                            fontSize = 11.sp,
-                            color = if (isListening && ctaText.value == ctaFullText) CartAiSecondary else CartAiText.copy(alpha = 0.85f),
-                            lineHeight = 16.sp
-                        )
-                    }
-                }
-            }
 
             Spacer(modifier = Modifier.height(14.dp))
 
@@ -640,7 +567,6 @@ fun CartAiChatBubble(
                         )
                         .border(1.dp, CartAiPrimary.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
                         .clickable {
-                            voiceRecognizer.stopListening()
                             onSuggestAnotherRestaurant()
                         },
                     contentAlignment = Alignment.Center
@@ -666,7 +592,6 @@ fun CartAiChatBubble(
                         )
                         .border(1.dp, CartAiSecondary.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
                         .clickable {
-                            voiceRecognizer.stopListening()
                             onAddMoreFromSame()
                         },
                     contentAlignment = Alignment.Center
