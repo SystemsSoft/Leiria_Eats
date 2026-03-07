@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -42,6 +43,7 @@ import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
+import org.leria.eats.project.data.SavedPaymentMethod
 import org.leria.eats.project.presentation.util.formatCurrency
 
 // ─── Paleta KOMAAI (shared) ───────────────────────────────────────────────────
@@ -715,3 +717,216 @@ fun SavePaymentMethodSheet(
         }
     }
 }
+
+// ─── Confirm Payment with Saved Card Sheet ────────────────────────────────────
+
+private fun cardBrandEmoji(brand: String): String = when (brand.lowercase()) {
+    "visa" -> "💳"
+    "mastercard" -> "💳"
+    "amex" -> "💳"
+    "discover" -> "💳"
+    else -> "💳"
+}
+
+private fun cardBrandLabel(brand: String): String =
+    brand.replaceFirstChar { it.uppercaseChar() }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PaymentConfirmBottomSheet(
+    savedCards: List<SavedPaymentMethod>,
+    onDismiss: () -> Unit,
+    onUseSavedCard: (SavedPaymentMethod) -> Unit,
+    onUseOtherMethod: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // Default: first card (primary saved card)
+    val primaryCard = savedCards.firstOrNull()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = CartCard,
+        contentColor = CartText
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 40.dp, top = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // ── Icon ────────────────────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .size(68.dp)
+                    .background(CartPrimary.copy(alpha = 0.15f), CircleShape)
+                    .border(1.dp, CartPrimary.copy(alpha = 0.35f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CreditCard,
+                    contentDescription = null,
+                    tint = CartPrimary,
+                    modifier = Modifier.size(34.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // ── Title ───────────────────────────────────────────────────
+            Text(
+                text = "Confirmar pagamento",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = CartText
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Deseja pagar com o cartão guardado?",
+                fontSize = 14.sp,
+                color = CartMuted,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ── Card details ─────────────────────────────────────────────
+            if (primaryCard != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFF0E2E20), Color(0xFF0A2218))
+                            )
+                        )
+                        .border(
+                            1.dp,
+                            Brush.horizontalGradient(
+                                listOf(CartPrimary.copy(alpha = 0.5f), CartSecondary.copy(alpha = 0.3f))
+                            ),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Card brand icon area
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(CartPrimary.copy(alpha = 0.12f))
+                                .border(1.dp, CartPrimary.copy(alpha = 0.3f), RoundedCornerShape(10.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = cardBrandEmoji(primaryCard.brand),
+                                fontSize = 24.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(14.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = cardBrandLabel(primaryCard.brand),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CartText
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "•••• •••• •••• ${primaryCard.last4}",
+                                fontSize = 14.sp,
+                                color = CartMuted,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Val.: ${primaryCard.expMonth.toString().padStart(2, '0')}/${primaryCard.expYear}",
+                                fontSize = 11.sp,
+                                color = CartMuted.copy(alpha = 0.7f)
+                            )
+                        }
+
+                        // Active badge
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(CartSecondary.copy(alpha = 0.15f))
+                                .border(1.dp, CartSecondary.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Ativo",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CartSecondary
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // ── Confirm button ──────────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            Brush.horizontalGradient(listOf(CartPrimary, Color(0xFFE65100)))
+                        )
+                        .clickable { onUseSavedCard(primaryCard) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Pagar com ${cardBrandLabel(primaryCard.brand)} ••••${primaryCard.last4}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // ── Other method button ─────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(CartSurface)
+                        .border(1.dp, CartMuted.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                        .clickable { onUseOtherMethod() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Usar outro método de pagamento",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CartMuted
+                    )
+                }
+            }
+        }
+    }
+}
+

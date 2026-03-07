@@ -253,9 +253,12 @@ fun MainScreenWithAI(
                 AddressSelectionBottomSheet(
                     addresses = uiState.userProfile.addresses,
                     onAddressSelected = { address ->
-                        // Check if user has saved payment methods
                         val hasSavedPaymentMethods = uiState.userProfile.savedPaymentMethods.isNotEmpty()
-                        viewModel.confirmCheckout(address, savePaymentMethod = hasSavedPaymentMethods)
+                        if (hasSavedPaymentMethods) {
+                            viewModel.showPaymentConfirmForAddress(address)
+                        } else {
+                            viewModel.showSavePaymentSheetForAddress(address)
+                        }
                     },
                     onDismiss = {
                         viewModel.dismissAddressSheet()
@@ -620,6 +623,20 @@ fun MainScreenWithAI(
                 onDismiss = { viewModel.dismissSavePaymentSheet() },
                 onConfirm = { savePaymentMethod ->
                     viewModel.proceedToCheckout(savePaymentMethod)
+                }
+            )
+        }
+
+        // Confirm Payment with Saved Card Sheet
+        if (uiState.showPaymentConfirmSheet && uiState.userProfile.savedPaymentMethods.isNotEmpty()) {
+            PaymentConfirmBottomSheet(
+                savedCards = uiState.userProfile.savedPaymentMethods,
+                onDismiss = { viewModel.dismissPaymentConfirmSheet() },
+                onUseSavedCard = { _ ->
+                    viewModel.onPaymentConfirmResult(useSavedCard = true)
+                },
+                onUseOtherMethod = {
+                    viewModel.onPaymentConfirmResult(useSavedCard = false)
                 }
             )
         }

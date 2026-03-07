@@ -1,5 +1,6 @@
 package org.leria.eats.project.presentation
 
+import org.leria.eats.project.data.Address
 import org.leria.eats.project.data.Order
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
@@ -42,6 +43,8 @@ data class SearchUiState(
     val pendingRestaurantResults: List<Restaurant> = emptyList(),
     val pendingProductResults: List<Product> = emptyList(),
     val showSavePaymentSheet: Boolean = false,
+    val showPaymentConfirmSheet: Boolean = false,
+    val selectedAddressForCheckout: Address? = null,
     val isProcessingAutoPayment: Boolean = false,
     val autoPaymentOrderId: Int? = null,
     val autoPaymentIntentId: String? = null,

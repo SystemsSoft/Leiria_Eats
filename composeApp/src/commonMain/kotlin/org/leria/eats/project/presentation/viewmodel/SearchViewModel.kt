@@ -513,24 +513,47 @@ class SearchViewModel(
             return
         }
 
-        // Check if there's a default address
         val defaultAddress = currentState.userProfile.addresses.find { it.isDefault }
 
-        // Check if user has saved payment methods
-        val hasSavedPaymentMethods = currentState.userProfile.savedPaymentMethods.isNotEmpty()
-
         if (defaultAddress != null) {
+            // Address confirmed – now check for saved payment methods
+            val hasSavedPaymentMethods = currentState.userProfile.savedPaymentMethods.isNotEmpty()
             if (hasSavedPaymentMethods) {
-                // User has saved payment methods, proceed directly with auto-payment
-                // Backend will handle charging the saved card
-                confirmCheckout(defaultAddress, savePaymentMethod = true)
+                // Show confirmation sheet with saved card details
+                _uiState.update {
+                    it.copy(
+                        showPaymentConfirmSheet = true,
+                        selectedAddressForCheckout = defaultAddress
+                    )
+                }
             } else {
-                // User doesn't have saved payment methods, show sheet to ask
-                _uiState.update { it.copy(showSavePaymentSheet = true) }
+                // No saved card – ask if user wants to save one after payment
+                _uiState.update {
+                    it.copy(
+                        showSavePaymentSheet = true,
+                        selectedAddressForCheckout = defaultAddress
+                    )
+                }
             }
         } else {
-            // Show address selection sheet if no default
+            // No default address – show address selection first
             _uiState.update { it.copy(isAddressSheetVisible = true) }
+        }
+    }
+
+    fun dismissPaymentConfirmSheet() {
+        _uiState.update { it.copy(showPaymentConfirmSheet = false) }
+    }
+
+    /** Called when user confirms payment with saved card (useSavedCard=true) or chooses another method (false). */
+    fun onPaymentConfirmResult(useSavedCard: Boolean) {
+        val address = _uiState.value.selectedAddressForCheckout ?: return
+        _uiState.update { it.copy(showPaymentConfirmSheet = false, selectedAddressForCheckout = null) }
+        if (useSavedCard) {
+            confirmCheckout(address, savePaymentMethod = true)
+        } else {
+            // Proceed without saved card – open Stripe checkout
+            confirmCheckout(address, savePaymentMethod = false)
         }
     }
 
@@ -538,14 +561,36 @@ class SearchViewModel(
         _uiState.update { it.copy(showSavePaymentSheet = false) }
     }
 
+    fun showPaymentConfirmForAddress(address: Address) {
+        _uiState.update {
+            it.copy(
+                isAddressSheetVisible = false,
+                showPaymentConfirmSheet = true,
+                selectedAddressForCheckout = address
+            )
+        }
+    }
+
+    fun showSavePaymentSheetForAddress(address: Address) {
+        _uiState.update {
+            it.copy(
+                isAddressSheetVisible = false,
+                showSavePaymentSheet = true,
+                selectedAddressForCheckout = address
+            )
+        }
+    }
+
     fun proceedToCheckout(savePaymentMethod: Boolean) {
         _uiState.update { it.copy(showSavePaymentSheet = false) }
 
         val currentState = _uiState.value
-        val defaultAddress = currentState.userProfile.addresses.find { it.isDefault }
+        val address = currentState.selectedAddressForCheckout
+            ?: currentState.userProfile.addresses.find { it.isDefault }
 
-        if (defaultAddress != null) {
-            confirmCheckout(defaultAddress, savePaymentMethod)
+        if (address != null) {
+            _uiState.update { it.copy(selectedAddressForCheckout = null) }
+            confirmCheckout(address, savePaymentMethod)
         }
     }
 
