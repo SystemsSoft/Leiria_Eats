@@ -511,33 +511,8 @@ class SearchViewModel(
             onTabSelected(MainTab.PROFILE)
             return
         }
-
-        val defaultAddress = currentState.userProfile.addresses.find { it.isDefault }
-
-        if (defaultAddress != null) {
-            // Address confirmed – now check for saved payment methods
-            val hasSavedPaymentMethods = currentState.userProfile.savedPaymentMethods.isNotEmpty()
-            if (hasSavedPaymentMethods) {
-                // Show confirmation sheet with saved card details
-                _uiState.update {
-                    it.copy(
-                        showPaymentConfirmSheet = true,
-                        selectedAddressForCheckout = defaultAddress
-                    )
-                }
-            } else {
-                // No saved card – ask if user wants to save one after payment
-                _uiState.update {
-                    it.copy(
-                        showSavePaymentSheet = true,
-                        selectedAddressForCheckout = defaultAddress
-                    )
-                }
-            }
-        } else {
-            // No default address – show address selection first
-            _uiState.update { it.copy(isAddressSheetVisible = true) }
-        }
+        // Always show address selection sheet — no default concept
+        _uiState.update { it.copy(isAddressSheetVisible = true) }
     }
 
     fun dismissPaymentConfirmSheet() {
@@ -585,7 +560,6 @@ class SearchViewModel(
 
         val currentState = _uiState.value
         val address = currentState.selectedAddressForCheckout
-            ?: currentState.userProfile.addresses.find { it.isDefault }
 
         if (address != null) {
             _uiState.update { it.copy(selectedAddressForCheckout = null) }

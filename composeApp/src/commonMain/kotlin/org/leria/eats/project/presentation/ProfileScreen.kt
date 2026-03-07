@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -89,22 +88,9 @@ fun ProfileScreen(
             onDismiss = { showAddAddressDialog = false; addressToEdit = null },
             onSave = { newAddress ->
                 if (addressToEdit != null) {
-                    // If the new address is marked as default, remove default from all others
-                    addresses = if (newAddress.isDefault) {
-                        addresses.map {
-                            if (it == addressToEdit) newAddress
-                            else it.copy(isDefault = false)
-                        }
-                    } else {
-                        addresses.map { if (it == addressToEdit) newAddress else it }
-                    }
+                    addresses = addresses.map { if (it == addressToEdit) newAddress else it }
                 } else {
-                    // If the new address is marked as default, remove default from all existing ones
-                    addresses = if (newAddress.isDefault) {
-                        addresses.map { it.copy(isDefault = false) } + newAddress
-                    } else {
-                        addresses + newAddress
-                    }
+                    addresses = addresses + newAddress
                 }
                 showAddAddressDialog = false
                 addressToEdit = null
@@ -253,13 +239,7 @@ fun ProfileScreen(
                     AddressItem(
                         address = address,
                         onEdit = { addressToEdit = it },
-                        onDelete = { addresses = addresses - it },
-                        onSetDefault = { selectedAddress ->
-                            // Remove default from all addresses and set the selected one as default
-                            addresses = addresses.map {
-                                it.copy(isDefault = it.address == selectedAddress.address && it.name == selectedAddress.name)
-                            }
-                        }
+                        onDelete = { addresses = addresses - it }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -331,19 +311,14 @@ private fun ProfileSectionLabel(label: String) {
 fun AddressItem(
     address: Address,
     onEdit: (Address) -> Unit,
-    onDelete: (Address) -> Unit,
-    onSetDefault: (Address) -> Unit = {}
+    onDelete: (Address) -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(PCard)
-            .border(
-                1.dp,
-                if (address.isDefault) PGold.copy(alpha = 0.4f) else PGold.copy(alpha = 0.12f),
-                RoundedCornerShape(14.dp)
-            )
+            .border(1.dp, PGold.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
             .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Column {
@@ -362,48 +337,17 @@ fun AddressItem(
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            address.name,
-                            fontWeight = FontWeight.Bold,
-                            color = PText,
-                            fontSize = 13.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (address.isDefault) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(PGold.copy(alpha = 0.2f))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    "PADRÃO",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = PGold
-                                )
-                            }
-                        }
-                    }
+                    Text(
+                        address.name,
+                        fontWeight = FontWeight.Bold,
+                        color = PText,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Text(address.address, color = PMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
 
-                if (!address.isDefault) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .background(PGold.copy(alpha = 0.1f))
-                            .clickable { onSetDefault(address) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Star, contentDescription = "Definir como padrão", tint = PGold, modifier = Modifier.size(15.dp))
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                }
 
                 Box(
                     modifier = Modifier
@@ -533,7 +477,6 @@ fun AddressEntryDialog(
 ) {
     var name by remember { mutableStateOf(address?.name ?: "") }
     var addressValue by remember { mutableStateOf(address?.address ?: "") }
-    var isDefault by remember { mutableStateOf(address?.isDefault ?: false) }
     var isLocating by remember { mutableStateOf(false) }
     var showMapDialog by remember { mutableStateOf(false) }
 
@@ -569,8 +512,7 @@ fun AddressEntryDialog(
                 Spacer(modifier = Modifier.height(10.dp))
                 ProfileTextField(
                     value = addressValue,
-                    onValueChange = { addressValue = it },
-                    label = "Endereço",
+                    onValueChange = { addressValue = it },                    label = "Endereço",
                     trailingContent = {
                         Row {
                             Box(
@@ -606,30 +548,7 @@ fun AddressEntryDialog(
                         }
                     }
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { isDefault = !isDefault }
-                        .padding(vertical = 8.dp)
-                ) {
-                    Checkbox(
-                        checked = isDefault,
-                        onCheckedChange = { isDefault = it },
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = PGold,
-                            uncheckedColor = PMuted
-                        )
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Definir como endereço padrão",
-                        color = PText,
-                        fontSize = 13.sp
-                    )
-                }
+                Spacer(modifier = Modifier.height(4.dp))
             }
         },
         confirmButton = {
@@ -641,7 +560,7 @@ fun AddressEntryDialog(
                         onSave(Address(
                             name = name.ifEmpty { "Endereço Sem Nome" },
                             address = addressValue,
-                            isDefault = isDefault
+                            isDefault = false
                         ))
                     }
                     .padding(horizontal = 18.dp, vertical = 9.dp)
@@ -707,12 +626,11 @@ fun ProfileAiChatBubble(
     val fullMessage = buildString {
         append("✨ Que bom ter você aqui! Vamos configurar seu perfil juntos.\n\n")
         append("📝 Preencha seus dados pessoais e adicione pelo menos um endereço.\n\n")
-        append("✨ Aqui está a parte legal: ")
-        append("Quando você marcar um endereço como padrão, eu vou utilizá-lo automaticamente em todos os seus pedidos! ")
+        append("✨ Quando finalizar o pedido, poderá escolher o endereço de entrega. ")
         append("O mesmo vale para o método de pagamento - quando você salvar um cartão ao fazer seu primeiro pedido, ")
         append("eu vou reutilizá-lo nas próximas vezes.\n\n")
         append("🎯 Dessa forma, seu único trabalho será me dizer o que você deseja comer, ")
-        append("e eu cuido do resto: pedido, endereço e pagamento, tudo automaticamente!\n\n")
+        append("e eu cuido do resto: pedido e pagamento, tudo automaticamente!\n\n")
         append("🔄 Sempre que quiser alterar alguma coisa, é só retornar aqui no perfil.")
     }
 
