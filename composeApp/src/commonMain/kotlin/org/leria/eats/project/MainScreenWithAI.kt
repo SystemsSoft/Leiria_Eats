@@ -126,14 +126,7 @@ fun MainScreenWithAI(
         }
     }
 
-    LaunchedEffect(uiState.cartMessage) {
-        uiState.cartMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearCartMessage()
-        }
-    }
-
-    LaunchedEffect(voiceText) {
+    LaunchedEffect(uiState.cartError) {
         if (isListening && voiceText.isNotEmpty()) {
             viewModel.updateInputFromVoice(voiceText)
         }

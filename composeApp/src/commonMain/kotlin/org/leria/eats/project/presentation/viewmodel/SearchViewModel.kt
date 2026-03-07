@@ -379,8 +379,7 @@ class SearchViewModel(
                 }
                 currentState.copy(
                     cartItems = updatedCart,
-                    cartRestaurantId = product.restaurant_id,
-                    cartMessage = "${product.name} adicionado à sacola."
+                    cartRestaurantId = product.restaurant_id
                 )
             }
         }
