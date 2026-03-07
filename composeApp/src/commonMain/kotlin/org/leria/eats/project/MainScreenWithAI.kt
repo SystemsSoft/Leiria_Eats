@@ -126,7 +126,7 @@ fun MainScreenWithAI(
         }
     }
 
-    LaunchedEffect(uiState.cartError) {
+    LaunchedEffect(voiceText) {
         if (isListening && voiceText.isNotEmpty()) {
             viewModel.updateInputFromVoice(voiceText)
         }
