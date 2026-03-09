@@ -153,10 +153,6 @@ class SearchViewModel(
         }
     }
 
-    private fun loadInitialRestaurants() {
-        // sem pesquisa automática no arranque
-    }
-
     fun updateUserProfile(name: String, email: String, phone: String, addresses: List<Address>) {
         viewModelScope.launch {
             val currentId = _uiState.value.userProfile.id
@@ -297,7 +293,7 @@ class SearchViewModel(
                         )
                     }
                     if (isProductOnly) {
-                        response.productResults.forEach { product -> addToCart(product) }
+                        addProductsToCart(response.productResults)
                         val productNames = response.productResults
                             .take(3)
                             .joinToString(", ") { it.name }
@@ -894,6 +890,24 @@ class SearchViewModel(
         } catch (e: Exception) {
             println("⚠️ Erro ao buscar métodos de pagamento: ${e.message}")
             // Don't block the flow, just log the error
+        }
+    }
+
+    private fun addProductsToCart(products: List<Product>) {
+        _uiState.update { currentState ->
+            val cartMap = currentState.cartItems.associateBy { it.id }.toMutableMap()
+            for (product in products) {
+                val existing = cartMap[product.id]
+                if (existing != null) {
+                    cartMap[product.id] = existing.copy(quantity = existing.quantity + product.quantity)
+                } else {
+                    cartMap[product.id] = product.copy(quantity = product.quantity)
+                }
+            }
+            currentState.copy(
+                cartItems = cartMap.values.toList(),
+                cartRestaurantId = products.firstOrNull()?.restaurant_id ?: currentState.cartRestaurantId
+            )
         }
     }
 }
