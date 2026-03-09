@@ -17,7 +17,7 @@ enum class MainTab {
 data class SearchUiState(
     val isLoading: Boolean = false,
     val textInput: String = "",
-    val aiReply: String = "Olá! O que vamos comer hoje?",
+    val aiReply: String = "Olá! O que deseja comer hoje?",
     val restaurantResults: List<Restaurant> = emptyList(),
     val productResults: List<Product> = emptyList(),
     val error: String? = null,

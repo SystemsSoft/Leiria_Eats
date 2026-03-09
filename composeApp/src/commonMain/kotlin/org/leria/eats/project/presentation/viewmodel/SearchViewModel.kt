@@ -251,6 +251,46 @@ class SearchViewModel(
         }
     }
 
+    private fun handleFavoriteOrderByNickname(apelido: String) {
+        val favorites = _uiState.value.favoriteOrders
+        val match = favorites.firstOrNull { order ->
+            order.nickname.lowercase().contains(apelido)
+        }
+        if (match != null) {
+            val cartProducts = match.items.mapIndexed { index, item ->
+                Product(
+                    id = index,
+                    name = item.product_name,
+                    description = item.description,
+                    price = item.price,
+                    category = "",
+                    image_url = item.imageUrl.ifBlank { null },
+                    restaurant_id = match.id.toIntOrNull() ?: 0,
+                    quantity = item.quantity
+                )
+            }
+            cartProducts.forEach { addToCart(it) }
+            val reply = "✅ Adicionei o pedido \"${match.nickname}\" à sua sacola!\n\n💡 Confira os itens e finalize quando estiver pronto."
+            _uiState.update {
+                it.copy(
+                    textInput = "",
+                    aiReply = reply,
+                    cartAiMessage = reply,
+                    cartAiMessageSpoken = false
+                )
+            }
+            onTabSelected(MainTab.CART)
+        } else {
+            val reply = "❌ Não encontrei nenhum favorito com o apelido \"$apelido\".\n\n💡 Verifique os seus favoritos ou tente outro apelido."
+            _uiState.update {
+                it.copy(
+                    textInput = "",
+                    aiReply = reply
+                )
+            }
+        }
+    }
+
 
     fun sendSearch() {
         val currentQuery = _uiState.value.textInput
@@ -258,6 +298,16 @@ class SearchViewModel(
             clearSearch()
             return
         }
+
+        // ── Detect "pedir [apelido]" voice command ──────────────────────────
+        val pedirRegex = Regex("^pedir (.+)$", RegexOption.IGNORE_CASE)
+        val pedirMatch = pedirRegex.find(currentQuery.trim())
+        if (pedirMatch != null) {
+            val apelido = pedirMatch.groupValues[1].trim().lowercase()
+            handleFavoriteOrderByNickname(apelido)
+            return
+        }
+        // ───────────────────────────────────────────────────────────────────
         _uiState.update { it.copy(isLoading = true, error = null, isSuggestionMode = false) }
         viewModelScope.launch {
             try {

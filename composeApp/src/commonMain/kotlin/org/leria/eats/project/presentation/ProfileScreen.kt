@@ -33,16 +33,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.leria.eats.project.data.Address
-import org.leria.eats.project.data.SavedPaymentMethod
 import org.leria.eats.project.data.UserProfile
 
 // ─── Paleta KOMAAI ────────────────────────────────────────────────────────────
 private val PDeepBg  = Color(0xFF061510)
-private val PSurface = Color(0xFF0A2218)
 private val PCard    = Color(0xFF0E2E20)
 private val PGold    = Color(0xFFFFC107)
 private val PGreen   = Color(0xFF4ADE80)
-private val PAmber   = Color(0xFFFFD54F)
 private val PText    = Color(0xFFF0FDF4)
 private val PMuted   = Color(0xFF6EE7A0)
 
@@ -245,34 +242,6 @@ fun ProfileScreen(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            // ── Section: métodos de pagamento ─────────────────────────────
-            item {
-                ProfileSectionLabel(label = "Métodos de Pagamento")
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            if (userProfile.savedPaymentMethods.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(PCard)
-                            .border(1.dp, PGold.copy(alpha = 0.1f), RoundedCornerShape(14.dp))
-                            .padding(20.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Nenhum método de pagamento salvo.", color = PMuted, fontSize = 13.sp)
-                    }
-                }
-            } else {
-                items(userProfile.savedPaymentMethods) { method ->
-                    PaymentMethodItem(method = method)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
         }
@@ -375,96 +344,6 @@ fun AddressItem(
     }
 }
 
-@Composable
-private fun PaymentMethodItem(method: SavedPaymentMethod) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(
-                Brush.horizontalGradient(
-                    listOf(PCard, PCard.copy(alpha = 0.7f))
-                )
-            )
-            .border(1.dp, PGold.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Card icon based on brand
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(
-                        when (method.brand.lowercase()) {
-                            "visa" -> Color(0xFF1A1F71)
-                            "mastercard" -> Color(0xFFEB001B)
-                            "amex" -> Color(0xFF006FCF)
-                            else -> PGold
-                        }.copy(alpha = 0.15f),
-                        CircleShape
-                    )
-                    .border(
-                        1.dp,
-                        when (method.brand.lowercase()) {
-                            "visa" -> Color(0xFF1A1F71)
-                            "mastercard" -> Color(0xFFEB001B)
-                            "amex" -> Color(0xFF006FCF)
-                            else -> PGold
-                        }.copy(alpha = 0.3f),
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "💳",
-                    fontSize = 20.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = method.brand.uppercase(),
-                    fontWeight = FontWeight.Bold,
-                    color = PText,
-                    fontSize = 14.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "•••• •••• •••• ${method.last4}",
-                    color = PMuted,
-                    fontSize = 12.sp
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Exp: ${method.expMonth.toString().padStart(2, '0')}/${method.expYear}",
-                    color = PMuted.copy(alpha = 0.7f),
-                    fontSize = 11.sp
-                )
-            }
-
-            // Saved badge
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(PGreen.copy(alpha = 0.15f))
-                    .border(1.dp, PGreen.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    "Salvo",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = PGreen
-                )
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -624,9 +503,10 @@ fun ProfileAiChatBubble(
     tts: org.leria.eats.project.voice.TextToSpeechService = org.koin.compose.koinInject()
 ) {
     val fullMessage = buildString {
-        append("📝 Para começar, preencha o seu nome, email e telefone e endereços preferidos.\n\n")
-        append("🎯 O seu único trabalho é dizer-me o que deseja comer — eu trato do resto!\n\n")
-        append("🔄 Sempre que precisar atualizar os seus dados, é só voltar aqui.")
+        append("✨ Que bom ter você aqui! Vamos configurar o seu perfil juntos.\n\n")
+        append("📝 Preencha os seus dados pessoais e adicione pelo menos um endereço.\n\n")
+        append("🎯 O seu único trabalho será dizer-me o que deseja comer — eu cuido do resto!\n\n")
+        append("🔄 Sempre que quiser alterar alguma coisa, é só voltar aqui ao perfil.")
     }
 
     val displayedText = remember { mutableStateOf("") }
@@ -637,9 +517,8 @@ fun ProfileAiChatBubble(
         if (!isMuted && !hasSpoken.value) {
             // Strip emojis for TTS
             val textForTts = fullMessage
-                .replace("👋", "")
-                .replace("📝", "")
                 .replace("✨", "")
+                .replace("📝", "")
                 .replace("🎯", "")
                 .replace("🔄", "")
                 .trim()

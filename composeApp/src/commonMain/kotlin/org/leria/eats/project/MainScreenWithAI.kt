@@ -111,8 +111,19 @@ fun MainScreenWithAI(
     }
 
     LaunchedEffect(voiceText) {
-        if (isListening && voiceText.isNotEmpty()) {
+        if (voiceText.isNotEmpty()) {
             viewModel.updateInputFromVoice(voiceText)
+        }
+    }
+
+    // When mic stops listening and there is text captured, automatically send the search
+    LaunchedEffect(isListening) {
+        if (!isListening) {
+            val capturedText = voiceText.trim()
+            if (capturedText.isNotEmpty()) {
+                delay(200) // small delay to ensure UI state is updated
+                viewModel.sendSearch()
+            }
         }
     }
 
