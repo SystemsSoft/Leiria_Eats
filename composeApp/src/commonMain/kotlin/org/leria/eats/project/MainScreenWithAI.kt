@@ -65,50 +65,34 @@ fun MainScreenWithAI(
     val snackbarHostState = remember { SnackbarHostState() }
     var isMuted by remember { mutableStateOf(false) }
 
-    // Falar a saudação quando o nome for carregado
     LaunchedEffect(uiState.aiReply) {
         if (!isMuted && (uiState.aiReply.startsWith("Olá") || uiState.aiReply.startsWith("Outras opções"))) {
             tts.speak(uiState.aiReply)
         }
     }
 
-    // Navigate to profile after TTS finishes for new users
     LaunchedEffect(uiState.pendingProfileNavigation, uiState.aiReply, isMuted) {
         if (uiState.pendingProfileNavigation) {
-            // Calculate estimated TTS duration based on text length
-            // Average speaking rate: ~150 words per minute = ~2.5 words per second
-            // Average Portuguese word length: ~5 characters
-            // So approximately: characters / 12.5 = seconds
             val textLength = uiState.aiReply.length
             val estimatedDurationMs = if (isMuted) {
-                // If muted, just wait for text animation (14ms per character)
-                (textLength * 14L) + 500L // Add small buffer
+                (textLength * 14L) + 500L
             } else {
-                // If speaking, calculate based on speech rate
-                // Portuguese TTS is configured at 1.1x speed (Android) and 0.55 (iOS ~1.1x normal)
-                // Approximate: 13 characters per second at normal speed, ~14.3 at 1.1x
-                ((textLength / 14.3) * 1000).toLong() + 800L // Add buffer for processing
+                ((textLength / 14.3) * 1000).toLong() + 800L
             }
 
-            // Wait for TTS/animation to complete
             delay(estimatedDurationMs)
 
-            // Navigate to profile screen
             viewModel.completePendingProfileNavigation()
         }
     }
 
-    // Voice feedback when order is successfully placed
     LaunchedEffect(uiState.orderJustPlaced) {
         if (uiState.orderJustPlaced && !isMuted) {
-            // Small delay to ensure navigation is complete
             delay(500)
 
-            // Speak success message in Portuguese from Portugal
             val successMessage = "Pedido realizado com sucesso! Acompanhe agora o seu estado em Os Meus Pedidos."
             tts.speak(successMessage)
 
-            // Reset flag after speaking
             delay(1000)
             viewModel.resetOrderJustPlacedFlag()
         }
@@ -136,11 +120,9 @@ fun MainScreenWithAI(
         if (permissionStatus != PermissionStatus.GRANTED) voiceRecognizer.stopListening()
     }
 
-    // Use animated visibility to smoothly transition between main UI and WebView
     Box(modifier = Modifier.fillMaxSize()) {
         var webViewLoading by remember { mutableStateOf(false) }
 
-        // Smooth transition for WebView (already present)
         AnimatedVisibility(
             visible = uiState.checkoutUrl != null,
             enter = fadeIn() + slideInHorizontally(initialOffsetX = { fullWidth -> fullWidth }),
@@ -157,17 +139,13 @@ fun MainScreenWithAI(
             }
         }
 
-        // Overlay progress indicator while WebView internal resources are loading
         if (webViewLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         }
 
-        // New: show a full-screen animated loading overlay after user confirms (e.g., confirmCheckout)
-        // This covers the period between starting the checkout request and receiving the checkoutUrl
         AnimatedVisibility(
-            // only show loading overlay when we're waiting for checkoutUrl and the address bottom sheet is not visible
             visible = uiState.isLoading && uiState.checkoutUrl == null && !uiState.isAddressSheetVisible,
             enter = fadeIn(),
             exit = fadeOut()
@@ -189,7 +167,6 @@ fun MainScreenWithAI(
             }
         }
 
-        // Auto-payment processing overlay
         AnimatedVisibility(
             visible = uiState.isProcessingAutoPayment,
             enter = fadeIn(),
