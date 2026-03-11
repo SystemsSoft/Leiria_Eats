@@ -7,28 +7,24 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -286,41 +282,62 @@ private fun AiHeader(uiState: SearchUiState, glowAlpha: Float) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 12.dp, bottom = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(top = 16.dp, bottom = 8.dp),
+        horizontalAlignment = Alignment.Start
     ) {
         // Logo + brand row
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.Start,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 0.dp)
+                .padding(horizontal = 20.dp)
                 .padding(bottom = 12.dp)
         ) {
-            // AI orb
             Box(
                 modifier = Modifier
+                    .size(64.dp)
                     .background(
                         Brush.radialGradient(
-                            listOf(AiPrimary.copy(alpha = 0.7f), AiSecondary.copy(alpha = 0.3f))
+                            listOf(
+                                AiPrimary.copy(alpha = 0.35f + (glowAlpha * 0.35f)),
+                                AiSecondary.copy(alpha = 0.16f),
+                                Color.Transparent
+                            )
                         ),
                         CircleShape
-                    ),
+                    )
+                    .border(1.dp, AiPrimary.copy(alpha = 0.35f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 KamelImage(
                     resource = asyncPainterResource("https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo%3Dpato.png"),
                     contentDescription = "Logo",
-                    modifier = Modifier.size(112.dp),
+                    modifier = Modifier.size(84.dp),
                     contentScale = ContentScale.Fit,
                     onFailure = {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(26.dp))
                     }
                 )
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column(verticalArrangement = Arrangement.Center) {
+                Text(
+                    text = "KOMAAI",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = AiPrimary
+                )
+                Text(
+                    text = "O app que decide por você",
+                    fontSize = 11.sp,
+                    color = AiTextMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
 
         // AI reply bubble
@@ -560,7 +577,7 @@ private fun AiInputBar(
                         CircleShape
                     )
             ) {
-                Icon(Icons.Default.Send, contentDescription = "Enviar", tint = Color.White, modifier = Modifier.size(16.dp))
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar", tint = Color.White, modifier = Modifier.size(16.dp))
             }
         }
 

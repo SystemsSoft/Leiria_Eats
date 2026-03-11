@@ -910,4 +910,22 @@ class SearchViewModel(
             )
         }
     }
+
+    fun handleVoiceCommand(text: String) {
+        val normalized = text.trim().lowercase()
+        if (normalized == "pedir pizza de final de semana") {
+            val favoriteOrder = _uiState.value.favoriteOrders.firstOrNull { it.nickname?.lowercase() == "pizza de final de semana" }
+            if (favoriteOrder != null) {
+                val productNames = favoriteOrder.items.joinToString(", ") { it.product_name }
+                _uiState.update { it.copy(textInput = productNames) }
+                onQueryChange(productNames)
+
+            } else {
+                _uiState.update { it.copy(aiReply = "Favorito 'pizza de final de semana' não encontrado.") }
+            }
+        } else {
+            // Fluxo normal: atualizar input de voz
+            updateInputFromVoice(text)
+        }
+    }
 }
