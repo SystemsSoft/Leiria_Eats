@@ -112,7 +112,7 @@ fun MainScreenWithAI(
 
     LaunchedEffect(voiceText) {
         if (voiceText.isNotEmpty()) {
-            viewModel.handleVoiceCommand(voiceText)
+            viewModel.updateInputFromVoice(voiceText)
         }
     }
 
