@@ -65,7 +65,9 @@ data class OrderRequest(
     @SerialName("restaurant_category")
     val restaurant_category: String,
     val items: List<OrderItemRequest>,
-    val save_payment_method: Boolean = false
+    val save_payment_method: Boolean = false,
+    @SerialName("search_query")
+    val search_query: String = ""
 )
 
 @Serializable

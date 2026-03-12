@@ -20,6 +20,8 @@ data class Order(
     val date: String = "Hoje",
     val isFavorite: Boolean = false,
     val nickname: String = "",
+    @SerialName("search_query")
+    val searchQuery: String = "",
 
     @SerialName("payment_intent_id")
     val paymentIntentId: String? = ""

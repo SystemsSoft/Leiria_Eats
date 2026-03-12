@@ -249,17 +249,54 @@ class SearchViewModel(
 
 
     fun sendSearch() {
-        val currentQuery = _uiState.value.textInput
+        var currentQuery = _uiState.value.textInput
+
         if (currentQuery.isBlank()) {
             clearSearch()
             return
         }
 
-        // ───────────────────────────────────────────────────────────────────
+        var resolvedQuery = currentQuery.trim()
+
+        val favoriteAlias = resolvedQuery.startsWith("pedir", ignoreCase = true)
+        if (favoriteAlias) {
+            val favoriteName = resolvedQuery
+                .replaceFirst(Regex("^pedir\\s*", RegexOption.IGNORE_CASE), "")
+                .trim()
+
+            if (favoriteName.isBlank()) {
+                return
+            }
+
+            val nicknames = _uiState.value.favoriteOrderNicknames
+            val matchedOrderId = nicknames.entries
+                .firstOrNull { it.value.contains(favoriteName, ignoreCase = true) }
+                ?.key
+
+            if (matchedOrderId == null) {
+                return
+            }
+
+            val favoriteOrder = _uiState.value.favoriteOrders
+                .firstOrNull { it.id == matchedOrderId }
+
+            if (favoriteOrder == null) {
+                return
+            }
+
+
+            resolvedQuery = favoriteOrder.searchQuery
+        }
+
+
+        fetchSearch(resolvedQuery)
+    }
+
+    private fun fetchSearch(resolvedQuery: String) {
         _uiState.update { it.copy(isLoading = true, error = null, isSuggestionMode = false) }
         viewModelScope.launch {
             try {
-                val response = apiClient.searchRestaurants(currentQuery)
+                val response = apiClient.searchRestaurants(resolvedQuery)
 
                 val hasBoth = response.restaurantResults.isNotEmpty() && response.productResults.isNotEmpty()
                 val isProductOnly = response.restaurantResults.isEmpty() && response.productResults.isNotEmpty()
@@ -271,14 +308,14 @@ class SearchViewModel(
                             isLoading = false,
                             aiReply = response.reply,
                             textInput = "",
-                            lastSearchQuery = currentQuery,
+                            lastSearchQuery = resolvedQuery,
                             pendingRestaurantResults = response.restaurantResults,
                             pendingProductResults = response.productResults,
                             showSearchTypeSheet = true
                         )
                     }
                 } else {
-                    val resolvedReply = if (currentQuery.trim().equals("ver todos", ignoreCase = true))
+                    val resolvedReply = if (resolvedQuery.equals("ver todos", ignoreCase = true))
                         "Todos os restaurantes disponíveis"
                     else
                         response.reply
@@ -289,7 +326,7 @@ class SearchViewModel(
                             restaurantResults = response.restaurantResults,
                             productResults = response.productResults,
                             textInput = "",
-                            lastSearchQuery = currentQuery
+                            lastSearchQuery = resolvedQuery
                         )
                     }
                     if (isProductOnly) {
@@ -301,7 +338,7 @@ class SearchViewModel(
                             append("✅ Adicionei à sua sacola: $productNames")
                             if (response.productResults.size > 3)
                                 append(" e mais ${response.productResults.size - 3} itens")
-                            append(".\n\n💡 Quer que sugira outro restaurante com pratos semelhantes, ou gostaria de adicionar mais alguma coisa deste restaurante?")
+                            append(".\\n\\n💡 Quer que sugira outro restaurante com pratos semelhantes, ou gostaria de adicionar mais alguma coisa deste restaurante?")
                         }
                         _uiState.update { it.copy(cartAiMessage = aiMsg, cartAiMessageSpoken = false) }
                         onTabSelected(MainTab.CART)
@@ -645,7 +682,8 @@ class SearchViewModel(
                 restaurant_image_url = restaurant.image_url,
                 restaurant_category = restaurant.category,
                 items = orderItems,
-                save_payment_method = savePaymentMethod
+                save_payment_method = savePaymentMethod,
+                search_query = currentState.lastSearchQuery
             )
 
             val sessionResponse = apiClient.initiateCheckout(request)

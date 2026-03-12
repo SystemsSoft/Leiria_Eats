@@ -282,62 +282,41 @@ private fun AiHeader(uiState: SearchUiState, glowAlpha: Float) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 16.dp, bottom = 8.dp),
-        horizontalAlignment = Alignment.Start
+            .padding(top = 12.dp, bottom = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Logo + brand row
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start,
+            horizontalArrangement = Arrangement.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = 20.dp, vertical = 0.dp)
                 .padding(bottom = 12.dp)
         ) {
+            // AI orb
             Box(
                 modifier = Modifier
-                    .size(64.dp)
                     .background(
                         Brush.radialGradient(
-                            listOf(
-                                AiPrimary.copy(alpha = 0.35f + (glowAlpha * 0.35f)),
-                                AiSecondary.copy(alpha = 0.16f),
-                                Color.Transparent
-                            )
+                            listOf(AiPrimary.copy(alpha = 0.7f), AiSecondary.copy(alpha = 0.3f))
                         ),
                         CircleShape
-                    )
-                    .border(1.dp, AiPrimary.copy(alpha = 0.35f), CircleShape),
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 KamelImage(
                     resource = asyncPainterResource("https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo%3Dpato.png"),
                     contentDescription = "Logo",
-                    modifier = Modifier.size(84.dp),
+                    modifier = Modifier.size(112.dp),
                     contentScale = ContentScale.Fit,
                     onFailure = {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(26.dp))
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
                     }
                 )
             }
 
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(verticalArrangement = Arrangement.Center) {
-                Text(
-                    text = "KOMAAI",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = AiPrimary
-                )
-                Text(
-                    text = "O app que decide por você",
-                    fontSize = 11.sp,
-                    color = AiTextMuted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            Spacer(modifier = Modifier.width(10.dp))
         }
 
         // AI reply bubble
