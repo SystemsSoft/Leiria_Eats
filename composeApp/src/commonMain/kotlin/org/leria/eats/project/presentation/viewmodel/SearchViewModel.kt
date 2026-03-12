@@ -74,6 +74,7 @@ class SearchViewModel(
         startStatusPolling()
         observeFavoriteOrders()
         observeFavoriteOrderNicknames()
+        observeOrderSearchQueries()
     }
 
 
@@ -106,6 +107,14 @@ class SearchViewModel(
         viewModelScope.launch {
             profileRepository.favoriteOrderNicknamesFlow.collect { nicknames ->
                 _uiState.update { it.copy(favoriteOrderNicknames = nicknames) }
+            }
+        }
+    }
+
+    private fun observeOrderSearchQueries() {
+        viewModelScope.launch {
+            profileRepository.orderSearchQueriesFlow.collect { queries ->
+                _uiState.update { it.copy(orderSearchQueries = queries) }
             }
         }
     }
@@ -249,7 +258,7 @@ class SearchViewModel(
 
 
     fun sendSearch() {
-        var currentQuery = _uiState.value.textInput
+        val currentQuery = _uiState.value.textInput
 
         if (currentQuery.isBlank()) {
             clearSearch()
@@ -695,6 +704,11 @@ class SearchViewModel(
 
             // Handle auto_paid scenario (payment method already saved)
             if (sessionResponse.auto_paid) {
+                // Save search query locally before clearing state
+                val orderId = sessionResponse.order_id
+                if (orderId != null && currentState.lastSearchQuery.isNotBlank()) {
+                    profileRepository.saveOrderSearchQuery(orderId.toString(), currentState.lastSearchQuery)
+                }
                 // Go DIRECTLY to Orders screen - don't wait for confirmation
                 // Status will update in real-time on the Orders screen
                 val greeting = buildGreeting(currentState.userProfile.name)
@@ -743,6 +757,14 @@ class SearchViewModel(
             val shouldFetchMethods = _uiState.value.pendingSavePaymentMethod
             val userId = _uiState.value.userProfile.id
             val greeting = buildGreeting(_uiState.value.userProfile.name)
+            val pendingSearchQuery = _uiState.value.lastSearchQuery
+
+            // Save search query locally before clearing state
+            if (!orderId.isNullOrBlank() && pendingSearchQuery.isNotBlank()) {
+                viewModelScope.launch {
+                    profileRepository.saveOrderSearchQuery(orderId, pendingSearchQuery)
+                }
+            }
 
             _uiState.update {
                 it.copy(

@@ -19,6 +19,7 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
     private val ADDRESSES_KEY = stringPreferencesKey("user_addresses")
     private val FAVORITE_ORDERS_KEY = stringSetPreferencesKey("favorite_orders")
     private val FAVORITE_ORDER_NICKNAMES_KEY = stringPreferencesKey("favorite_order_nicknames")
+    private val ORDER_SEARCH_QUERIES_KEY = stringPreferencesKey("order_search_queries")
     private val PAYMENT_METHODS_KEY = stringPreferencesKey("saved_payment_methods")
 
     val userProfileFlow: Flow<UserProfile> = dataStore.data.map { preferences ->
@@ -88,6 +89,27 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
             }
             val updated = if (nickname.isBlank()) current - orderId else current + (orderId to nickname)
             preferences[FAVORITE_ORDER_NICKNAMES_KEY] = Json.encodeToString(updated)
+        }
+    }
+
+    val orderSearchQueriesFlow: Flow<Map<String, String>> = dataStore.data.map { preferences ->
+        val json = preferences[ORDER_SEARCH_QUERIES_KEY] ?: "{}"
+        try {
+            Json.decodeFromString<Map<String, String>>(json)
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    suspend fun saveOrderSearchQuery(orderId: String, searchQuery: String) {
+        dataStore.edit { preferences ->
+            val current = try {
+                Json.decodeFromString<Map<String, String>>(preferences[ORDER_SEARCH_QUERIES_KEY] ?: "{}")
+            } catch (e: Exception) {
+                emptyMap()
+            }
+            val updated = current + (orderId to searchQuery)
+            preferences[ORDER_SEARCH_QUERIES_KEY] = Json.encodeToString(updated)
         }
     }
 
