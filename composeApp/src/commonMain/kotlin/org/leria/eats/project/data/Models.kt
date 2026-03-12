@@ -20,7 +20,8 @@ data class Product(
     val category: String = "",
     @SerialName("preparation_time")
     val preparationTime: String = "",
-    val quantity: Int = 1
+    val quantity: Int = 1,
+    val rating: Double? = null
 )
 
 @Serializable

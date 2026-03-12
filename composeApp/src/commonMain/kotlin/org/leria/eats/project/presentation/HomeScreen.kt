@@ -831,6 +831,29 @@ fun ProductGridItem(product: Product, onAddToCart: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
                 color = AiTextMuted
             )
+            if (product.rating != null) {
+                Spacer(modifier = Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val fullStars = product.rating.toInt()
+                    val hasHalf = (product.rating - fullStars) >= 0.5
+                    (1..5).forEach { star ->
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = if (star <= fullStars) Color(0xFFFFB800)
+                                   else if (star == fullStars + 1 && hasHalf) Color(0xFFFFB800).copy(alpha = 0.5f)
+                                   else Color(0xFF444444),
+                            modifier = Modifier.size(9.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        text = "${(product.rating * 10).toInt() / 10.0}",
+                        fontSize = 8.sp,
+                        color = AiTextMuted
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
