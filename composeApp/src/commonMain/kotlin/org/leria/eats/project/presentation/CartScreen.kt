@@ -289,7 +289,7 @@ fun CartItemRow(product: Product, onRemove: () -> Unit) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (product.rating != null) {
+                if (product.rating != null && product.rating != 0.0) {
                     Spacer(modifier = Modifier.height(3.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val fullStars = product.rating.toInt()

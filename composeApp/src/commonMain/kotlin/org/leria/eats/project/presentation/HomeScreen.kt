@@ -831,7 +831,7 @@ fun ProductGridItem(product: Product, onAddToCart: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
                 color = AiTextMuted
             )
-            if (product.rating != null) {
+            if (product.rating != null && product.rating != 0.0) {
                 Spacer(modifier = Modifier.height(3.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val fullStars = product.rating.toInt()
