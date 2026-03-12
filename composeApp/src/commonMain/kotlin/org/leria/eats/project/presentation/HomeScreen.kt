@@ -520,22 +520,6 @@ private fun AiInputBar(
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Mic button
-        IconButton(onClick = onMic, enabled = !isLoading, modifier = Modifier.size(40.dp)) {
-            val micAlpha by rememberInfiniteTransition(label = "mic").animateFloat(
-                initialValue = if (isListening) 0.4f else 1f,
-                targetValue = 1f,
-                label = "micPulse",
-                animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse)
-            )
-            Icon(
-                imageVector = if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
-                contentDescription = "Microfone",
-                tint = if (isListening) AiAccent.copy(alpha = micAlpha) else AiPrimary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-
         // Text field
         BasicAiTextField(
             value = value,
@@ -567,6 +551,22 @@ private fun AiInputBar(
                 strokeWidth = 2.dp
             )
         }
+
+        // Mic button (right side)
+        IconButton(onClick = onMic, enabled = !isLoading, modifier = Modifier.size(40.dp)) {
+            val micAlpha by rememberInfiniteTransition(label = "mic").animateFloat(
+                initialValue = if (isListening) 0.4f else 1f,
+                targetValue = 1f,
+                label = "micPulse",
+                animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse)
+            )
+            Icon(
+                imageVector = if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
+                contentDescription = "Microfone",
+                tint = if (isListening) AiAccent.copy(alpha = micAlpha) else AiPrimary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 
@@ -584,7 +584,7 @@ private fun BasicAiTextField(
         onValueChange = onValueChange,
         placeholder = {
             Text(
-                if (isListening) "🎤 A ouvir…" else "✨ Diga-me o que deseja... vou escolher o melhor prato para si!",
+                if (isListening) "🎤 A ouvir…" else "✨ Diga-me ou digite o que deseja... vou escolher o melhor prato para si!",
                 color = AiTextMuted,
                 fontSize = 14.sp
             )
