@@ -305,7 +305,7 @@ class SearchViewModel(
         _uiState.update { it.copy(isLoading = true, error = null, isSuggestionMode = false) }
         viewModelScope.launch {
             try {
-                val response = apiClient.searchRestaurants(resolvedQuery)
+                val response = apiClient.searchRestaurants(resolvedQuery.trim())
 
                 val hasBoth = response.restaurantResults.isNotEmpty() && response.productResults.isNotEmpty()
                 val isProductOnly = response.restaurantResults.isEmpty() && response.productResults.isNotEmpty()
