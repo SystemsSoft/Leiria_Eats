@@ -52,7 +52,13 @@ data class SearchUiState(
     val pendingProfileNavigation: Boolean = false, // Flag to navigate to profile after TTS finishes
     val orderJustPlaced: Boolean = false, // Flag to trigger voice feedback when order is placed
     val favoriteOrderNicknames: Map<String, String> = emptyMap(),
-    val orderSearchQueries: Map<String, String> = emptyMap()
+    val orderSearchQueries: Map<String, String> = emptyMap(),
+    // key = "orderId::productName", value = 1..5
+    val orderItemRatings: Map<String, Int> = emptyMap(),
+    // key = "orderId::productName", value = productId
+    val orderProductIds: Map<String, Int> = emptyMap(),
+    // key = orderId, value = restaurantId
+    val orderRestaurantIds: Map<String, Int> = emptyMap()
 ) {
     val cartCount: Int get() = cartItems.size
     val favoriteOrders: List<Order> get() = orderHistory

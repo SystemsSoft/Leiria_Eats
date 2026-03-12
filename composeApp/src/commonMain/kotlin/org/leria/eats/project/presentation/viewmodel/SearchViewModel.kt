@@ -16,6 +16,8 @@ import org.leria.eats.project.data.OrderItemRequest
 import org.leria.eats.project.data.OrderRequest
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.ProfileRepository
+import org.leria.eats.project.data.RatingItemRequest
+import org.leria.eats.project.data.RatingRequest
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.presentation.MainTab
 import org.leria.eats.project.presentation.SearchUiState
@@ -75,6 +77,9 @@ class SearchViewModel(
         observeFavoriteOrders()
         observeFavoriteOrderNicknames()
         observeOrderSearchQueries()
+        observeOrderItemRatings()
+        observeOrderProductIds()
+        observeOrderRestaurantIds()
     }
 
 
@@ -122,6 +127,67 @@ class SearchViewModel(
     fun updateFavoriteOrderNickname(orderId: String, nickname: String) {
         viewModelScope.launch {
             profileRepository.saveFavoriteOrderNickname(orderId, nickname)
+        }
+    }
+
+    private fun observeOrderItemRatings() {
+        viewModelScope.launch {
+            profileRepository.orderItemRatingsFlow.collect { ratings ->
+                _uiState.update { it.copy(orderItemRatings = ratings) }
+            }
+        }
+    }
+
+    private fun observeOrderProductIds() {
+        viewModelScope.launch {
+            profileRepository.orderProductIdsFlow.collect { productIds ->
+                _uiState.update { it.copy(orderProductIds = productIds) }
+            }
+        }
+    }
+
+    private fun observeOrderRestaurantIds() {
+        viewModelScope.launch {
+            profileRepository.orderRestaurantIdsFlow.collect { restaurantIds ->
+                _uiState.update { it.copy(orderRestaurantIds = restaurantIds) }
+            }
+        }
+    }
+
+    fun rateOrderItem(orderId: String, productId: Int, restaurantId: Int, productName: String, rating: Int) {
+        viewModelScope.launch {
+            // Guarda localmente para atualizar a UI imediatamente
+            profileRepository.saveOrderItemRating(orderId, productName, rating)
+
+            // Resolve productId — usa o local se a API devolveu 0
+            val resolvedProductId = if (productId != 0) productId
+                else _uiState.value.orderProductIds["$orderId::$productName"] ?: 0
+
+            // Resolve restaurantId — usa o local se a API devolveu 0
+            val resolvedRestaurantId = if (restaurantId != 0) restaurantId
+                else _uiState.value.orderRestaurantIds[orderId] ?: 0
+
+            if (resolvedProductId == 0) {
+                println("⚠️ productId não encontrado para: orderId=$orderId, productName=$productName")
+                return@launch
+            }
+
+            if (resolvedRestaurantId == 0) {
+                println("⚠️ restaurantId não encontrado para: orderId=$orderId")
+                return@launch
+            }
+
+            val request = RatingRequest(
+                orderId = orderId,
+                restaurantId = resolvedRestaurantId,
+                ratings = listOf(RatingItemRequest(productId = resolvedProductId, rating = rating))
+            )
+            val response = apiClient.submitRatings(request)
+            if (response == null || !response.success) {
+                println("⚠️ Falha ao enviar avaliação: orderId=$orderId, productId=$resolvedProductId, restaurantId=$resolvedRestaurantId")
+            } else {
+                println("✅ Avaliação enviada: orderId=$orderId, productId=$resolvedProductId, restaurantId=$resolvedRestaurantId, rating=$rating")
+            }
         }
     }
 
@@ -729,6 +795,12 @@ class SearchViewModel(
                 if (orderId != null && currentState.lastSearchQuery.isNotBlank()) {
                     profileRepository.saveOrderSearchQuery(orderId.toString(), currentState.lastSearchQuery)
                 }
+                // Guardar mapeamento productName -> productId para avaliações futuras
+                if (orderId != null) {
+                    val productIdMap = currentState.cartItems.map { it.name to it.id }
+                    profileRepository.saveOrderProductIds(orderId.toString(), productIdMap)
+                    profileRepository.saveOrderRestaurantId(orderId.toString(), restaurant.id)
+                }
                 // Go DIRECTLY to Orders screen - don't wait for confirmation
                 // Status will update in real-time on the Orders screen
                 val greeting = buildGreeting(currentState.userProfile.name)
@@ -778,11 +850,24 @@ class SearchViewModel(
             val userId = _uiState.value.userProfile.id
             val greeting = buildGreeting(_uiState.value.userProfile.name)
             val pendingSearchQuery = _uiState.value.lastSearchQuery
+            val cartItems = _uiState.value.cartItems
 
             // Save search query locally before clearing state
             if (!orderId.isNullOrBlank() && pendingSearchQuery.isNotBlank()) {
                 viewModelScope.launch {
                     profileRepository.saveOrderSearchQuery(orderId, pendingSearchQuery)
+                }
+            }
+
+            // Guardar mapeamento productName -> productId para avaliações futuras
+            if (!orderId.isNullOrBlank() && cartItems.isNotEmpty()) {
+                viewModelScope.launch {
+                    val productIdMap = cartItems.map { it.name to it.id }
+                    profileRepository.saveOrderProductIds(orderId, productIdMap)
+                    val restaurantId = _uiState.value.cartRestaurantId
+                    if (restaurantId != null) {
+                        profileRepository.saveOrderRestaurantId(orderId, restaurantId)
+                    }
                 }
             }
 

@@ -21,6 +21,9 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
     private val FAVORITE_ORDER_NICKNAMES_KEY = stringPreferencesKey("favorite_order_nicknames")
     private val ORDER_SEARCH_QUERIES_KEY = stringPreferencesKey("order_search_queries")
     private val PAYMENT_METHODS_KEY = stringPreferencesKey("saved_payment_methods")
+    private val ORDER_ITEM_RATINGS_KEY = stringPreferencesKey("order_item_ratings")
+    private val ORDER_PRODUCT_IDS_KEY = stringPreferencesKey("order_product_ids")
+    private val ORDER_RESTAURANT_IDS_KEY = stringPreferencesKey("order_restaurant_ids")
 
     val userProfileFlow: Flow<UserProfile> = dataStore.data.map { preferences ->
         val addressesJson = preferences[ADDRESSES_KEY] ?: "[]"
@@ -117,6 +120,74 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { preferences ->
             val methodsJson = Json.encodeToString(methods)
             preferences[PAYMENT_METHODS_KEY] = methodsJson
+        }
+    }
+
+    // ─── Order item ratings — key = "orderId::productName", value = 1..5 ──────
+    val orderItemRatingsFlow: Flow<Map<String, Int>> = dataStore.data.map { preferences ->
+        val json = preferences[ORDER_ITEM_RATINGS_KEY] ?: "{}"
+        try {
+            Json.decodeFromString<Map<String, String>>(json).mapValues { it.value.toInt() }
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    suspend fun saveOrderItemRating(orderId: String, productName: String, rating: Int) {
+        dataStore.edit { preferences ->
+            val current = try {
+                Json.decodeFromString<Map<String, String>>(preferences[ORDER_ITEM_RATINGS_KEY] ?: "{}")
+            } catch (e: Exception) {
+                emptyMap()
+            }
+            val key = "$orderId::$productName"
+            val updated = current + (key to rating.toString())
+            preferences[ORDER_ITEM_RATINGS_KEY] = Json.encodeToString(updated)
+        }
+    }
+
+    // ─── Product IDs — key = "orderId::productName", value = productId ────────
+    val orderProductIdsFlow: Flow<Map<String, Int>> = dataStore.data.map { preferences ->
+        val json = preferences[ORDER_PRODUCT_IDS_KEY] ?: "{}"
+        try {
+            Json.decodeFromString<Map<String, String>>(json).mapValues { it.value.toInt() }
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    suspend fun saveOrderProductIds(orderId: String, items: List<Pair<String, Int>>) {
+        dataStore.edit { preferences ->
+            val current = try {
+                Json.decodeFromString<Map<String, String>>(preferences[ORDER_PRODUCT_IDS_KEY] ?: "{}")
+            } catch (e: Exception) {
+                emptyMap()
+            }
+            val newEntries = items.associate { (productName, productId) ->
+                "$orderId::$productName" to productId.toString()
+            }
+            preferences[ORDER_PRODUCT_IDS_KEY] = Json.encodeToString(current + newEntries)
+        }
+    }
+
+    // ─── Restaurant IDs — key = orderId, value = restaurantId ────────────────
+    val orderRestaurantIdsFlow: Flow<Map<String, Int>> = dataStore.data.map { preferences ->
+        val json = preferences[ORDER_RESTAURANT_IDS_KEY] ?: "{}"
+        try {
+            Json.decodeFromString<Map<String, String>>(json).mapValues { it.value.toInt() }
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    suspend fun saveOrderRestaurantId(orderId: String, restaurantId: Int) {
+        dataStore.edit { preferences ->
+            val current = try {
+                Json.decodeFromString<Map<String, String>>(preferences[ORDER_RESTAURANT_IDS_KEY] ?: "{}")
+            } catch (e: Exception) {
+                emptyMap()
+            }
+            preferences[ORDER_RESTAURANT_IDS_KEY] = Json.encodeToString(current + (orderId to restaurantId.toString()))
         }
     }
 }

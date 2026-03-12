@@ -551,7 +551,11 @@ fun MainScreenWithAI(
                                     onBackToList = { viewModel.clearOrderSelection() },
                                     onToggleFavorite = { order -> viewModel.toggleFavoriteOrder(order) },
                                     isFiltered = uiState.isFilterEnabled,
-                                    onFilterToggle = { viewModel.toggleFilter() }
+                                    onFilterToggle = { viewModel.toggleFilter() },
+                                    orderItemRatings = uiState.orderItemRatings,
+                                    onRateItem = { orderId, productId, restaurantId, productName, rating ->
+                                        viewModel.rateOrderItem(orderId, productId, restaurantId, productName, rating)
+                                    }
                                 )
                             }
 

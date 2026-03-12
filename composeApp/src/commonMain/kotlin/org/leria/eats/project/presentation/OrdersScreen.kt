@@ -1,5 +1,5 @@
 package org.leria.eats.project.presentation
-
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,7 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +50,8 @@ fun OrdersScreen(
     onToggleFavorite: (Order) -> Unit,
     isFiltered: Boolean,
     onFilterToggle: () -> Unit,
+    orderItemRatings: Map<String, Int> = emptyMap(),
+    onRateItem: (orderId: String, productId: Int, restaurantId: Int, productName: String, rating: Int) -> Unit = { _, _, _, _, _ -> }
 ) {
     Box(
         modifier = Modifier
@@ -71,7 +73,12 @@ fun OrdersScreen(
                 .padding(top = 24.dp, bottom = 8.dp)
         ) {
             if (selectedOrder != null) {
-                OrderDetailView(order = selectedOrder, onBack = onBackToList)
+                OrderDetailView(
+                    order = selectedOrder,
+                    onBack = onBackToList,
+                    orderItemRatings = orderItemRatings,
+                    onRateItem = onRateItem
+                )
             } else {
                 // ── Header ────────────────────────────────────────────────
                 Row(
@@ -174,7 +181,13 @@ fun OrdersScreen(
 }
 
 @Composable
-fun OrderDetailView(order: Order, onBack: () -> Unit) {
+fun OrderDetailView(
+    order: Order,
+    onBack: () -> Unit,
+    orderItemRatings: Map<String, Int> = emptyMap(),
+    onRateItem: (orderId: String, productId: Int, restaurantId: Int, productName: String, rating: Int) -> Unit = { _, _, _, _, _ -> }
+) {
+    val isDelivered = order.status == "Entregue"
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
             // ── Back header ───────────────────────────────────────────────
@@ -234,39 +247,56 @@ fun OrderDetailView(order: Order, onBack: () -> Unit) {
                     Text("Itens do Pedido", color = OText, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(bottom = 10.dp))
 
                     order.items.forEach { item ->
-                        Row(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(vertical = 6.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(58.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(OSurface)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                KamelImage(
-                                    asyncPainterResource(item.imageUrl),
-                                    contentDescription = item.product_name,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
+                                Box(
+                                    modifier = Modifier
+                                        .size(58.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(OSurface)
+                                ) {
+                                    KamelImage(
+                                        asyncPainterResource(item.imageUrl),
+                                        contentDescription = item.product_name,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(item.product_name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = OText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(item.description, fontSize = 11.sp, color = OMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(formatCurrency(item.price), fontWeight = FontWeight.Bold, color = OGreen, fontSize = 12.sp)
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(OGold.copy(alpha = 0.15f))
+                                        .border(1.dp, OGold.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text("x${item.quantity}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = OGold)
+                                }
+                            }
+
+                            // ── Avaliação por produto (só quando Entregue) ──────
+                            if (isDelivered) {
+                                val ratingKey = "${order.id}::${item.product_name}"
+                                val savedRating = orderItemRatings[ratingKey]
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OrderItemRatingRow(
+                                    currentRating = savedRating,
+                                    onRatingSelected = { stars ->
+                                        onRateItem(order.id, item.productId, order.restaurantId, item.product_name, stars)
+                                    }
                                 )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(item.product_name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = OText, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(item.description, fontSize = 11.sp, color = OMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(formatCurrency(item.price), fontWeight = FontWeight.Bold, color = OGreen, fontSize = 12.sp)
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(OGold.copy(alpha = 0.15f))
-                                    .border(1.dp, OGold.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text("x${item.quantity}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = OGold)
                             }
                         }
                     }
@@ -372,6 +402,73 @@ fun OrderItemCard(
                     Text(order.status, color = statusColor, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 }
                 Text(formatCurrency(order.total), color = OGold, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun OrderItemRatingRow(
+    currentRating: Int?,
+    onRatingSelected: (Int) -> Unit
+) {
+    val isRated = currentRating != null && currentRating > 0
+    var hoveredStar by remember { mutableStateOf(0) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (isRated) OGreen.copy(alpha = 0.07f) else OGold.copy(alpha = 0.07f))
+            .border(
+                1.dp,
+                if (isRated) OGreen.copy(alpha = 0.3f) else OGold.copy(alpha = 0.25f),
+                RoundedCornerShape(10.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Column {
+            Text(
+                text = if (isRated) "✅ A sua avaliação" else "⭐ Avalie este produto",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (isRated) OGreen else OGold
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                (1..5).forEach { star ->
+                    val isFilled = star <= (currentRating ?: hoveredStar)
+                    val scale by animateFloatAsState(
+                        targetValue = if (isFilled) 1.25f else 1f,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                        label = "star$star"
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "$star estrelas",
+                        tint = if (isFilled) OGold else OMuted.copy(alpha = 0.3f),
+                        modifier = Modifier
+                            .size((22 * scale).dp)
+                            .clickable { onRatingSelected(star) }
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = when (currentRating) {
+                        1 -> "😞 Mau"
+                        2 -> "😐 Regular"
+                        3 -> "🙂 Razoável"
+                        4 -> "😊 Bom"
+                        5 -> "🤩 Excelente!"
+                        else -> "Toque para avaliar"
+                    },
+                    fontSize = 12.sp,
+                    color = if (isRated) OGreen else OMuted.copy(alpha = 0.6f),
+                    fontWeight = if (isRated) FontWeight.Medium else FontWeight.Normal
+                )
             }
         }
     }

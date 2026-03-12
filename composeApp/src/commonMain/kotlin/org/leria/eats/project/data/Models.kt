@@ -91,7 +91,9 @@ data class OrderItem(
     val imageUrl: String = "",
     val price: Double = 0.0,
     val quantity: Int = 0,
-    val observation: String? = null
+    val observation: String? = null,
+    @SerialName("product_id")
+    val productId: Int = 0
 )
 
 @Serializable
@@ -119,6 +121,28 @@ data class SavedPaymentMethodsResponse(
     @SerialName("has_saved_methods")
     val hasSavedMethods: Boolean,
     val methods: List<SavedPaymentMethod> = emptyList()
+)
+
+@Serializable
+data class RatingItemRequest(
+    @SerialName("product_id")
+    val productId: Int,
+    val rating: Int
+)
+
+@Serializable
+data class RatingRequest(
+    @SerialName("order_id")
+    val orderId: String,
+    @SerialName("restaurant_id")
+    val restaurantId: Int,
+    val ratings: List<RatingItemRequest>
+)
+
+@Serializable
+data class RatingResponse(
+    val success: Boolean,
+    val message: String = ""
 )
 
 @Serializable

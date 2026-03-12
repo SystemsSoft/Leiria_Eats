@@ -31,7 +31,8 @@ class LeriaApiClient {
         }
     }
 
-    private val baseUrl = "https://api.leiriaeats.com"
+    private val baseUrl = "http://192.168.29.3:8080"
+        //"https://api.leiriaeats.com"
     suspend fun searchRestaurants(text: String): SearchResponse {
         val response = client.post("$baseUrl/search") {
             contentType(ContentType.Application.Json)
@@ -105,6 +106,25 @@ class LeriaApiClient {
             }
         } catch (e: Exception) {
             println("🚨 Falha ao buscar métodos de pagamento: ${e.message}")
+            null
+        }
+    }
+
+    suspend fun submitRatings(request: RatingRequest): RatingResponse? {
+        return try {
+            val response = client.post("$baseUrl/orders/ratings") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+            if (response.status.value in 200..299) {
+                response.body()
+            } else {
+                val errorBody: String = response.body()
+                println("⚠️ Erro ${response.status.value} ao enviar avaliações: $errorBody")
+                null
+            }
+        } catch (e: Exception) {
+            println("🚨 Falha ao enviar avaliações: ${e.message}")
             null
         }
     }
