@@ -300,15 +300,18 @@ class SearchViewModel(
                 return
             }
 
-
             resolvedQuery = favoriteOrder.searchQuery
+            // Determine the display name: nickname if set, otherwise restaurant name
+            val displayName = nicknames[matchedOrderId]?.takeIf { it.isNotBlank() }
+                ?: favoriteOrder.restaurantName
+            fetchSearch(resolvedQuery, favoriteName = displayName)
+            return
         }
-
 
         fetchSearch(resolvedQuery)
     }
 
-    private fun fetchSearch(resolvedQuery: String) {
+    private fun fetchSearch(resolvedQuery: String, favoriteName: String? = null) {
         _uiState.update { it.copy(isLoading = true, error = null, isSuggestionMode = false) }
         viewModelScope.launch {
             try {
@@ -351,7 +354,11 @@ class SearchViewModel(
                             .take(3)
                             .joinToString(", ") { it.name }
                         val aiMsg = buildString {
-                            append("✅ Adicionei à sua sacola: $productNames")
+                            if (favoriteName != null) {
+                                append("⭐ Pedido favorito \"$favoriteName\" adicionado à sacola: $productNames")
+                            } else {
+                                append("✅ Adicionei à sua sacola: $productNames")
+                            }
                             if (response.productResults.size > 3)
                                 append(" e mais ${response.productResults.size - 3} itens")
                             append(".\n\n💡 Quer que sugira outro restaurante com pratos semelhantes, ou gostaria de adicionar mais alguma coisa deste restaurante?")
