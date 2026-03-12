@@ -340,6 +340,109 @@ private fun AiHeader(uiState: SearchUiState, glowAlpha: Float) {
                 textAlign = TextAlign.Start
             )
         }
+
+        // Favorites tip — only shown on the initial greeting
+        val isGreeting = uiState.aiReply.startsWith("Olá") &&
+                uiState.restaurantResults.isEmpty() &&
+                uiState.productResults.isEmpty() &&
+                !uiState.isLoading
+
+        AnimatedVisibility(
+            visible = isGreeting,
+            enter = fadeIn(animationSpec = tween(600, delayMillis = 800)) +
+                    expandVertically(animationSpec = tween(500, delayMillis = 800)),
+            exit = fadeOut(animationSpec = tween(300)) + shrinkVertically(animationSpec = tween(300))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(Color(0xFF0D2419), Color(0xFF0E2E20))
+                        )
+                    )
+                    .border(
+                        1.dp,
+                        Brush.horizontalGradient(
+                            listOf(AiPrimary.copy(alpha = 0.5f), AiSecondary.copy(alpha = 0.3f))
+                        ),
+                        RoundedCornerShape(16.dp)
+                    )
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.Top) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(AiPrimary.copy(alpha = 0.15f), CircleShape)
+                            .border(1.dp, AiPrimary.copy(alpha = 0.4f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = AiPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "💡 Sabia que pode guardar favoritos?",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            color = AiPrimary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Marque um pedido com ⭐ nos seus Pedidos e dê-lhe um apelido (ex: \"Jantar em família\"). Para o refazer, use sempre a palavra ",
+                            fontSize = 12.sp,
+                            color = AiTextMuted,
+                            lineHeight = 17.sp
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(AiPrimary.copy(alpha = 0.18f))
+                                    .border(1.dp, AiPrimary.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 7.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "pedir",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AiPrimary
+                                )
+                            }
+                            Text(
+                                text = " seguida do apelido:",
+                                fontSize = 12.sp,
+                                color = AiTextMuted,
+                                lineHeight = 17.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(AiPrimary.copy(alpha = 0.12f))
+                                .border(1.dp, AiPrimary.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                text = "🎤  \"pedir Jantar em família\"",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = AiAccent
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
