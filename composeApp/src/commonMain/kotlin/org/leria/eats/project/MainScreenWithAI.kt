@@ -98,7 +98,6 @@ fun MainScreenWithAI(
         }
     }
 
-    // Stop TTS immediately when muted
     LaunchedEffect(isMuted) {
         if (isMuted) tts.stop()
     }
@@ -116,12 +115,12 @@ fun MainScreenWithAI(
         }
     }
 
-    // When mic stops listening and there is text captured, automatically send the search
     LaunchedEffect(isListening) {
         if (!isListening) {
             val capturedText = voiceText.trim()
             if (capturedText.isNotEmpty()) {
-                delay(200) // small delay to ensure UI state is updated
+                viewModel.updateInputFromVoice(capturedText)
+                delay(300)
                 viewModel.sendSearch()
             }
         }

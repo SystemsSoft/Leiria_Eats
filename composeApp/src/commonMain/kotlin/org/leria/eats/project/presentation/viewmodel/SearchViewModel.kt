@@ -130,7 +130,8 @@ class SearchViewModel(
         viewModelScope.launch {
             while (true) {
                 val userId = _uiState.value.userProfile.id
-                if (userId.isNotBlank() && _uiState.value.currentTab == MainTab.ORDERS) {
+                val tab = _uiState.value.currentTab
+                if (userId.isNotBlank() && (tab == MainTab.ORDERS || tab == MainTab.FAVORITES)) {
                     refreshOrdersInternal()
                 }
                 delay(10000)
@@ -265,6 +266,12 @@ class SearchViewModel(
             return
         }
 
+        // Prevent duplicate calls while a search is already in progress
+        if (_uiState.value.isLoading) return
+
+        // Clear textInput immediately to prevent duplicate calls (e.g. voice race condition)
+        _uiState.update { it.copy(textInput = "") }
+
         var resolvedQuery = currentQuery.trim()
 
         val favoriteAlias = resolvedQuery.startsWith("pedir", ignoreCase = true)
@@ -347,7 +354,7 @@ class SearchViewModel(
                             append("✅ Adicionei à sua sacola: $productNames")
                             if (response.productResults.size > 3)
                                 append(" e mais ${response.productResults.size - 3} itens")
-                            append(".\\n\\n💡 Quer que sugira outro restaurante com pratos semelhantes, ou gostaria de adicionar mais alguma coisa deste restaurante?")
+                            append(".\n\n💡 Quer que sugira outro restaurante com pratos semelhantes, ou gostaria de adicionar mais alguma coisa deste restaurante?")
                         }
                         _uiState.update { it.copy(cartAiMessage = aiMsg, cartAiMessageSpoken = false) }
                         onTabSelected(MainTab.CART)
@@ -534,6 +541,12 @@ class SearchViewModel(
 
     fun onTabSelected(tab: MainTab) {
         _uiState.update { it.copy(currentTab = tab) }
+        if (tab == MainTab.ORDERS || tab == MainTab.FAVORITES) {
+            val userId = _uiState.value.userProfile.id
+            if (userId.isNotBlank()) {
+                viewModelScope.launch { refreshOrdersInternal() }
+            }
+        }
     }
 
     fun selectOrder(order: Order) {
