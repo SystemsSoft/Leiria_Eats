@@ -112,7 +112,7 @@ fun CartScreen(
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text("A minha sacola", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = CartText)
+                    Text("Carrinho", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = CartText)
                     Text(
                         if (cartItems.isEmpty()) "Vazia" else "${cartItems.size} ${if (cartItems.size == 1) "item" else "itens"}",
                         fontSize = 12.sp, color = CartMuted
@@ -168,7 +168,7 @@ fun CartScreen(
                             Icon(Icons.Default.ShoppingBag, contentDescription = null, tint = CartMuted, modifier = Modifier.size(32.dp))
                         }
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("A sua sacola está vazia", color = CartText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Seu carrinho está vazio", color = CartText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                         Spacer(modifier = Modifier.height(6.dp))
                         Text("Pesquise um prato ou restaurante", color = CartMuted, fontSize = 13.sp)
                     }

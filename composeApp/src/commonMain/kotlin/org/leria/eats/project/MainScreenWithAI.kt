@@ -295,7 +295,7 @@ fun MainScreenWithAI(
                                 )
                             )
 
-                            // ── Sacola ────────────────────────────────────────
+                            // ── Carrinho ────────────────────────────────────────
                             NavigationBarItem(
                                 icon = {
                                     BadgedBox(
@@ -319,7 +319,7 @@ fun MainScreenWithAI(
                                 },
                                 label = {
                                     Text(
-                                        "Sacola",
+                                        "Carrinho",
                                         fontSize = 10.sp,
                                         fontWeight = if (uiState.currentTab == MainTab.CART) FontWeight.Bold else FontWeight.Normal
                                     )

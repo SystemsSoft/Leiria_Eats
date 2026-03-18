@@ -288,35 +288,20 @@ private fun AiHeader(uiState: SearchUiState, glowAlpha: Float) {
         // Logo + brand row
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.Start,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 0.dp)
-                .padding(bottom = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 0.dp)
         ) {
-            // AI orb
-            Box(
-                modifier = Modifier
-                    .background(
-                        Brush.radialGradient(
-                            listOf(AiPrimary.copy(alpha = 0.7f), AiSecondary.copy(alpha = 0.3f))
-                        ),
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                KamelImage(
-                    resource = asyncPainterResource("https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo%3Dpato.png"),
-                    contentDescription = "Logo",
-                    modifier = Modifier.size(112.dp),
-                    contentScale = ContentScale.Fit,
-                    onFailure = {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.width(10.dp))
+            KamelImage(
+                resource = asyncPainterResource("https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo%3Dpato.png"),
+                contentDescription = "Logo",
+                modifier = Modifier.size(96.dp),
+                contentScale = ContentScale.Fit,
+                onFailure = {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                }
+            )
         }
 
         // AI reply bubble
@@ -324,7 +309,7 @@ private fun AiHeader(uiState: SearchUiState, glowAlpha: Float) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp))
+                .clip(RoundedCornerShape( topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp))
                 .background(
                     Brush.horizontalGradient(
                         listOf(AiBotBubble, AiCard)
