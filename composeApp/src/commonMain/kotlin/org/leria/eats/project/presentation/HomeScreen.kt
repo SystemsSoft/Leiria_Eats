@@ -24,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -715,7 +716,8 @@ fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .clickable(enabled = !restaurant.isClosed) { onClick() }
+            .then(if (restaurant.isClosed) Modifier.alpha(0.6f) else Modifier),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
@@ -738,6 +740,26 @@ fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
                     .fillMaxSize()
                     .background(Brush.verticalGradient(listOf(Color.Transparent, AiDeepBg.copy(alpha = 0.5f))))
             )
+            // Badge "FECHADO" sobre a imagem
+            if (restaurant.isClosed) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFB71C1C).copy(alpha = 0.90f)
+                    ) {
+                        Text(
+                            text = "🔒 FECHADO",
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(6.dp))
