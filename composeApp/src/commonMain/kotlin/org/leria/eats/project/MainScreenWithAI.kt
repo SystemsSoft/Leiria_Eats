@@ -18,8 +18,6 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -379,31 +377,6 @@ fun MainScreenWithAI(
                                 )
                             )
 
-                            // ── Som ───────────────────────────────────────────
-                            NavigationBarItem(
-                                icon = {
-                                    Icon(
-                                        imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                                        contentDescription = if (isMuted) "Ativar som" else "Desativar som"
-                                    )
-                                },
-                                label = {
-                                    Text(
-                                        if (isMuted) "Som off" else "Som",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Normal
-                                    )
-                                },
-                                selected = false,
-                                onClick = { isMuted = !isMuted },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = KomaDeepBg,
-                                    selectedTextColor = selectedColor,
-                                    indicatorColor = KomaGold,
-                                    unselectedIconColor = if (isMuted) KomaMuted.copy(alpha = 0.4f) else KomaMuted.copy(alpha = 0.55f),
-                                    unselectedTextColor = if (isMuted) KomaMuted.copy(alpha = 0.4f) else KomaMuted.copy(alpha = 0.55f)
-                                )
-                            )
 
 
                             // ── Perfil ────────────────────────────────────────
