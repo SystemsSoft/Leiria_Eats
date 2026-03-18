@@ -44,6 +44,7 @@ class SearchViewModel(
 
     private val favoriteOrderIdsFlow = profileRepository.favoriteOrderIdsFlow
 
+    private var initialRestaurantsLoaded = false
 
     init {
         viewModelScope.launch {
@@ -55,6 +56,11 @@ class SearchViewModel(
                     // User is registered, show normal greeting
                     val greeting = buildGreeting(profile.name)
                     _uiState.update { it.copy(userProfile = profile, aiReply = greeting) }
+                    // Load all restaurants automatically on first open
+                    if (!initialRestaurantsLoaded) {
+                        initialRestaurantsLoaded = true
+                        fetchSearch("ver todos")
+                    }
                 } else {
                     // User is NOT registered, show welcome message
                     // Don't navigate yet - wait for TTS to finish
@@ -400,10 +406,11 @@ class SearchViewModel(
                         )
                     }
                 } else {
-                    val resolvedReply = if (resolvedQuery.equals("ver todos", ignoreCase = true))
-                        "Todos os restaurantes disponíveis"
-                    else
-                        response.reply
+                    val resolvedReply = when {
+                        resolvedQuery.equals("ver todos", ignoreCase = true) ->
+                            _uiState.value.aiReply.ifBlank { "Todos os restaurantes disponíveis" }
+                        else -> response.reply
+                    }
                     _uiState.update {
                         it.copy(
                             isLoading = false,

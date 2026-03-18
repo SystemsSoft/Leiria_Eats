@@ -2,7 +2,6 @@ package org.leria.eats.project.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Palette from KomaAI Artwork
 val KomaGreen = Color(0xFF0A443C) // Dark Teal Background
 val KomaYellow = Color(0xFFFFC107) // Vibrant Yellow/Gold
 val KomaWhite = Color(0xFFFFFFFF)
