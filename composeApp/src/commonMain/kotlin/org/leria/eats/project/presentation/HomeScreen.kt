@@ -281,8 +281,7 @@ private fun AiHeader(uiState: SearchUiState, glowAlpha: Float) {
 
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 12.dp, bottom = 8.dp),
+            .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Logo + brand row
