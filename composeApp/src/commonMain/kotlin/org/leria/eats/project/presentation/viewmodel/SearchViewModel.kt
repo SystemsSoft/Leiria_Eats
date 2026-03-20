@@ -663,13 +663,13 @@ class SearchViewModel(
 
     /** Called when user confirms payment with saved card (useSavedCard=true) or chooses another method (false). */
     fun onPaymentConfirmResult(useSavedCard: Boolean) {
-        val address = _uiState.value.selectedAddressForCheckout ?: return
-        _uiState.update { it.copy(showPaymentConfirmSheet = false, selectedAddressForCheckout = null) }
-        if (useSavedCard) {
-            confirmCheckout(address, savePaymentMethod = true)
-        } else {
-            // Proceed without saved card – open Stripe checkout
-            confirmCheckout(address, savePaymentMethod = false)
+        if (_uiState.value.selectedAddressForCheckout == null) return
+        _uiState.update {
+            it.copy(
+                showPaymentConfirmSheet = false,
+                showDeliveryTypeSheet = true,
+                pendingCheckoutSavePaymentMethod = useSavedCard
+            )
         }
     }
 
@@ -698,22 +698,38 @@ class SearchViewModel(
     }
 
     fun proceedToCheckout(savePaymentMethod: Boolean) {
-        _uiState.update { it.copy(showSavePaymentSheet = false) }
-
-        val currentState = _uiState.value
-        val address = currentState.selectedAddressForCheckout
-
-        if (address != null) {
-            _uiState.update { it.copy(selectedAddressForCheckout = null) }
-            confirmCheckout(address, savePaymentMethod)
+        _uiState.update {
+            it.copy(
+                showSavePaymentSheet = false,
+                showDeliveryTypeSheet = true,
+                pendingCheckoutSavePaymentMethod = savePaymentMethod
+            )
         }
+    }
+
+    fun dismissDeliveryTypeSheet() {
+        _uiState.update { it.copy(showDeliveryTypeSheet = false) }
+    }
+
+    fun proceedWithDeliveryType(deliveryType: String) {
+        _uiState.update { it.copy(showDeliveryTypeSheet = false) }
+        val currentState = _uiState.value
+        val address = currentState.selectedAddressForCheckout ?: return
+        val savePaymentMethod = currentState.pendingCheckoutSavePaymentMethod
+        _uiState.update {
+            it.copy(
+                selectedAddressForCheckout = null,
+                pendingCheckoutSavePaymentMethod = false
+            )
+        }
+        confirmCheckout(address, savePaymentMethod, deliveryType)
     }
 
     fun dismissAddressSheet() {
         _uiState.update { it.copy(isAddressSheetVisible = false) }
     }
 
-    fun confirmCheckout(selectedAddress: Address, savePaymentMethod: Boolean = false) {
+    fun confirmCheckout(selectedAddress: Address, savePaymentMethod: Boolean = false, deliveryType: String = "") {
         _uiState.update {
             it.copy(
                 isAddressSheetVisible = false,
@@ -793,7 +809,8 @@ class SearchViewModel(
                 items = orderItems,
                 save_payment_method = savePaymentMethod,
                 search_query = currentState.lastSearchQuery,
-                tracking_code = trackingCode
+                tracking_code = trackingCode,
+                deliveryType = deliveryType
             )
 
             val sessionResponse = apiClient.initiateCheckout(request)

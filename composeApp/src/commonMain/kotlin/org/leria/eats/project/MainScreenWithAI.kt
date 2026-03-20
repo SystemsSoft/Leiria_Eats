@@ -597,5 +597,15 @@ fun MainScreenWithAI(
                 }
             )
         }
+
+        // Delivery Type Sheet
+        if (uiState.showDeliveryTypeSheet) {
+            DeliveryTypeBottomSheet(
+                onDismiss = { viewModel.dismissDeliveryTypeSheet() },
+                onDeliveryTypeSelected = { deliveryType ->
+                    viewModel.proceedWithDeliveryType(deliveryType)
+                }
+            )
+        }
     }
 }

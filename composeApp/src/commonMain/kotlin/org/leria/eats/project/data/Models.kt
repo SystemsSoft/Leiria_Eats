@@ -72,7 +72,10 @@ data class OrderRequest(
     @SerialName("search_query")
     val search_query: String = "",
     @SerialName("tracking_code")
-    val tracking_code: String = ""
+    val tracking_code: String = "",
+    @SerialName("delivery_type")
+    val deliveryType: String = ""
+
 )
 
 @Serializable

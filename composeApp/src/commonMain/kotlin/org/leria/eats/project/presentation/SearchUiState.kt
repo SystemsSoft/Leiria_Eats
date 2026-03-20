@@ -44,6 +44,8 @@ data class SearchUiState(
     val pendingProductResults: List<Product> = emptyList(),
     val showSavePaymentSheet: Boolean = false,
     val showPaymentConfirmSheet: Boolean = false,
+    val showDeliveryTypeSheet: Boolean = false,
+    val pendingCheckoutSavePaymentMethod: Boolean = false,
     val selectedAddressForCheckout: Address? = null,
     val isProcessingAutoPayment: Boolean = false,
     val autoPaymentOrderId: Int? = null,

@@ -29,5 +29,8 @@ data class Order(
     val paymentIntentId: String? = "",
 
     @SerialName("tracking_code")
-    val trackingCode: String = ""
+    val trackingCode: String = "",
+
+    @SerialName("delivery_type")
+    val deliveryType: String = ""
 )

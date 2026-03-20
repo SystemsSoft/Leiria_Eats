@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.filled.StoreMallDirectory
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -954,3 +956,142 @@ fun PaymentConfirmBottomSheet(
     }
 }
 
+// ─── Delivery Type Bottom Sheet ───────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DeliveryTypeBottomSheet(
+    onDismiss: () -> Unit,
+    onDeliveryTypeSelected: (String) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = CartCard,
+        contentColor = CartText
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 48.dp, top = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .background(CartPrimary.copy(alpha = 0.15f), CircleShape)
+                    .border(1.dp, CartPrimary.copy(alpha = 0.3f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "🛵", fontSize = 32.sp)
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = "Como deseja receber?",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = CartText
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Escolha se pretende entrega em casa ou recolha no restaurante.",
+                fontSize = 14.sp,
+                color = CartMuted,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                lineHeight = 20.sp
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Entrega (Delivery) button
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(CartPrimary.copy(alpha = 0.18f), CartPrimary.copy(alpha = 0.07f))
+                            )
+                        )
+                        .border(1.dp, CartPrimary.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                        .clickable { onDeliveryTypeSelected("delivery") }
+                        .padding(vertical = 20.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.DirectionsBike,
+                            contentDescription = "Entrega",
+                            tint = CartPrimary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Entrega",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CartPrimary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Receba em casa",
+                            fontSize = 11.sp,
+                            color = CartMuted,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+
+                // Recolha (Pickup) button
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(CartSecondary.copy(alpha = 0.18f), CartSecondary.copy(alpha = 0.07f))
+                            )
+                        )
+                        .border(1.dp, CartSecondary.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                        .clickable { onDeliveryTypeSelected("pickup") }
+                        .padding(vertical = 20.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.StoreMallDirectory,
+                            contentDescription = "Recolha",
+                            tint = CartSecondary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Recolha",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CartSecondary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Levante no restaurante",
+                            fontSize = 11.sp,
+                            color = CartMuted,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
