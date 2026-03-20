@@ -5,6 +5,7 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
@@ -126,6 +127,19 @@ class LeriaApiClient {
         } catch (e: Exception) {
             println("🚨 Falha ao enviar avaliações: ${e.message}")
             null
+        }
+    }
+
+    suspend fun updateOrderStatus(orderId: String, newStatus: String): Boolean {
+        return try {
+            val response = client.put("$baseUrl/orders/$orderId/status") {
+                contentType(ContentType.Application.Json)
+                setBody(mapOf("status" to newStatus))
+            }
+            response.status.value in 200..299
+        } catch (e: Exception) {
+            println("🚨 Falha ao atualizar status do pedido: ${e.message}")
+            false
         }
     }
 }

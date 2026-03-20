@@ -32,5 +32,5 @@ data class Order(
     val trackingCode: String = "",
 
     @SerialName("delivery_type")
-    val deliveryType: String = ""
+    val deliveryType: String? = null
 )

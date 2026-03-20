@@ -528,7 +528,8 @@ fun MainScreenWithAI(
                                     orderItemRatings = uiState.orderItemRatings,
                                     onRateItem = { orderId, productId, restaurantId, productName, rating ->
                                         viewModel.rateOrderItem(orderId, productId, restaurantId, productName, rating)
-                                    }
+                                    },
+                                    onMarkDelivered = { orderId -> viewModel.markOrderAsDelivered(orderId) }
                                 )
                             }
 

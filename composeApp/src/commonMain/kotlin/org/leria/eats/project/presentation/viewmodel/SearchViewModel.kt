@@ -1057,6 +1057,17 @@ class SearchViewModel(
         }
     }
 
+    fun markOrderAsDelivered(orderId: String) {
+        viewModelScope.launch {
+            val success = apiClient.updateOrderStatus(orderId, "Entregue")
+            if (success) {
+                refreshOrdersInternal()
+            } else {
+                _uiState.update { it.copy(error = "Erro ao marcar pedido como entregue.") }
+            }
+        }
+    }
+
     private fun startBackgroundPolling(userId: String) {
         viewModelScope.launch {
             // Poll every 2 seconds for up to 30 seconds to catch status updates

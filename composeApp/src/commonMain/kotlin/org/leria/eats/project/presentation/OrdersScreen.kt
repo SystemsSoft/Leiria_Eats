@@ -51,7 +51,8 @@ fun OrdersScreen(
     isFiltered: Boolean,
     onFilterToggle: () -> Unit,
     orderItemRatings: Map<String, Int> = emptyMap(),
-    onRateItem: (orderId: String, productId: Int, restaurantId: Int, productName: String, rating: Int) -> Unit = { _, _, _, _, _ -> }
+    onRateItem: (orderId: String, productId: Int, restaurantId: Int, productName: String, rating: Int) -> Unit = { _, _, _, _, _ -> },
+    onMarkDelivered: (orderId: String) -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -77,7 +78,8 @@ fun OrdersScreen(
                     order = selectedOrder,
                     onBack = onBackToList,
                     orderItemRatings = orderItemRatings,
-                    onRateItem = onRateItem
+                    onRateItem = onRateItem,
+                    onMarkDelivered = onMarkDelivered
                 )
             } else {
                 // ── Header ────────────────────────────────────────────────
@@ -185,7 +187,8 @@ fun OrderDetailView(
     order: Order,
     onBack: () -> Unit,
     orderItemRatings: Map<String, Int> = emptyMap(),
-    onRateItem: (orderId: String, productId: Int, restaurantId: Int, productName: String, rating: Int) -> Unit = { _, _, _, _, _ -> }
+    onRateItem: (orderId: String, productId: Int, restaurantId: Int, productName: String, rating: Int) -> Unit = { _, _, _, _, _ -> },
+    onMarkDelivered: (orderId: String) -> Unit = {}
 ) {
     val isDelivered = order.status == "Entregue"
     LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -340,6 +343,40 @@ fun OrderDetailView(
                     ) {
                         Text("Total", color = OText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Text(formatCurrency(order.total), color = OGold, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    }
+
+                    // ── "Entregue" button — shown only when out for delivery ──
+                    if (order.status == "Saiu para Entrega") {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(54.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(OGreen, Color(0xFF22C55E))
+                                    )
+                                )
+                                .clickable { onMarkDelivered(order.id) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = Color(0xFF061510),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Confirmar Entrega",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF061510)
+                                )
+                            }
+                        }
                     }
                 }
             }
