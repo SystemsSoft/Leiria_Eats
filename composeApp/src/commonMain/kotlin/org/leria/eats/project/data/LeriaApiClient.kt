@@ -31,7 +31,7 @@ class LeriaApiClient {
         }
     }
 
-    private val baseUrl = "https://api.leiriaeats.com"
+    private val baseUrl = "http://192.168.29.3:8000"
 
     suspend fun searchRestaurants(text: String): SearchResponse {
         val response = client.post("$baseUrl/search") {

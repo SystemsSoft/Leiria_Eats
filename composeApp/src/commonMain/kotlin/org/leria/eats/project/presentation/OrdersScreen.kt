@@ -242,6 +242,36 @@ fun OrderDetailView(
                         }
                     }
 
+                    if (order.trackingCode.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                "Nº do Pedido",
+                                color = OMuted,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(OGold.copy(alpha = 0.12f))
+                                    .border(1.dp, OGold.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    order.trackingCode,
+                                    color = OGold,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
                     HorizontalDivider(color = OGold.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 14.dp))
 
                     Text("Itens do Pedido", color = OText, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(bottom = 10.dp))

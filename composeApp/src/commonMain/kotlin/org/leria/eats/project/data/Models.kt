@@ -70,7 +70,9 @@ data class OrderRequest(
     val items: List<OrderItemRequest>,
     val save_payment_method: Boolean = false,
     @SerialName("search_query")
-    val search_query: String = ""
+    val search_query: String = "",
+    @SerialName("tracking_code")
+    val tracking_code: String = ""
 )
 
 @Serializable

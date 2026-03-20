@@ -26,5 +26,8 @@ data class Order(
     val searchQuery: String = "",
 
     @SerialName("payment_intent_id")
-    val paymentIntentId: String? = ""
+    val paymentIntentId: String? = "",
+
+    @SerialName("tracking_code")
+    val trackingCode: String = ""
 )

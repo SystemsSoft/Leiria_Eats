@@ -27,6 +27,11 @@ class SearchViewModel(
     private val profileRepository: ProfileRepository,
 ) : ViewModel() {
 
+    /** Gera um código de pedido numérico único com 9 dígitos */
+    private fun generateTrackingCode(): String {
+        return (100000000..999999999).random().toString()
+    }
+
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
@@ -774,6 +779,8 @@ class SearchViewModel(
                 )
             }
 
+            val trackingCode = generateTrackingCode()
+
             val request = OrderRequest(
                 user_id = currentState.userProfile.id,
                 user_name = currentState.userProfile.name,
@@ -785,7 +792,8 @@ class SearchViewModel(
                 restaurant_category = restaurant.category,
                 items = orderItems,
                 save_payment_method = savePaymentMethod,
-                search_query = currentState.lastSearchQuery
+                search_query = currentState.lastSearchQuery,
+                tracking_code = trackingCode
             )
 
             val sessionResponse = apiClient.initiateCheckout(request)
