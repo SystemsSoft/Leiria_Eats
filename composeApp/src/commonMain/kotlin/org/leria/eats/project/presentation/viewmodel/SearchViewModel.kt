@@ -797,6 +797,13 @@ class SearchViewModel(
 
             val trackingCode = generateTrackingCode()
 
+            // Calculates the base time: highest preparation time among the cart products
+            val baseTime = currentState.cartItems.maxOfOrNull { product ->
+                product.preparationTime
+                    .filter { it.isDigit() || it == '.' }
+                    .toDoubleOrNull()?.toInt() ?: 0
+            } ?: 0
+
             val request = OrderRequest(
                 user_id = currentState.userProfile.id,
                 user_name = currentState.userProfile.name,
@@ -810,7 +817,8 @@ class SearchViewModel(
                 save_payment_method = savePaymentMethod,
                 search_query = currentState.lastSearchQuery,
                 tracking_code = trackingCode,
-                deliveryType = deliveryType
+                deliveryType = deliveryType,
+                baseTime = baseTime
             )
 
             val sessionResponse = apiClient.initiateCheckout(request)

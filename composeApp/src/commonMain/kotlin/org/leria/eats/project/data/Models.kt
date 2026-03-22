@@ -74,7 +74,9 @@ data class OrderRequest(
     @SerialName("tracking_code")
     val tracking_code: String = "",
     @SerialName("delivery_type")
-    val deliveryType: String = ""
+    val deliveryType: String = "",
+    @SerialName("base_time")
+    val baseTime: Int = 0
 
 )
 
