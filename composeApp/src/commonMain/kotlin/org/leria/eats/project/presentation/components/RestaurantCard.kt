@@ -33,8 +33,8 @@ fun RestaurantCard(
         Card(
             modifier = Modifier
                 .fillMaxSize()
-                .clickable(enabled = !restaurant.isClosed) { onClick() }
-                .then(if (restaurant.isClosed) Modifier.alpha(0.55f) else Modifier),
+                .clickable(enabled = restaurant.isClosed != true) { onClick() }
+                .then(if (restaurant.isClosed == true) Modifier.alpha(0.55f) else Modifier),
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(
                 containerColor = Color(0xFF16213E) // Fundo azul escuro elegante
@@ -112,7 +112,7 @@ fun RestaurantCard(
         }
 
         // Badge "FECHADO" — visível apenas quando o restaurante está fechado
-        if (restaurant.isClosed) {
+        if (restaurant.isClosed == true) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()

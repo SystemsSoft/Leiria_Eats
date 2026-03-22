@@ -716,8 +716,8 @@ fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = !restaurant.isClosed) { onClick() }
-            .then(if (restaurant.isClosed) Modifier.alpha(0.6f) else Modifier),
+            .clickable(enabled = restaurant.isClosed != true) { onClick() }
+            .then(if (restaurant.isClosed == true) Modifier.alpha(0.6f) else Modifier),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
@@ -741,7 +741,7 @@ fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
                     .background(Brush.verticalGradient(listOf(Color.Transparent, AiDeepBg.copy(alpha = 0.5f))))
             )
             // Badge "FECHADO" sobre a imagem
-            if (restaurant.isClosed) {
+            if (restaurant.isClosed == true) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center

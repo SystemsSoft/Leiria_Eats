@@ -31,7 +31,7 @@ data class Restaurant(
     val category: String,
     val rating: Double? = null,
     @SerialName("is_closed")
-    val isClosed: Boolean = false,
+    val isClosed: Boolean? = null,
     val image_url: String?,
     val products: List<Product> = emptyList()
 )
