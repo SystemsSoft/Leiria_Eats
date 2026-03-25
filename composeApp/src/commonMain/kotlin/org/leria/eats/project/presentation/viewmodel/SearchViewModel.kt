@@ -818,7 +818,9 @@ class SearchViewModel(
                 search_query = currentState.lastSearchQuery,
                 tracking_code = trackingCode,
                 deliveryType = deliveryType,
-                baseTime = baseTime
+                baseTime = baseTime,
+                deliveryLatitude = selectedAddress.latitude,
+                deliveryLongitude = selectedAddress.longitude
             )
 
             val sessionResponse = apiClient.initiateCheckout(request)

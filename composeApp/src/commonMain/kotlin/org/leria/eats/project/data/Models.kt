@@ -76,8 +76,11 @@ data class OrderRequest(
     @SerialName("delivery_type")
     val deliveryType: String = "",
     @SerialName("base_time")
-    val baseTime: Int = 0
-
+    val baseTime: Int = 0,
+    @SerialName("delivery_latitude")
+    val deliveryLatitude: Double? = null,
+    @SerialName("delivery_longitude")
+    val deliveryLongitude: Double? = null
 )
 
 @Serializable
