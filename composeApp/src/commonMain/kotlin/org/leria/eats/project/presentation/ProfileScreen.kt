@@ -47,7 +47,7 @@ private val PMuted   = Color(0xFF6EE7A0)
 fun ProfileScreen(
     userProfile: UserProfile,
     onSave: (String, String, String, List<Address>) -> Unit,
-    onGetLocation: ((String) -> Unit) -> Unit,
+    onGetLocation: ((String, Double?, Double?) -> Unit) -> Unit,
     onGetAddressFromMap: (Double, Double) -> String?,
     isMuted: Boolean = false
 ) {
@@ -72,7 +72,7 @@ fun ProfileScreen(
             onLocationSelected = { lat, long ->
                 val selectedAddress = onGetAddressFromMap(lat, long)
                 if (selectedAddress != null) {
-                    addresses = addresses + Address("Novo Endereço do Mapa", selectedAddress)
+                    addresses = addresses + Address("Novo Endereço do Mapa", selectedAddress, latitude = lat, longitude = long)
                 }
                 showMapDialog = false
             }
@@ -351,20 +351,26 @@ fun AddressEntryDialog(
     address: Address?,
     onDismiss: () -> Unit,
     onSave: (Address) -> Unit,
-    onGetLocation: ((String) -> Unit) -> Unit,
+    onGetLocation: ((String, Double?, Double?) -> Unit) -> Unit,
     onGetAddressFromMap: (Double, Double) -> String?,
 ) {
     var name by remember { mutableStateOf(address?.name ?: "") }
     var addressValue by remember { mutableStateOf(address?.address ?: "") }
+    var lat by remember { mutableStateOf(address?.latitude) }
+    var lng by remember { mutableStateOf(address?.longitude) }
     var isLocating by remember { mutableStateOf(false) }
     var showMapDialog by remember { mutableStateOf(false) }
 
     if (showMapDialog) {
         MapDialog(
             onDismiss = { showMapDialog = false },
-            onLocationSelected = { lat, long ->
-                val selectedAddress = onGetAddressFromMap(lat, long)
-                if (selectedAddress != null) addressValue = selectedAddress
+            onLocationSelected = { mapLat, mapLong ->
+                val selectedAddress = onGetAddressFromMap(mapLat, mapLong)
+                if (selectedAddress != null) {
+                    addressValue = selectedAddress
+                    lat = mapLat
+                    lng = mapLong
+                }
                 showMapDialog = false
             }
         )
@@ -401,9 +407,13 @@ fun AddressEntryDialog(
                                     .background(if (!isLocating) PGold.copy(alpha = 0.15f) else PCard)
                                     .clickable(enabled = !isLocating) {
                                         isLocating = true
-                                        onGetLocation { foundAddress ->
+                                        onGetLocation { foundAddress, foundLat, foundLng ->
                                             isLocating = false
-                                            if (foundAddress.isNotEmpty()) addressValue = foundAddress
+                                            if (foundAddress.isNotEmpty()) {
+                                                addressValue = foundAddress
+                                                lat = foundLat
+                                                lng = foundLng
+                                            }
                                         }
                                     },
                                 contentAlignment = Alignment.Center
@@ -439,7 +449,9 @@ fun AddressEntryDialog(
                         onSave(Address(
                             name = name.ifEmpty { "Endereço Sem Nome" },
                             address = addressValue,
-                            isDefault = false
+                            isDefault = false,
+                            latitude = lat,
+                            longitude = lng
                         ))
                     }
                     .padding(horizontal = 18.dp, vertical = 9.dp)

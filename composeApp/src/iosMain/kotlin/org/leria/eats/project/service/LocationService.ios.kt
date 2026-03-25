@@ -7,4 +7,7 @@ actual class LocationService {
     actual fun getAddressFromCoordinates(latitude: Double, longitude: Double): String? {
         return "Endereço não disponível no iOS"
     }
+    actual suspend fun getCurrentCoordinates(): Pair<Double, Double>? {
+        return null
+    }
 }

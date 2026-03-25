@@ -82,4 +82,31 @@ class AndroidLocationService(private val context: Context) : LocationService {
     private fun getAddressFromLocation(location: Location): String {
         return getAddressFromCoordinates(location.latitude, location.longitude) ?: "Endereço não encontrado"
     }
+
+    @SuppressLint("MissingPermission")
+    override suspend fun getCurrentCoordinates(): Pair<Double, Double>? {
+        return suspendCoroutine { continuation ->
+            val cancellationTokenSource = CancellationTokenSource()
+            fusedLocationClient.getCurrentLocation(
+                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                cancellationTokenSource.token
+            ).addOnSuccessListener { location ->
+                if (location != null) {
+                    continuation.resume(Pair(location.latitude, location.longitude))
+                } else {
+                    fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
+                        if (lastLocation != null) {
+                            continuation.resume(Pair(lastLocation.latitude, lastLocation.longitude))
+                        } else {
+                            continuation.resume(null)
+                        }
+                    }.addOnFailureListener {
+                        continuation.resume(null)
+                    }
+                }
+            }.addOnFailureListener {
+                continuation.resume(null)
+            }
+        }
+    }
 }

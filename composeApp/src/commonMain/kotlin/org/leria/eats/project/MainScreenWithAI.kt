@@ -557,11 +557,16 @@ fun MainScreenWithAI(
                                         if (permissionStatus == PermissionStatus.GRANTED) {
                                             scope.launch {
                                                 val addressFound = locationService.getCurrentAddress()
-                                                callbackUpdateAddress(addressFound ?: "Localização não encontrada")
+                                                val coords = locationService.getCurrentCoordinates()
+                                                callbackUpdateAddress(
+                                                    addressFound ?: "Localização não encontrada",
+                                                    coords?.first,
+                                                    coords?.second
+                                                )
                                              }
                                         } else {
                                             permissionManager.askForPermission()
-                                            callbackUpdateAddress("")
+                                            callbackUpdateAddress("", null, null)
                                         }
                                     },
                                     onGetAddressFromMap = { lat, long ->

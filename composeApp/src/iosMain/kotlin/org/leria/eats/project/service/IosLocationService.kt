@@ -1,7 +1,7 @@
 package org.leria.eats.project.service
 
-
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.useContents
 import platform.CoreLocation.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -41,6 +41,19 @@ class IosLocationService : LocationService {
                     }
                 }
             }
+        }
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    suspend fun getCurrentCoordinates(): Pair<Double, Double>? {
+        return try {
+            locationManager.requestWhenInUseAuthorization()
+            val location = locationManager.location ?: return null
+            val lat = location.coordinate.useContents { latitude }
+            val lng = location.coordinate.useContents { longitude }
+            Pair(lat, lng)
+        } catch (e: Exception) {
+            null
         }
     }
 }

@@ -110,7 +110,9 @@ data class OrderItem(
 data class Address(
     val name: String,
     val address: String,
-    val isDefault: Boolean = false
+    val isDefault: Boolean = false,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 @Serializable
