@@ -229,7 +229,7 @@ fun CartScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Finalizar Pedido",
+                        text = "Ir para o check-out",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
