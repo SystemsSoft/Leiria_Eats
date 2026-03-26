@@ -163,6 +163,21 @@ data class RatingResponse(
 )
 
 @Serializable
+data class DeliveryFeeRequest(
+    val customer_latitude: Double,
+    val customer_longitude: Double,
+    val restaurant_latitude: Double,
+    val restaurant_longitude: Double
+)
+
+@Serializable
+data class DeliveryFeeResponse(
+    val distance_km: Double,
+    val delivery_fee: Double,
+    val tier: Int
+)
+
+@Serializable
 data class UserProfile(
     val id: String = "",
     val name: String = "",

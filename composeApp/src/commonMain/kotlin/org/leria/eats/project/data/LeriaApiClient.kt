@@ -12,6 +12,8 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 @Serializable
 data class PaymentIntentResponse(
@@ -140,6 +142,22 @@ class LeriaApiClient {
         } catch (e: Exception) {
             println("🚨 Falha ao atualizar status do pedido: ${e.message}")
             false
+        }
+    }
+
+    suspend fun getDeliveryFee(request: DeliveryFeeRequest): DeliveryFeeResponse {
+        val response = client.post("$baseUrl/orders/delivery-fee") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        if (response.status.value in 200..299) {
+            return response.body()
+        } else {
+            val errorBody: String = response.body()
+            val detail = try {
+                Json.parseToJsonElement(errorBody).jsonObject["detail"]?.jsonPrimitive?.content
+            } catch (e: Exception) { null }
+            throw Exception(detail ?: "Endereço fora da área de entrega.")
         }
     }
 }

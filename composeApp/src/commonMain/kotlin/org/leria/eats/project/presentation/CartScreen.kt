@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
 import org.leria.eats.project.data.Address
+import org.leria.eats.project.data.DeliveryFeeResponse
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.data.SavedPaymentMethod
@@ -81,7 +82,8 @@ fun CartScreen(
     onSuggestAnotherRestaurant: () -> Unit = {},
     onAddMoreFromSame: () -> Unit = {},
     onMarkAiMessageAsSpoken: () -> Unit = {},
-    isMuted: Boolean = false
+    isMuted: Boolean = false,
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double) -> DeliveryFeeResponse?)? = null
 ) {
     val total = cartItems.sumOf { it.price * it.quantity }
     var showServiceFeeSheet by remember { mutableStateOf(false) }
@@ -91,6 +93,8 @@ fun CartScreen(
             cartTotal = total,
             userAddresses = userAddresses,
             onGetAddressFromMap = onGetAddressFromMap,
+            restaurant = restaurantSelected,
+            onGetDeliveryFee = onGetDeliveryFee,
             onDismiss = { showServiceFeeSheet = false },
             onConfirm = { address ->
                 showServiceFeeSheet = false
@@ -988,14 +992,50 @@ fun ServiceFeeBottomSheet(
     userAddresses: List<Address>,
     onGetAddressFromMap: (Double, Double) -> String?,
     onDismiss: () -> Unit,
-    onConfirm: (Address) -> Unit
+    onConfirm: (Address) -> Unit,
+    restaurant: Restaurant? = null,
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double) -> DeliveryFeeResponse?)? = null
 ) {
     val serviceFee = (cartTotal * 0.05).coerceIn(0.49, 1.99)
-    val grandTotal = cartTotal + serviceFee
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedAddress by remember { mutableStateOf(userAddresses.firstOrNull()) }
     var showAddressPicker by remember { mutableStateOf(false) }
     var showMapDialog by remember { mutableStateOf(false) }
+
+    // Delivery fee state
+    var deliveryFee by remember { mutableStateOf<Double?>(null) }
+    var deliveryFeeLoading by remember { mutableStateOf(false) }
+    var deliveryFeeError by remember { mutableStateOf<String?>(null) }
+    var deliveryDistanceKm by remember { mutableStateOf<Double?>(null) }
+
+    val grandTotal = cartTotal + serviceFee + (deliveryFee ?: 0.0)
+
+    // Fetch delivery fee whenever the selected address changes
+    val canCalculateFee = restaurant?.latitude != null && restaurant.longitude != null
+    LaunchedEffect(selectedAddress) {
+        val addr = selectedAddress
+        if (canCalculateFee && addr?.latitude != null && addr.longitude != null && onGetDeliveryFee != null) {
+            deliveryFeeLoading = true
+            deliveryFeeError = null
+            deliveryFee = null
+            deliveryDistanceKm = null
+            try {
+                val result = onGetDeliveryFee(
+                    addr.latitude, addr.longitude,
+                    restaurant!!.latitude!!, restaurant.longitude!!
+                )
+                if (result != null) {
+                    deliveryFee = result.delivery_fee
+                    deliveryDistanceKm = result.distance_km
+                } else {
+                    deliveryFeeError = "Não foi possível calcular a taxa de entrega."
+                }
+            } catch (e: Exception) {
+                deliveryFeeError = e.message ?: "Endereço fora da área de entrega."
+            }
+            deliveryFeeLoading = false
+        }
+    }
 
     if (showMapDialog) {
         MapDialog(
@@ -1194,6 +1234,67 @@ fun ServiceFeeBottomSheet(
                             )
                         }
                         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(CartPrimary.copy(alpha = 0.12f)))
+                        // ── Delivery fee row ──────────────────────────────────
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(text = "Taxa de entrega", fontSize = 14.sp, color = CartMuted)
+                                if (deliveryDistanceKm != null) {
+                                    val km = deliveryDistanceKm!!
+                                    val rounded = (km * 100).toInt()
+                                    val intPart = rounded / 100
+                                    val decPart = rounded % 100
+                                    val decStr = if (decPart < 10) "0$decPart" else "$decPart"
+                                    Text(
+                                        text = "$intPart.$decStr km",
+                                        fontSize = 11.sp,
+                                        color = CartMuted.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
+                            when {
+                                deliveryFeeLoading -> CircularProgressIndicator(
+                                    color = CartPrimary,
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                deliveryFeeError != null -> Text(
+                                    text = "⚠ Fora da área",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFFF87171)
+                                )
+                                deliveryFee != null -> Text(
+                                    text = formatCurrency(deliveryFee!!),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = CartPrimary
+                                )
+                                !canCalculateFee || selectedAddress?.latitude == null -> Text(
+                                    text = "—",
+                                    fontSize = 14.sp,
+                                    color = CartMuted
+                                )
+                                else -> Text(
+                                    text = "—",
+                                    fontSize = 14.sp,
+                                    color = CartMuted
+                                )
+                            }
+                        }
+                        // Show error detail below the row if outside area
+                        if (deliveryFeeError != null) {
+                            Text(
+                                text = deliveryFeeError!!,
+                                fontSize = 11.sp,
+                                color = Color(0xFFF87171).copy(alpha = 0.85f),
+                                lineHeight = 15.sp
+                            )
+                        }
+                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(CartPrimary.copy(alpha = 0.12f)))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1214,6 +1315,9 @@ fun ServiceFeeBottomSheet(
 
                 // ── Confirm button ────────────────────────────────────────────
                 val canConfirm = selectedAddress != null
+                    && !deliveryFeeLoading
+                    && deliveryFeeError == null
+                    && (deliveryFee != null || !canCalculateFee || selectedAddress?.latitude == null)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()

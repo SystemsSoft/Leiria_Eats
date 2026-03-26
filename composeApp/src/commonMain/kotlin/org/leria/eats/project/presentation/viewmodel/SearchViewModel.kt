@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.leria.eats.project.data.Address
+import org.leria.eats.project.data.DeliveryFeeRequest
+import org.leria.eats.project.data.DeliveryFeeResponse
 import org.leria.eats.project.data.LeriaApiClient
 import org.leria.eats.project.data.Order
 import org.leria.eats.project.data.OrderItemRequest
@@ -644,6 +646,22 @@ class SearchViewModel(
 
     fun toggleFilter() {
         _uiState.update { it.copy(isFilterEnabled = !it.isFilterEnabled) }
+    }
+
+    suspend fun getDeliveryFee(
+        customerLat: Double,
+        customerLon: Double,
+        restaurantLat: Double,
+        restaurantLon: Double
+    ): DeliveryFeeResponse {
+        return apiClient.getDeliveryFee(
+            DeliveryFeeRequest(
+                customer_latitude = customerLat,
+                customer_longitude = customerLon,
+                restaurant_latitude = restaurantLat,
+                restaurant_longitude = restaurantLon
+            )
+        )
     }
 
     fun checkout() {

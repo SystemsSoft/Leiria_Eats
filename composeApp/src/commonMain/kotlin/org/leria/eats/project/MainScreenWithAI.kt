@@ -495,6 +495,9 @@ fun MainScreenWithAI(
                                     onGetAddressFromMap = { lat, long ->
                                         locationService.getAddressFromCoordinates(lat, long)
                                     },
+                                    onGetDeliveryFee = { custLat, custLon, restLat, restLon ->
+                                        viewModel.getDeliveryFee(custLat, custLon, restLat, restLon)
+                                    },
                                     onGoToRestaurant = { restaurant ->
                                         viewModel.selectRestaurant(restaurant)
                                         viewModel.onTabSelected(MainTab.HOME)
