@@ -336,13 +336,53 @@ fun OrderDetailView(
 
                     HorizontalDivider(color = OGold.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 14.dp))
 
+                    // ── Subtotal dos itens ──────────────────────────────────
+                    val itemsSubtotal = order.items.sumOf { it.price * it.quantity }
+                    val grandTotal = itemsSubtotal + order.deliveryFee + order.serviceFee
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Subtotal", color = OMuted, fontSize = 14.sp)
+                        Text(formatCurrency(itemsSubtotal), color = OText, fontSize = 14.sp)
+                    }
+
+                    // ── Taxa de entrega ─────────────────────────────────────
+                    if (order.deliveryFee > 0.0) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Taxa de entrega", color = OMuted, fontSize = 14.sp)
+                            Text(formatCurrency(order.deliveryFee), color = OText, fontSize = 14.sp)
+                        }
+                    }
+
+                    // ── Taxa de serviço ─────────────────────────────────────
+                    if (order.serviceFee > 0.0) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Taxa de serviço", color = OMuted, fontSize = 14.sp)
+                            Text(formatCurrency(order.serviceFee), color = OText, fontSize = 14.sp)
+                        }
+                    }
+
+                    HorizontalDivider(color = OGold.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 10.dp))
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Total", color = OText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text(formatCurrency(order.total), color = OGold, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                        Text(formatCurrency(grandTotal), color = OGold, fontWeight = FontWeight.Bold, fontSize = 20.sp)
                     }
 
                     // ── "Entregue" button — shown only when out for delivery ──
@@ -468,7 +508,7 @@ fun OrderItemCard(
                     Spacer(modifier = Modifier.width(5.dp))
                     Text(order.status, color = statusColor, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 }
-                Text(formatCurrency(order.total), color = OGold, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(formatCurrency(order.total + order.deliveryFee + order.serviceFee), color = OGold, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
         }
     }
