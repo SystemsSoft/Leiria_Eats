@@ -676,7 +676,7 @@ class SearchViewModel(
     }
 
     /** Called from the ServiceFeeBottomSheet — skips the address selection sheet */
-    fun checkoutWithAddress(address: Address) {
+    fun checkoutWithAddress(address: Address, deliveryFee: Double = 0.0, serviceFee: Double = 0.0) {
         val currentState = _uiState.value
         if (currentState.userProfile.name.isBlank()) {
             _uiState.update { it.copy(error = "Por favor, preencha seu Nome no Perfil.") }
@@ -686,9 +686,9 @@ class SearchViewModel(
         if (currentState.cartItems.isEmpty()) return
         val hasSavedPaymentMethods = currentState.userProfile.savedPaymentMethods.isNotEmpty()
         if (hasSavedPaymentMethods) {
-            showPaymentConfirmForAddress(address)
+            showPaymentConfirmForAddress(address, deliveryFee, serviceFee)
         } else {
-            showSavePaymentSheetForAddress(address)
+            showSavePaymentSheetForAddress(address, deliveryFee, serviceFee)
         }
     }
 
@@ -712,22 +712,26 @@ class SearchViewModel(
         _uiState.update { it.copy(showSavePaymentSheet = false) }
     }
 
-    fun showPaymentConfirmForAddress(address: Address) {
+    fun showPaymentConfirmForAddress(address: Address, deliveryFee: Double = 0.0, serviceFee: Double = 0.0) {
         _uiState.update {
             it.copy(
                 isAddressSheetVisible = false,
                 showPaymentConfirmSheet = true,
-                selectedAddressForCheckout = address
+                selectedAddressForCheckout = address,
+                pendingDeliveryFee = deliveryFee,
+                pendingServiceFee = serviceFee
             )
         }
     }
 
-    fun showSavePaymentSheetForAddress(address: Address) {
+    fun showSavePaymentSheetForAddress(address: Address, deliveryFee: Double = 0.0, serviceFee: Double = 0.0) {
         _uiState.update {
             it.copy(
                 isAddressSheetVisible = false,
                 showSavePaymentSheet = true,
-                selectedAddressForCheckout = address
+                selectedAddressForCheckout = address,
+                pendingDeliveryFee = deliveryFee,
+                pendingServiceFee = serviceFee
             )
         }
     }
@@ -751,20 +755,24 @@ class SearchViewModel(
         val currentState = _uiState.value
         val address = currentState.selectedAddressForCheckout ?: return
         val savePaymentMethod = currentState.pendingCheckoutSavePaymentMethod
+        val deliveryFee = currentState.pendingDeliveryFee
+        val serviceFee = currentState.pendingServiceFee
         _uiState.update {
             it.copy(
                 selectedAddressForCheckout = null,
-                pendingCheckoutSavePaymentMethod = false
+                pendingCheckoutSavePaymentMethod = false,
+                pendingDeliveryFee = 0.0,
+                pendingServiceFee = 0.0
             )
         }
-        confirmCheckout(address, savePaymentMethod, deliveryType)
+        confirmCheckout(address, savePaymentMethod, deliveryType, deliveryFee, serviceFee)
     }
 
     fun dismissAddressSheet() {
         _uiState.update { it.copy(isAddressSheetVisible = false) }
     }
 
-    fun confirmCheckout(selectedAddress: Address, savePaymentMethod: Boolean = false, deliveryType: String = "") {
+    fun confirmCheckout(selectedAddress: Address, savePaymentMethod: Boolean = false, deliveryType: String = "", deliveryFee: Double = 0.0, serviceFee: Double = 0.0) {
         _uiState.update {
             it.copy(
                 isAddressSheetVisible = false,
@@ -855,7 +863,9 @@ class SearchViewModel(
                 deliveryType = deliveryType,
                 baseTime = baseTime,
                 deliveryLatitude = selectedAddress.latitude,
-                deliveryLongitude = selectedAddress.longitude
+                deliveryLongitude = selectedAddress.longitude,
+                deliveryFee = deliveryFee,
+                serviceFee = serviceFee
             )
 
             val sessionResponse = apiClient.initiateCheckout(request)

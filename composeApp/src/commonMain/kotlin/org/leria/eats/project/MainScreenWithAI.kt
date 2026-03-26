@@ -490,7 +490,7 @@ fun MainScreenWithAI(
                                     cartItems = uiState.cartItems,
                                     restaurantSelected = uiState.selectedRestaurant,
                                     onRemoveItem = { product -> viewModel.removeFromCart(product) },
-                                    onCheckout = { address -> viewModel.checkoutWithAddress(address) },
+                                    onCheckout = { address, deliveryFee, serviceFee -> viewModel.checkoutWithAddress(address, deliveryFee, serviceFee) },
                                     userAddresses = uiState.userProfile.addresses,
                                     onGetAddressFromMap = { lat, long ->
                                         locationService.getAddressFromCoordinates(lat, long)

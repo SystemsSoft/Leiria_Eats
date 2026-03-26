@@ -82,7 +82,11 @@ data class OrderRequest(
     @SerialName("delivery_latitude")
     val deliveryLatitude: Double? = null,
     @SerialName("delivery_longitude")
-    val deliveryLongitude: Double? = null
+    val deliveryLongitude: Double? = null,
+    @SerialName("delivery_fee")
+    val deliveryFee: Double = 0.0,
+    @SerialName("service_fee")
+    val serviceFee: Double = 0.0
 )
 
 @Serializable

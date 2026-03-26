@@ -71,7 +71,7 @@ private val CartMuted     = Color(0xFF6EE7A0)   // Muted green
 fun CartScreen(
     cartItems: List<Product>,
     onRemoveItem: (Product) -> Unit,
-    onCheckout: (Address) -> Unit,
+    onCheckout: (Address, Double, Double) -> Unit,
     restaurantSelected: Restaurant?,
     userAddresses: List<Address> = emptyList(),
     onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null },
@@ -96,9 +96,9 @@ fun CartScreen(
             restaurant = restaurantSelected,
             onGetDeliveryFee = onGetDeliveryFee,
             onDismiss = { showServiceFeeSheet = false },
-            onConfirm = { address ->
+            onConfirm = { address, deliveryFee, serviceFee ->
                 showServiceFeeSheet = false
-                onCheckout(address)
+                onCheckout(address, deliveryFee, serviceFee)
             }
         )
     }
@@ -992,7 +992,7 @@ fun ServiceFeeBottomSheet(
     userAddresses: List<Address>,
     onGetAddressFromMap: (Double, Double) -> String?,
     onDismiss: () -> Unit,
-    onConfirm: (Address) -> Unit,
+    onConfirm: (Address, Double, Double) -> Unit,
     restaurant: Restaurant? = null,
     onGetDeliveryFee: (suspend (Double, Double, Double, Double) -> DeliveryFeeResponse?)? = null
 ) {
@@ -1332,7 +1332,7 @@ fun ServiceFeeBottomSheet(
                                 )
                         )
                         .then(
-                            if (canConfirm) Modifier.clickable { onConfirm(selectedAddress!!) }
+                            if (canConfirm) Modifier.clickable { onConfirm(selectedAddress!!, deliveryFee ?: 0.0, serviceFee) }
                             else Modifier
                         ),
                     contentAlignment = Alignment.Center
