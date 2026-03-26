@@ -1,8 +1,20 @@
 package org.leria.eats.project.presentation
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -20,10 +32,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -295,12 +309,19 @@ fun ProductItemWithCounter(
     onAdd: () -> Unit,
     onRemove: () -> Unit
 ) {
+    val hasItems = quantity > 0
+    val borderColor by animateColorAsState(
+        targetValue = if (hasItems) RdPrimary.copy(alpha = 0.45f) else RdPrimary.copy(alpha = 0.12f),
+        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        label = "borderColor"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(RdCard)
-            .border(1.dp, RdPrimary.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(14.dp))
             .padding(12.dp)
     ) {
         Row(
@@ -374,40 +395,146 @@ fun ProductItemWithCounter(
 
             Spacer(modifier = Modifier.width(10.dp))
 
-            // SELETOR DE QUANTIDADE
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (quantity > 0) {
+            // ── Seletor de quantidade moderno ─────────────────────────────
+            AnimatedContent(
+                targetState = hasItems,
+                transitionSpec = {
+                    (fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
+                            scaleIn(initialScale = 0.85f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)))
+                        .togetherWith(
+                            fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
+                                    scaleOut(targetScale = 0.85f)
+                        )
+                },
+                label = "qtySelector"
+            ) { showCounter ->
+                if (showCounter) {
+                    // ── Pill counter [−] n [+] ─────────────────────────
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(RdPrimary.copy(alpha = 0.14f), RdSecondary.copy(alpha = 0.10f))
+                                )
+                            )
+                            .border(
+                                1.dp,
+                                Brush.horizontalGradient(listOf(RdPrimary.copy(alpha = 0.55f), RdSecondary.copy(alpha = 0.45f))),
+                                RoundedCornerShape(50.dp)
+                            )
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        // Minus button
+                        val minusSource = remember { MutableInteractionSource() }
+                        val minusPressed by minusSource.collectIsPressedAsState()
+                        val minusScale by animateFloatAsState(
+                            targetValue = if (minusPressed) 0.80f else 1f,
+                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                            label = "minusScale"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .scale(minusScale)
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(RdAccent.copy(alpha = 0.18f))
+                                .border(1.dp, RdAccent.copy(alpha = 0.45f), CircleShape)
+                                .clickable(
+                                    interactionSource = minusSource,
+                                    indication = null
+                                ) { onRemove() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Remove, null, tint = RdAccent, modifier = Modifier.size(15.dp))
+                        }
+
+                        // Quantity label
+                        AnimatedContent(
+                            targetState = quantity,
+                            transitionSpec = {
+                                if (targetState > initialState) {
+                                    (fadeIn() + scaleIn(initialScale = 0.7f)).togetherWith(fadeOut() + scaleOut(targetScale = 0.7f))
+                                } else {
+                                    (fadeIn() + scaleIn(initialScale = 1.3f)).togetherWith(fadeOut() + scaleOut(targetScale = 1.3f))
+                                }
+                            },
+                            label = "qtyNum"
+                        ) { qty ->
+                            Text(
+                                text = "$qty",
+                                color = RdText,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.widthIn(min = 26.dp)
+                            )
+                        }
+
+                        // Plus button
+                        val plusSource = remember { MutableInteractionSource() }
+                        val plusPressed by plusSource.collectIsPressedAsState()
+                        val plusScale by animateFloatAsState(
+                            targetValue = if (plusPressed) 0.80f else 1f,
+                            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                            label = "plusScale"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .scale(plusScale)
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(Brush.linearGradient(listOf(RdPrimary, RdSecondary)))
+                                .clickable(
+                                    interactionSource = plusSource,
+                                    indication = null
+                                ) { onAdd() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Add, null, tint = Color(0xFF061510), modifier = Modifier.size(15.dp))
+                        }
+                    }
+                } else {
+                    // ── Botão "Adicionar" pill ─────────────────────────
+                    val addSource = remember { MutableInteractionSource() }
+                    val addPressed by addSource.collectIsPressedAsState()
+                    val addScale by animateFloatAsState(
+                        targetValue = if (addPressed) 0.93f else 1f,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                        label = "addScale"
+                    )
                     Box(
                         modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(RdAccent.copy(alpha = 0.15f))
-                            .border(1.dp, RdAccent.copy(alpha = 0.4f), CircleShape)
-                            .clickable { onRemove() },
+                            .scale(addScale)
+                            .clip(RoundedCornerShape(50.dp))
+                            .background(Brush.linearGradient(listOf(RdPrimary, Color(0xFF84CC16))))
+                            .clickable(
+                                interactionSource = addSource,
+                                indication = null
+                            ) { onAdd() }
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Remove, null, tint = RdAccent, modifier = Modifier.size(14.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                tint = Color(0xFF061510),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "Adicionar",
+                                color = Color(0xFF061510),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
-                    Text(
-                        text = quantity.toString(),
-                        color = RdText,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        modifier = Modifier.widthIn(min = 20.dp)
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(Brush.linearGradient(listOf(RdPrimary, RdSecondary)))
-                        .clickable { onAdd() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(14.dp))
                 }
             }
         }
