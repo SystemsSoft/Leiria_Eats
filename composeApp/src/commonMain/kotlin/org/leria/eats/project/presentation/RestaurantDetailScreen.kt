@@ -25,10 +25,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -315,7 +319,76 @@ fun ProductItemWithCounter(
         animationSpec = spring(stiffness = Spring.StiffnessMedium),
         label = "borderColor"
     )
+    var zoomedImage by remember { mutableStateOf(false) }
 
+    // ── Zoom Dialog ───────────────────────────────────────────────────────────
+    if (zoomedImage && !product.image_url.isNullOrBlank()) {
+        var animScale by remember { mutableFloatStateOf(0.78f) }
+        val scale by animateFloatAsState(
+            targetValue = animScale,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+            label = "zoomScale"
+        )
+        LaunchedEffect(Unit) { animScale = 1f }
+
+        Dialog(
+            onDismissRequest = { zoomedImage = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.85f))
+                    .clickable { zoomedImage = false },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.scale(scale)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.82f)
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(RdSurface)
+                            .border(
+                                1.5.dp,
+                                Brush.horizontalGradient(listOf(RdPrimary.copy(alpha = 0.65f), RdSecondary.copy(alpha = 0.45f))),
+                                RoundedCornerShape(22.dp)
+                            )
+                    ) {
+                        KamelImage(
+                            resource = asyncPainterResource(data = product.image_url),
+                            contentDescription = product.name,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            onLoading = {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(modifier = Modifier.size(32.dp), strokeWidth = 2.dp, color = RdPrimary)
+                                }
+                            }
+                        )
+                    }
+                    Text(
+                        text = product.name,
+                        color = RdText,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Toque para fechar",
+                        color = RdMuted.copy(alpha = 0.6f),
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+    }
+
+    // ── Card ──────────────────────────────────────────────────────────────────
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -334,6 +407,7 @@ fun ProductItemWithCounter(
                         .size(76.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(RdSurface)
+                        .clickable { zoomedImage = true }
                 ) {
                     KamelImage(
                         resource = asyncPainterResource(data = product.image_url),
@@ -343,6 +417,21 @@ fun ProductItemWithCounter(
                         onLoading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = RdPrimary) } },
                         onFailure = { Box(Modifier.fillMaxSize().background(RdSurface)) }
                     )
+                    // Zoom hint
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(18.dp)
+                            .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ZoomIn,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(11.dp)
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
             }
