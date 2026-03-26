@@ -69,8 +69,8 @@ fun RestaurantDetailScreen(
     onRemove: (Product) -> Unit,
     onViewCart: () -> Unit
 ) {
-    val totalParams = cartItems.sumOf { it.price }
-    val totalCount = cartItems.size
+    val totalParams = cartItems.sumOf { it.price * it.quantity }
+    val totalCount = cartItems.sumOf { it.quantity }
     var showBackDialog by remember { mutableStateOf(false) }
 
     // ── Back confirmation dialog ──────────────────────────────────────────────
@@ -247,7 +247,7 @@ fun RestaurantDetailScreen(
                 }
 
                 items(filteredProducts) { product ->
-                    val qty = cartItems.count { it.name == product.name }
+                    val qty = cartItems.find { it.id == product.id }?.quantity ?: 0
                     ProductItemWithCounter(
                         product = product,
                         quantity = qty,
