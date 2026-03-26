@@ -28,8 +28,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import org.koin.compose.koinInject
 import org.leria.eats.project.voice.TextToSpeechService
 import androidx.compose.ui.Alignment
@@ -75,6 +77,18 @@ fun CartScreen(
     isMuted: Boolean = false
 ) {
     val total = cartItems.sumOf { it.price * it.quantity }
+    var showServiceFeeSheet by remember { mutableStateOf(false) }
+
+    if (showServiceFeeSheet) {
+        ServiceFeeBottomSheet(
+            cartTotal = total,
+            onDismiss = { showServiceFeeSheet = false },
+            onConfirm = {
+                showServiceFeeSheet = false
+                onCheckout()
+            }
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -200,7 +214,7 @@ fun CartScreen(
                             listOf(CartPrimary, Color(0xFFE65100))
                         )
                     )
-                    .clickable { onCheckout() }
+                    .clickable { showServiceFeeSheet = true }
                     .padding(horizontal = 20.dp, vertical = 14.dp)
             ) {
                 Row(
@@ -951,6 +965,211 @@ fun PaymentConfirmBottomSheet(
                         color = CartMuted
                     )
                 }
+            }
+        }
+    }
+}
+
+// ─── Service Fee Bottom Sheet ─────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ServiceFeeBottomSheet(
+    cartTotal: Double,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val serviceFee = (cartTotal * 0.05).coerceIn(0.49, 1.99)
+    val grandTotal = cartTotal + serviceFee
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = CartCard,
+        contentColor = CartText
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 48.dp, top = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // ── Icon ────────────────────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .background(CartPrimary.copy(alpha = 0.15f), CircleShape)
+                    .border(1.dp, CartPrimary.copy(alpha = 0.3f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "🧾", fontSize = 30.sp)
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Text(
+                text = "Resumo do pedido",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = CartText
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "Uma taxa de serviço é aplicada para suportar a plataforma.",
+                fontSize = 13.sp,
+                color = CartMuted,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                lineHeight = 19.sp
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ── Breakdown card ───────────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CartSurface)
+                    .border(
+                        1.dp,
+                        Brush.horizontalGradient(
+                            listOf(CartPrimary.copy(alpha = 0.3f), CartSecondary.copy(alpha = 0.2f))
+                        ),
+                        RoundedCornerShape(16.dp)
+                    )
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Subtotal row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Subtotal",
+                            fontSize = 14.sp,
+                            color = CartMuted
+                        )
+                        Text(
+                            text = formatCurrency(cartTotal),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = CartText
+                        )
+                    }
+
+                    // Divider
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(CartPrimary.copy(alpha = 0.12f))
+                    )
+
+                    // Service fee row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Taxa de serviço",
+                            fontSize = 14.sp,
+                            color = CartMuted
+                        )
+                        Text(
+                            text = formatCurrency(serviceFee),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = CartPrimary
+                        )
+                    }
+
+                    // Divider
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(CartPrimary.copy(alpha = 0.12f))
+                    )
+
+                    // Grand total row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Total",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CartText
+                        )
+                        Text(
+                            text = formatCurrency(grandTotal),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CartSecondary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // ── Confirm button ────────────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        Brush.horizontalGradient(listOf(CartPrimary, Color(0xFFE65100)))
+                    )
+                    .clickable { onConfirm() },
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Confirmar pedido · ${formatCurrency(grandTotal)}",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // ── Cancel button ─────────────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(CartSurface)
+                    .border(1.dp, CartMuted.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+                    .clickable { onDismiss() },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Cancelar",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = CartMuted
+                )
             }
         }
     }
