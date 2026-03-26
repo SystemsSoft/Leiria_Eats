@@ -33,7 +33,9 @@ data class Restaurant(
     @SerialName("is_closed")
     val isClosed: Boolean? = null,
     val image_url: String?,
-    val products: List<Product> = emptyList()
+    val products: List<Product> = emptyList(),
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 @Serializable
