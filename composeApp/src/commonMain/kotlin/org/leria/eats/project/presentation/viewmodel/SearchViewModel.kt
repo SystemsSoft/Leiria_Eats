@@ -657,6 +657,23 @@ class SearchViewModel(
         _uiState.update { it.copy(isAddressSheetVisible = true) }
     }
 
+    /** Called from the ServiceFeeBottomSheet — skips the address selection sheet */
+    fun checkoutWithAddress(address: Address) {
+        val currentState = _uiState.value
+        if (currentState.userProfile.name.isBlank()) {
+            _uiState.update { it.copy(error = "Por favor, preencha seu Nome no Perfil.") }
+            onTabSelected(MainTab.PROFILE)
+            return
+        }
+        if (currentState.cartItems.isEmpty()) return
+        val hasSavedPaymentMethods = currentState.userProfile.savedPaymentMethods.isNotEmpty()
+        if (hasSavedPaymentMethods) {
+            showPaymentConfirmForAddress(address)
+        } else {
+            showSavePaymentSheetForAddress(address)
+        }
+    }
+
     fun dismissPaymentConfirmSheet() {
         _uiState.update { it.copy(showPaymentConfirmSheet = false) }
     }

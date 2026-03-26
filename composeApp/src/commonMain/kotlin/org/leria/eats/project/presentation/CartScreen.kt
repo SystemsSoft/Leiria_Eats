@@ -5,6 +5,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -46,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
+import org.leria.eats.project.data.Address
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.data.SavedPaymentMethod
@@ -65,8 +70,10 @@ private val CartMuted     = Color(0xFF6EE7A0)   // Muted green
 fun CartScreen(
     cartItems: List<Product>,
     onRemoveItem: (Product) -> Unit,
-    onCheckout: () -> Unit,
+    onCheckout: (Address) -> Unit,
     restaurantSelected: Restaurant?,
+    userAddresses: List<Address> = emptyList(),
+    onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null },
     onGoToRestaurant: ((Restaurant) -> Unit)? = null,
     cartAiMessage: String? = null,
     cartAiMessageSpoken: Boolean = false,
@@ -82,10 +89,12 @@ fun CartScreen(
     if (showServiceFeeSheet) {
         ServiceFeeBottomSheet(
             cartTotal = total,
+            userAddresses = userAddresses,
+            onGetAddressFromMap = onGetAddressFromMap,
             onDismiss = { showServiceFeeSheet = false },
-            onConfirm = {
+            onConfirm = { address ->
                 showServiceFeeSheet = false
-                onCheckout()
+                onCheckout(address)
             }
         )
     }
@@ -976,12 +985,36 @@ fun PaymentConfirmBottomSheet(
 @Composable
 fun ServiceFeeBottomSheet(
     cartTotal: Double,
+    userAddresses: List<Address>,
+    onGetAddressFromMap: (Double, Double) -> String?,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: (Address) -> Unit
 ) {
     val serviceFee = (cartTotal * 0.05).coerceIn(0.49, 1.99)
     val grandTotal = cartTotal + serviceFee
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var selectedAddress by remember { mutableStateOf(userAddresses.firstOrNull()) }
+    var showAddressPicker by remember { mutableStateOf(false) }
+    var showMapDialog by remember { mutableStateOf(false) }
+
+    if (showMapDialog) {
+        MapDialog(
+            onDismiss = { showMapDialog = false },
+            onLocationSelected = { lat, long ->
+                val addressStr = onGetAddressFromMap(lat, long)
+                if (addressStr != null) {
+                    selectedAddress = Address(
+                        name = "Localização personalizada",
+                        address = addressStr,
+                        latitude = lat,
+                        longitude = long
+                    )
+                }
+                showMapDialog = false
+                showAddressPicker = false
+            }
+        )
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -989,187 +1022,440 @@ fun ServiceFeeBottomSheet(
         containerColor = CartCard,
         contentColor = CartText
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 48.dp, top = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // ── Icon ────────────────────────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .background(CartPrimary.copy(alpha = 0.15f), CircleShape)
-                    .border(1.dp, CartPrimary.copy(alpha = 0.3f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "🧾", fontSize = 30.sp)
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Text(
-                text = "Resumo do pedido",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = CartText
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = "Uma taxa de serviço é aplicada para suportar a plataforma.",
-                fontSize = 13.sp,
-                color = CartMuted,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                lineHeight = 19.sp
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // ── Breakdown card ───────────────────────────────────────────
-            Box(
+        if (!showAddressPicker) {
+            // ── Summary Page ──────────────────────────────────────────────────
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CartSurface)
-                    .border(
-                        1.dp,
-                        Brush.horizontalGradient(
-                            listOf(CartPrimary.copy(alpha = 0.3f), CartSecondary.copy(alpha = 0.2f))
-                        ),
-                        RoundedCornerShape(16.dp)
-                    )
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 48.dp, top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    // Subtotal row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Subtotal",
-                            fontSize = 14.sp,
-                            color = CartMuted
-                        )
-                        Text(
-                            text = formatCurrency(cartTotal),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = CartText
-                        )
-                    }
-
-                    // Divider
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(CartPrimary.copy(alpha = 0.12f))
-                    )
-
-                    // Service fee row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Taxa de serviço",
-                            fontSize = 14.sp,
-                            color = CartMuted
-                        )
-                        Text(
-                            text = formatCurrency(serviceFee),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = CartPrimary
-                        )
-                    }
-
-                    // Divider
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(CartPrimary.copy(alpha = 0.12f))
-                    )
-
-                    // Grand total row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Total",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CartText
-                        )
-                        Text(
-                            text = formatCurrency(grandTotal),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CartSecondary
-                        )
-                    }
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(CartPrimary.copy(alpha = 0.15f), CircleShape)
+                        .border(1.dp, CartPrimary.copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "🧾", fontSize = 30.sp)
                 }
-            }
 
-            Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(18.dp))
 
-            // ── Confirm button ────────────────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(
-                        Brush.horizontalGradient(listOf(CartPrimary, Color(0xFFE65100)))
-                    )
-                    .clickable { onConfirm() },
-                contentAlignment = Alignment.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Confirmar pedido · ${formatCurrency(grandTotal)}",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // ── Cancel button ─────────────────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(CartSurface)
-                    .border(1.dp, CartMuted.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
-                    .clickable { onDismiss() },
-                contentAlignment = Alignment.Center
-            ) {
                 Text(
-                    text = "Cancelar",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = CartMuted
+                    text = "Resumo do pedido",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = CartText
                 )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "Uma taxa de serviço é aplicada para suportar a plataforma.",
+                    fontSize = 13.sp,
+                    color = CartMuted,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    lineHeight = 19.sp
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // ── Delivery address ──────────────────────────────────────────
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Endereço de entrega",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CartMuted
+                    )
+                    Text(
+                        text = "Alterar",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CartPrimary,
+                        modifier = Modifier.clickable { showAddressPicker = true }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(CartSurface)
+                        .border(
+                            1.dp,
+                            if (selectedAddress != null) CartPrimary.copy(alpha = 0.3f)
+                            else Color(0xFFF87171).copy(alpha = 0.4f),
+                            RoundedCornerShape(14.dp)
+                        )
+                        .clickable { showAddressPicker = true }
+                        .padding(14.dp)
+                ) {
+                    if (selectedAddress != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(CartPrimary.copy(alpha = 0.12f), CircleShape)
+                                    .border(1.dp, CartPrimary.copy(alpha = 0.3f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = CartPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    selectedAddress!!.name,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CartText,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    selectedAddress!!.address,
+                                    fontSize = 12.sp,
+                                    color = CartMuted,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(text = "📍", fontSize = 20.sp)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Selecione um endereço de entrega",
+                                fontSize = 13.sp,
+                                color = CartMuted,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // ── Breakdown card ────────────────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(CartSurface)
+                        .border(
+                            1.dp,
+                            Brush.horizontalGradient(
+                                listOf(CartPrimary.copy(alpha = 0.3f), CartSecondary.copy(alpha = 0.2f))
+                            ),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "Subtotal", fontSize = 14.sp, color = CartMuted)
+                            Text(
+                                text = formatCurrency(cartTotal),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = CartText
+                            )
+                        }
+                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(CartPrimary.copy(alpha = 0.12f)))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "Taxa de serviço", fontSize = 14.sp, color = CartMuted)
+                            Text(
+                                text = formatCurrency(serviceFee),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = CartPrimary
+                            )
+                        }
+                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(CartPrimary.copy(alpha = 0.12f)))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "Total", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = CartText)
+                            Text(
+                                text = formatCurrency(grandTotal),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CartSecondary
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                // ── Confirm button ────────────────────────────────────────────
+                val canConfirm = selectedAddress != null
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            if (canConfirm)
+                                Brush.horizontalGradient(listOf(CartPrimary, Color(0xFFE65100)))
+                            else
+                                Brush.horizontalGradient(
+                                    listOf(CartMuted.copy(alpha = 0.25f), CartMuted.copy(alpha = 0.15f))
+                                )
+                        )
+                        .then(
+                            if (canConfirm) Modifier.clickable { onConfirm(selectedAddress!!) }
+                            else Modifier
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = if (canConfirm) Color.White else CartMuted,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Confirmar pedido · ${formatCurrency(grandTotal)}",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (canConfirm) Color.White else CartMuted
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // ── Cancel button ─────────────────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(CartSurface)
+                        .border(1.dp, CartMuted.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+                        .clickable { onDismiss() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Cancelar",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CartMuted
+                    )
+                }
+            }
+        } else {
+            // ── Address Picker Page ───────────────────────────────────────────
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 48.dp, top = 8.dp)
+            ) {
+                // Header with back button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(CartSurface)
+                            .border(1.dp, CartMuted.copy(alpha = 0.3f), CircleShape)
+                            .clickable { showAddressPicker = false },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar",
+                            tint = CartMuted,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Endereço de entrega",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CartText
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                if (userAddresses.isNotEmpty()) {
+                    Text(
+                        text = "Endereços guardados",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CartMuted
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    userAddresses.forEach { address ->
+                        val isSelected = selectedAddress?.name == address.name &&
+                                selectedAddress?.address == address.address
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(
+                                    if (isSelected) CartPrimary.copy(alpha = 0.1f) else CartSurface
+                                )
+                                .border(
+                                    1.dp,
+                                    if (isSelected) CartPrimary.copy(alpha = 0.5f)
+                                    else CartPrimary.copy(alpha = 0.1f),
+                                    RoundedCornerShape(14.dp)
+                                )
+                                .clickable {
+                                    selectedAddress = address
+                                    showAddressPicker = false
+                                }
+                                .padding(14.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(
+                                            if (isSelected) CartPrimary.copy(alpha = 0.18f) else CartCard,
+                                            CircleShape
+                                        )
+                                        .border(
+                                            1.dp,
+                                            if (isSelected) CartPrimary.copy(alpha = 0.5f)
+                                            else CartMuted.copy(alpha = 0.2f),
+                                            CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Home,
+                                        contentDescription = null,
+                                        tint = if (isSelected) CartPrimary else CartMuted,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        address.name,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) CartPrimary else CartText,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        address.address,
+                                        fontSize = 12.sp,
+                                        color = CartMuted,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = "Selecionado",
+                                        tint = CartPrimary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(CartSurface)
+                            .border(1.dp, CartPrimary.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
+                            .padding(20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Nenhum endereço guardado. Adicione um no Perfil ou utilize o mapa.",
+                            color = CartMuted,
+                            fontSize = 13.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                // ── Map option ────────────────────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(CartSecondary.copy(alpha = 0.07f))
+                        .border(1.dp, CartSecondary.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                        .clickable { showMapDialog = true }
+                        .padding(14.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(CartSecondary.copy(alpha = 0.15f), CircleShape)
+                                .border(1.dp, CartSecondary.copy(alpha = 0.35f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Map,
+                                contentDescription = null,
+                                tint = CartSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                "Personalizar no mapa",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CartSecondary
+                            )
+                            Text(
+                                "Escolha um local novo no mapa",
+                                fontSize = 12.sp,
+                                color = CartMuted
+                            )
+                        }
+                    }
+                }
             }
         }
     }
