@@ -676,7 +676,7 @@ class SearchViewModel(
     }
 
     /** Called from the ServiceFeeBottomSheet — skips the address selection sheet */
-    fun checkoutWithAddress(address: Address, deliveryFee: Double = 0.0, serviceFee: Double = 0.0) {
+    fun checkoutWithAddress(address: Address, deliveryFee: Double = 0.0, serviceFee: Double = 0.0, deliveryType: String = "delivery") {
         val currentState = _uiState.value
         if (currentState.userProfile.name.isBlank()) {
             _uiState.update { it.copy(error = "Por favor, preencha seu Nome no Perfil.") }
@@ -684,6 +684,8 @@ class SearchViewModel(
             return
         }
         if (currentState.cartItems.isEmpty()) return
+        // Store the delivery type chosen in the summary
+        _uiState.update { it.copy(pendingDeliveryType = deliveryType) }
         val hasSavedPaymentMethods = currentState.userProfile.savedPaymentMethods.isNotEmpty()
         if (hasSavedPaymentMethods) {
             showPaymentConfirmForAddress(address, deliveryFee, serviceFee)
@@ -699,13 +701,15 @@ class SearchViewModel(
     /** Called when user confirms payment with saved card (useSavedCard=true) or chooses another method (false). */
     fun onPaymentConfirmResult(useSavedCard: Boolean) {
         if (_uiState.value.selectedAddressForCheckout == null) return
+        val deliveryType = _uiState.value.pendingDeliveryType
         _uiState.update {
             it.copy(
                 showPaymentConfirmSheet = false,
-                showDeliveryTypeSheet = true,
                 pendingCheckoutSavePaymentMethod = useSavedCard
             )
         }
+        // Proceed directly with the type already chosen in the summary
+        proceedWithDeliveryType(deliveryType)
     }
 
     fun dismissSavePaymentSheet() {
@@ -737,13 +741,15 @@ class SearchViewModel(
     }
 
     fun proceedToCheckout(savePaymentMethod: Boolean) {
+        val deliveryType = _uiState.value.pendingDeliveryType
         _uiState.update {
             it.copy(
                 showSavePaymentSheet = false,
-                showDeliveryTypeSheet = true,
                 pendingCheckoutSavePaymentMethod = savePaymentMethod
             )
         }
+        // Use the delivery type already chosen in the summary
+        proceedWithDeliveryType(deliveryType)
     }
 
     fun dismissDeliveryTypeSheet() {
