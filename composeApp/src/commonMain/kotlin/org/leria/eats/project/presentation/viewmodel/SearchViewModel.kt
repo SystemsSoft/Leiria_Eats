@@ -652,14 +652,16 @@ class SearchViewModel(
         customerLat: Double,
         customerLon: Double,
         restaurantLat: Double,
-        restaurantLon: Double
+        restaurantLon: Double,
+        restaurantId: Int
     ): DeliveryFeeResponse {
         return apiClient.getDeliveryFee(
             DeliveryFeeRequest(
                 customer_latitude = customerLat,
                 customer_longitude = customerLon,
                 restaurant_latitude = restaurantLat,
-                restaurant_longitude = restaurantLon
+                restaurant_longitude = restaurantLon,
+                restaurant_id = restaurantId
             )
         )
     }

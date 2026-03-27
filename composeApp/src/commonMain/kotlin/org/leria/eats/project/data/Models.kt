@@ -171,7 +171,8 @@ data class DeliveryFeeRequest(
     val customer_latitude: Double,
     val customer_longitude: Double,
     val restaurant_latitude: Double,
-    val restaurant_longitude: Double
+    val restaurant_longitude: Double,
+    val restaurant_id: Int
 )
 
 @Serializable

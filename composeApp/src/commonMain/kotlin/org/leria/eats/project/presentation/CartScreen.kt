@@ -83,7 +83,7 @@ fun CartScreen(
     onAddMoreFromSame: () -> Unit = {},
     onMarkAiMessageAsSpoken: () -> Unit = {},
     isMuted: Boolean = false,
-    onGetDeliveryFee: (suspend (Double, Double, Double, Double) -> DeliveryFeeResponse?)? = null
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double, Int) -> DeliveryFeeResponse?)? = null
 ) {
     val total = cartItems.sumOf { it.price * it.quantity }
     var showServiceFeeSheet by remember { mutableStateOf(false) }
@@ -994,7 +994,7 @@ fun ServiceFeeBottomSheet(
     onDismiss: () -> Unit,
     onConfirm: (Address, Double, Double, String) -> Unit,
     restaurant: Restaurant? = null,
-    onGetDeliveryFee: (suspend (Double, Double, Double, Double) -> DeliveryFeeResponse?)? = null
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double, Int) -> DeliveryFeeResponse?)? = null
 ) {
     val serviceFee = (cartTotal * 0.05).coerceIn(0.49, 1.99)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -1025,7 +1025,8 @@ fun ServiceFeeBottomSheet(
             try {
                 val result = onGetDeliveryFee(
                     addr.latitude, addr.longitude,
-                    restaurant!!.latitude!!, restaurant.longitude!!
+                    restaurant!!.latitude!!, restaurant.longitude!!,
+                    restaurant.id
                 )
                 if (result != null) {
                     deliveryFee = result.delivery_fee
