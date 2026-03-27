@@ -190,6 +190,7 @@ fun OrderDetailView(
     onRateItem: (orderId: String, productId: Int, restaurantId: Int, productName: String, rating: Int) -> Unit = { _, _, _, _, _ -> },
     onMarkDelivered: (orderId: String) -> Unit = {}
 ) {
+    val displayStatus = getDisplayStatus(order)
     val isDelivered = order.status == "Entregue"
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item {
@@ -233,7 +234,7 @@ fun OrderDetailView(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("ID: ${order.id}", color = OGold, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        val statusColor = getStatusColor(order.status)
+                        val statusColor = getStatusColor(displayStatus)
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
@@ -241,7 +242,7 @@ fun OrderDetailView(
                                 .border(1.dp, statusColor.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
-                            Text(order.status, color = statusColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(displayStatus, color = statusColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -430,8 +431,9 @@ fun OrderItemCard(
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit
 ) {
-    val statusColor = getStatusColor(order.status)
-    val statusIcon = getStatusIcon(order.status)
+    val displayStatus = getDisplayStatus(order)
+    val statusColor = getStatusColor(displayStatus)
+    val statusIcon = getStatusIcon(displayStatus)
 
     Box(
         modifier = Modifier
@@ -506,7 +508,7 @@ fun OrderItemCard(
                 ) {
                     Icon(imageVector = statusIcon, contentDescription = null, tint = statusColor, modifier = Modifier.size(13.dp))
                     Spacer(modifier = Modifier.width(5.dp))
-                    Text(order.status, color = statusColor, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    Text(displayStatus, color = statusColor, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 }
                 Text(formatCurrency(order.total + order.deliveryFee + order.serviceFee), color = OGold, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
@@ -584,22 +586,30 @@ private fun OrderItemRatingRow(
 @Composable
 private fun getStatusColor(status: String): Color {
     return when (status) {
-        "Pendente"          -> Color(0xFFFFC107)
-        "Em Preparo"        -> Color(0xFF60A5FA)
-        "Saiu para Entrega" -> Color(0xFF4ADE80)
-        "Entregue"          -> Color(0xFFFFD54F)
-        "Cancelado"         -> Color(0xFFF87171)
-        else                -> Color(0xFF6EE7A0)
+        "Pendente"              -> Color(0xFFFFC107)
+        "Em Preparo"            -> Color(0xFF60A5FA)
+        "Saiu para Entrega"     -> Color(0xFF4ADE80)
+        "Entregue"              -> Color(0xFFFFD54F)
+        "Pronto para Recolha"   -> Color(0xFF4ADE80)
+        "Cancelado"             -> Color(0xFFF87171)
+        else                    -> Color(0xFF6EE7A0)
     }
 }
 
 private fun getStatusIcon(status: String): ImageVector {
     return when (status) {
-        "Pendente"          -> Icons.Default.HourglassEmpty
-        "Em Preparo"        -> Icons.Default.Restaurant
-        "Saiu para Entrega" -> Icons.Default.DeliveryDining
-        "Entregue"          -> Icons.Default.CheckCircle
-        "Cancelado"         -> Icons.Default.Close
-        else                -> Icons.Default.Info
+        "Pendente"              -> Icons.Default.HourglassEmpty
+        "Em Preparo"            -> Icons.Default.Restaurant
+        "Saiu para Entrega"     -> Icons.Default.DeliveryDining
+        "Entregue"              -> Icons.Default.CheckCircle
+        "Pronto para Recolha"   -> Icons.Default.StoreMallDirectory
+        "Cancelado"             -> Icons.Default.Close
+        else                    -> Icons.Default.Info
     }
 }
+
+/** Returns the status label to show in the UI.
+ *  For pickup orders, "Entregue" is displayed as "Pronto para Recolha". */
+private fun getDisplayStatus(order: Order): String =
+    if (order.deliveryType == "pickup" && order.status == "Entregue") "Pronto para Recolha"
+    else order.status
