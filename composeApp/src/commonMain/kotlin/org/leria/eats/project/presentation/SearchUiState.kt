@@ -8,6 +8,7 @@ import org.leria.eats.project.data.UserProfile
 
 enum class MainTab {
     HOME,
+    AI,
     CART,
     ORDERS,
     PROFILE,
@@ -20,6 +21,8 @@ data class SearchUiState(
     val aiReply: String = "Olá! O que deseja comer hoje?",
     val restaurantResults: List<Restaurant> = emptyList(),
     val productResults: List<Product> = emptyList(),
+    // Lista exclusiva do Home — carregada uma vez e nunca sobrescrita por pesquisas da IA
+    val allRestaurants: List<Restaurant> = emptyList(),
     val error: String? = null,
     val selectedRestaurant: Restaurant? = null,
     var restaurant: Restaurant? = null,

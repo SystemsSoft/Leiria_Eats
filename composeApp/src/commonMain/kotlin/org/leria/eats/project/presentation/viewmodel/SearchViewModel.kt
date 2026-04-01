@@ -53,6 +53,20 @@ class SearchViewModel(
 
     private var initialRestaurantsLoaded = false
 
+    /** Carrega todos os restaurantes e guarda em [SearchUiState.allRestaurants] para o Home. */
+    private fun loadAllRestaurantsForHome() {
+        viewModelScope.launch {
+            try {
+                val response = apiClient.searchRestaurants("ver todos")
+                if (response.restaurantResults.isNotEmpty()) {
+                    _uiState.update { it.copy(allRestaurants = response.restaurantResults) }
+                }
+            } catch (e: Exception) {
+                // falha silenciosa — a lista ficará vazia até a próxima tentativa
+            }
+        }
+    }
+
     init {
         viewModelScope.launch {
             profileRepository.userProfileFlow.collect { profile ->
@@ -66,7 +80,7 @@ class SearchViewModel(
                     // Load all restaurants automatically on first open
                     if (!initialRestaurantsLoaded) {
                         initialRestaurantsLoaded = true
-                        fetchSearch("ver todos")
+                        loadAllRestaurantsForHome()
                     }
                 } else {
                     // User is NOT registered, show welcome message
@@ -418,6 +432,12 @@ class SearchViewModel(
                             _uiState.value.aiReply.ifBlank { "Todos os restaurantes disponíveis" }
                         else -> response.reply
                     }
+                    // Se a pesquisa trouxe todos os restaurantes, atualiza também a lista do Home
+                    val updatedAllRestaurants = if (
+                        resolvedQuery.equals("ver todos", ignoreCase = true) &&
+                        response.restaurantResults.isNotEmpty()
+                    ) response.restaurantResults else _uiState.value.allRestaurants
+
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -425,7 +445,8 @@ class SearchViewModel(
                             restaurantResults = response.restaurantResults,
                             productResults = response.productResults,
                             textInput = "",
-                            lastSearchQuery = resolvedQuery
+                            lastSearchQuery = resolvedQuery,
+                            allRestaurants = updatedAllRestaurants
                         )
                     }
                     if (isProductOnly) {
