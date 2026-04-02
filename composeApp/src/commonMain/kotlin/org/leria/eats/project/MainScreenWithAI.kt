@@ -71,20 +71,6 @@ fun MainScreenWithAI(
         }
     }
 
-    LaunchedEffect(uiState.pendingProfileNavigation, uiState.aiReply, isMuted) {
-        if (uiState.pendingProfileNavigation) {
-            val textLength = uiState.aiReply.length
-            val estimatedDurationMs = if (isMuted) {
-                (textLength * 14L) + 500L
-            } else {
-                ((textLength / 14.3) * 1000).toLong() + 800L
-            }
-
-            delay(estimatedDurationMs)
-
-            viewModel.completePendingProfileNavigation()
-        }
-    }
 
     LaunchedEffect(uiState.orderJustPlaced) {
         if (uiState.orderJustPlaced && !isMuted) {

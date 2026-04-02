@@ -46,7 +46,7 @@ class SearchViewModel(
     }
 
     private fun buildWelcomeMessage(): String {
-        return "Olá, seja bem-vindo! Sou o seu assistente pessoal que decide os melhores pratos para si. Vou levá-lo ao seu perfil para o conhecer melhor e começarmos."
+        return "Crie o seu perfil para começar a pedir. Leva menos de 1 minuto! 🍽️"
     }
 
     private val favoriteOrderIdsFlow = profileRepository.favoriteOrderIdsFlow
@@ -83,14 +83,13 @@ class SearchViewModel(
                         loadAllRestaurantsForHome()
                     }
                 } else {
-                    // User is NOT registered, show welcome message
-                    // Don't navigate yet - wait for TTS to finish
-                    val welcomeMessage = buildWelcomeMessage()
+                    // Utilizador sem perfil → abrir diretamente no Profile, sem TTS
                     _uiState.update {
                         it.copy(
                             userProfile = profile,
-                            aiReply = welcomeMessage,
-                            pendingProfileNavigation = true // Set flag to navigate after TTS
+                            aiReply = buildWelcomeMessage(),
+                            currentTab = MainTab.PROFILE,
+                            pendingProfileNavigation = false
                         )
                     }
                 }

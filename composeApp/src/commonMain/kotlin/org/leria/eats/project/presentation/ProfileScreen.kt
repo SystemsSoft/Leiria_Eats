@@ -515,10 +515,8 @@ fun ProfileAiChatBubble(
     tts: org.leria.eats.project.voice.TextToSpeechService = org.koin.compose.koinInject()
 ) {
     val fullMessage = buildString {
-        append("✨ Que bom ter você aqui! Vamos configurar o seu perfil juntos.\n\n")
-        append("📝 Preencha os seus dados pessoais e adicione pelo menos um endereço.\n\n")
-        append("🎯 O seu único trabalho será dizer-me o que deseja comer — eu cuido do resto!\n\n")
-        append("🔄 Sempre que quiser alterar alguma coisa, é só voltar aqui ao perfil.")
+        append("Para começar a pedir, preencha o seu nome,email, telefone e adicione pelo menos um endereço de entrega.\n\n")
+        append("É rápido, simples e só precisa de fazer uma vez!")
     }
 
     val displayedText = remember { mutableStateOf("") }
