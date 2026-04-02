@@ -83,7 +83,8 @@ fun CartScreen(
     onAddMoreFromSame: () -> Unit = {},
     onMarkAiMessageAsSpoken: () -> Unit = {},
     isMuted: Boolean = false,
-    onGetDeliveryFee: (suspend (Double, Double, Double, Double, Int) -> DeliveryFeeResponse?)? = null
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double, Int) -> DeliveryFeeResponse?)? = null,
+    onGoToHome: (() -> Unit)? = null
 ) {
     val total = cartItems.sumOf { it.price * it.quantity }
     var showServiceFeeSheet by remember { mutableStateOf(false) }
@@ -200,6 +201,30 @@ fun CartScreen(
                         Text("Seu carrinho está vazio", color = CartText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                         Spacer(modifier = Modifier.height(6.dp))
                         Text("Pesquise um prato ou restaurante", color = CartMuted, fontSize = 13.sp)
+                        if (onGoToHome != null) {
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(
+                                onClick = onGoToHome,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = CartPrimary,
+                                    contentColor = Color(0xFF061510)
+                                ),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.height(48.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Home,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Voltar ao Início",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
                     }
                 }
             } else {

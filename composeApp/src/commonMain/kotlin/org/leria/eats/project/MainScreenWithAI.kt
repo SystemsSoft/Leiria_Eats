@@ -19,7 +19,6 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -326,45 +325,6 @@ fun MainScreenWithAI(
                                     )
                                 )
 
-                                // ── Carrinho ────────────────────────────────────────
-                                NavigationBarItem(
-                                    icon = {
-                                        BadgedBox(
-                                            badge = {
-                                                if (uiState.cartCount > 0) {
-                                                    Badge(
-                                                        containerColor = KomaGreen,
-                                                        contentColor = KomaDeepBg
-                                                    ) {
-                                                        Text(
-                                                            uiState.cartCount.toString(),
-                                                            fontWeight = FontWeight.Bold,
-                                                            fontSize = 9.sp
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        ) {
-                                            Icon(Icons.Default.ShoppingCart, contentDescription = "Sacola")
-                                        }
-                                    },
-                                    label = {
-                                        Text(
-                                            "Carrinho",
-                                            fontSize = 10.sp,
-                                            fontWeight = if (uiState.currentTab == MainTab.CART) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    },
-                                    selected = uiState.currentTab == MainTab.CART,
-                                    onClick = { viewModel.onTabSelected(MainTab.CART) },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = KomaDeepBg,
-                                        selectedTextColor = selectedColor,
-                                        indicatorColor = KomaGold,
-                                        unselectedIconColor = unselectedColor,
-                                        unselectedTextColor = unselectedColor
-                                    )
-                                )
 
                                 // ── Pedidos ───────────────────────────────────────
                                 NavigationBarItem(
@@ -582,7 +542,8 @@ fun MainScreenWithAI(
                                         viewModel.onTabSelected(MainTab.HOME)
                                     },
                                     onMarkAiMessageAsSpoken = { viewModel.markCartAiMessageAsSpoken() },
-                                    isMuted = isMuted
+                                    isMuted = isMuted,
+                                    onGoToHome = { viewModel.onTabSelected(MainTab.HOME) }
                                 )
                             }
 
