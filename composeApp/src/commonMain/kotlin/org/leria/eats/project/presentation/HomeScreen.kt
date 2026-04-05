@@ -403,12 +403,6 @@ private fun SmartRestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
                     )
                     .padding(horizontal = 5.dp, vertical = 2.dp)
             ) {
-                Text(
-                    text = "⭐",
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF061510)
-                )
             }
             // Badge FECHADO
             if (restaurant.isClosed == true) {
