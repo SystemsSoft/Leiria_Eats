@@ -7,15 +7,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -26,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -294,7 +294,7 @@ private fun AiHeroHeader(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Pesquisa Semântica",
+                        text = "Realizar pedido",
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 18.sp,
                         color = AiText
@@ -347,63 +347,32 @@ private fun AiHeroHeader(
             )
         }
 
-        // ── Chips de sugestão semântica (apenas no estado inicial) ────────────
-        AnimatedVisibility(
-            visible = !hasResults && !uiState.isLoading,
-            enter = fadeIn(tween(500, delayMillis = 400)) + expandVertically(tween(400, delayMillis = 400)),
-            exit = fadeOut(tween(250)) + shrinkVertically(tween(250))
-        ) {
-            Column {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "✨ Experimente perguntar:",
-                    fontSize = 11.sp,
-                    color = AiTextMuted,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
-                )
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp)
-                ) {
-                    val examples = listOf(
-                        "🥶 Algo reconfortante para o frio",
-                        "🥗 Comida saudável e leve",
-                        "🍕 Pizza estilo italiano",
-                        "⚡ Rápido e económico",
-                        "🌶️ Comida picante",
-                        "🍣 Peixe fresco"
-                    )
-                    items(examples) { example ->
-                        SuggestionChip(
-                            onClick = { onTextChange(example.drop(3)); onSendClick() },
-                            label = { Text(example, fontSize = 11.sp, color = AiPrimary) },
-                            shape = RoundedCornerShape(20.dp),
-                            border = SuggestionChipDefaults.suggestionChipBorder(
-                                enabled = true,
-                                borderColor = AiPrimary.copy(alpha = 0.4f)
-                            ),
-                            colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = AiPrimary.copy(alpha = 0.08f)
-                            )
-                        )
-                    }
-                }
-            }
-        }
+
     }
 }
 
 // ─── Card "Como funciona" ─────────────────────────────────────────────────────
 @Composable
-private fun AiHowItWorksCard(modifier: Modifier = Modifier) {
+private fun AiHowItWorksCard(modifier: Modifier = Modifier) { var expanded by remember { mutableStateOf(false) }
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(300),
+        label = "arrowRotation"
+    )
+
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
             .background(AiCard)
             .border(1.dp, AiPrimary.copy(alpha = 0.18f), RoundedCornerShape(20.dp))
+            .clickable { expanded = !expanded }
             .padding(20.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // ── Cabeçalho sempre visível ──────────────────────────────────────────
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Icon(
                 Icons.Default.AutoAwesome,
                 contentDescription = null,
@@ -415,87 +384,119 @@ private fun AiHowItWorksCard(modifier: Modifier = Modifier) {
                 "Como funciona a IA semântica?",
                 fontWeight = FontWeight.Bold,
                 color = AiPrimary,
-                fontSize = 13.sp
+                fontSize = 13.sp,
+                modifier = Modifier.weight(1f)
+            )
+            // Seta indicadora de expandir/recolher
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = if (expanded) "Recolher" else "Expandir",
+                tint = AiPrimary.copy(alpha = 0.7f),
+                modifier = Modifier
+                    .size(20.dp)
+                    .graphicsLayer { rotationZ = arrowRotation }
             )
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
-
-        val steps = listOf(
-            Triple("🗣️", "Fale ou escreva livremente", "Não precisa de palavras exatas — use linguagem natural"),
-            Triple("🧠", "A IA analisa o significado", "Compreende contexto, intenção e preferências"),
-            Triple("🔍", "Compara com todo o catálogo", "Avalia todos os restaurantes e produtos disponíveis"),
-            Triple("✅", "Devolve os mais relevantes", "Ordenados por similaridade semântica com o seu pedido")
-        )
-
-        steps.forEachIndexed { index, (emoji, title, desc) ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                // Step circle
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .background(
-                            Brush.radialGradient(listOf(AiPrimary.copy(alpha = 0.2f), Color.Transparent)),
-                            CircleShape
-                        )
-                        .border(1.dp, AiPrimary.copy(alpha = 0.3f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(emoji, fontSize = 14.sp)
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(title, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = AiText)
-                    Text(desc, fontSize = 11.sp, color = AiTextMuted, lineHeight = 15.sp)
-                }
-            }
-            if (index < steps.size - 1) {
-                Box(
-                    modifier = Modifier
-                        .padding(start = 15.dp)
-                        .width(2.dp)
-                        .height(8.dp)
-                        .background(AiPrimary.copy(alpha = 0.2f), RoundedCornerShape(1.dp))
-                )
-            }
+        // Dica de toque apenas quando recolhido
+        AnimatedVisibility(
+            visible = !expanded,
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(150))
+        ) {
+            Text(
+                text = "Toque para saber mais",
+                fontSize = 10.sp,
+                color = AiTextMuted.copy(alpha = 0.6f),
+                modifier = Modifier.padding(top = 4.dp, start = 24.dp)
+            )
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Diferenciação vs pesquisa normal
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(AiSecondary.copy(alpha = 0.08f))
-                .border(1.dp, AiSecondary.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                .padding(horizontal = 14.dp, vertical = 10.dp)
+        // ── Conteúdo expansível ───────────────────────────────────────────────
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn(tween(300)) + expandVertically(tween(350, easing = EaseOutQuart)),
+            exit = fadeOut(tween(200)) + shrinkVertically(tween(250, easing = EaseInQuart))
         ) {
             Column {
-                Text(
-                    "💡 Diferente de uma pesquisa normal",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 11.sp,
-                    color = AiSecondary
+                Spacer(modifier = Modifier.height(14.dp))
+
+                val steps = listOf(
+                    Triple("🗣️", "Fale ou escreva livremente", "Não precisa de palavras exatas — use linguagem natural"),
+                    Triple("🧠", "A IA analisa o significado", "Compreende contexto, intenção e preferências"),
+                    Triple("🔍", "Compara com todo o catálogo", "Avalia todos os restaurantes e produtos disponíveis"),
+                    Triple("✅", "Devolve os mais relevantes", "Ordenados por similaridade semântica com o seu pedido")
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("❌ Pesquisa normal", fontSize = 10.sp, color = AiTextMuted, fontWeight = FontWeight.SemiBold)
-                        Spacer(modifier = Modifier.height(3.dp))
-                        Text("Precisa de escrever\nexatamente o nome", fontSize = 10.sp, color = AiTextMuted, lineHeight = 14.sp)
+
+                steps.forEachIndexed { index, (emoji, title, desc) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(
+                                    Brush.radialGradient(listOf(AiPrimary.copy(alpha = 0.2f), Color.Transparent)),
+                                    CircleShape
+                                )
+                                .border(1.dp, AiPrimary.copy(alpha = 0.3f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(emoji, fontSize = 14.sp)
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = AiText)
+                            Text(desc, fontSize = 11.sp, color = AiTextMuted, lineHeight = 15.sp)
+                        }
                     }
-                    Box(modifier = Modifier.width(1.dp).height(40.dp).background(AiTextMuted.copy(alpha = 0.2f)).align(Alignment.CenterVertically))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("✅ Pesquisa IA", fontSize = 10.sp, color = AiSecondary, fontWeight = FontWeight.SemiBold)
-                        Spacer(modifier = Modifier.height(3.dp))
-                        Text("Entende o que\ndeseja comer", fontSize = 10.sp, color = AiText, lineHeight = 14.sp)
+                    if (index < steps.size - 1) {
+                        Box(
+                            modifier = Modifier
+                                .padding(start = 15.dp)
+                                .width(2.dp)
+                                .height(8.dp)
+                                .background(AiPrimary.copy(alpha = 0.2f), RoundedCornerShape(1.dp))
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Diferenciação vs pesquisa normal
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(AiSecondary.copy(alpha = 0.08f))
+                        .border(1.dp, AiSecondary.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    Column {
+                        Text(
+                            "💡 Diferente de uma pesquisa normal",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.sp,
+                            color = AiSecondary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("❌ Pesquisa normal", fontSize = 10.sp, color = AiTextMuted, fontWeight = FontWeight.SemiBold)
+                                Spacer(modifier = Modifier.height(3.dp))
+                                Text("Precisa de escrever\nexatamente o nome", fontSize = 10.sp, color = AiTextMuted, lineHeight = 14.sp)
+                            }
+                            Box(modifier = Modifier.width(1.dp).height(40.dp).background(AiTextMuted.copy(alpha = 0.2f)).align(Alignment.CenterVertically))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("✅ Pesquisa IA", fontSize = 10.sp, color = AiSecondary, fontWeight = FontWeight.SemiBold)
+                                Spacer(modifier = Modifier.height(3.dp))
+                                Text("Entende o que\ndeseja comer", fontSize = 10.sp, color = AiText, lineHeight = 14.sp)
+                            }
+                        }
                     }
                 }
             }
@@ -771,7 +772,7 @@ private fun AiSemanticInputBar(
                 onValueChange = onValueChange,
                 placeholder = {
                     Text(
-                        "Ex: \"algo leve com frango\"...",
+                        "Ex: \"Uma pizza de calabresa e alguma bebida\"...",
                         color = AiTextMuted,
                         fontSize = 14.sp
                     )
