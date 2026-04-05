@@ -345,7 +345,7 @@ private fun SmartRestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
 
     Column(
         modifier = Modifier
-            .width(200.dp)
+            .width(270.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(SmartCardBg)
             .border(
