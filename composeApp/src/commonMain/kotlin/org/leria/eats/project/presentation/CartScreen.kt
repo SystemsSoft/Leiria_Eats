@@ -172,7 +172,7 @@ fun CartScreen(
                         message = message,
                         onDismiss = onDismissAiMessage,
                         onSuggestAnotherRestaurant = onSuggestAnotherRestaurant,
-                        onAddMoreFromSame = onAddMoreFromSame,
+                        onGoToRestaurant = { restaurantSelected?.let { onGoToRestaurant?.invoke(it) } },
                         isMuted = isMuted,
                         alreadySpoken = cartAiMessageSpoken,
                         onMarkAsSpoken = onMarkAiMessageAsSpoken,
@@ -513,7 +513,7 @@ fun CartAiChatBubble(
     message: String,
     onDismiss: () -> Unit,
     onSuggestAnotherRestaurant: () -> Unit,
-    onAddMoreFromSame: () -> Unit,
+    onGoToRestaurant: () -> Unit,
     isMuted: Boolean = false,
     alreadySpoken: Boolean = false,
     onMarkAsSpoken: () -> Unit = {},
@@ -521,6 +521,48 @@ fun CartAiChatBubble(
     tts: TextToSpeechService = koinInject()
 ) {
     val displayedText = remember { mutableStateOf("") }
+    var showClearCartDialog by remember { mutableStateOf(false) }
+
+    // ── Diálogo de confirmação de limpar sacola ───────────────────────────────
+    if (showClearCartDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearCartDialog = false },
+            containerColor = CartCard,
+            titleContentColor = CartText,
+            textContentColor = CartMuted,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("🍽️", fontSize = 18.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Trocar de restaurante?", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Text("A sua sacola será esvaziada ao escolher outro restaurante.\n\nTem a certeza que deseja continuar?")
+            },
+            confirmButton = {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            Brush.horizontalGradient(listOf(CartPrimary, Color(0xFFE65100)))
+                        )
+                        .clickable {
+                            showClearCartDialog = false
+                            onSuggestAnotherRestaurant()
+                        }
+                        .padding(horizontal = 18.dp, vertical = 9.dp)
+                ) {
+                    Text("Sim, continuar", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCartDialog = false }) {
+                    Text("Cancelar", color = CartMuted)
+                }
+            }
+        )
+    }
 
     // Stop TTS when the composable leaves the composition
     DisposableEffect(Unit) {
@@ -647,7 +689,7 @@ fun CartAiChatBubble(
                         )
                         .border(1.dp, CartAiPrimary.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
                         .clickable {
-                            onSuggestAnotherRestaurant()
+                            showClearCartDialog = true
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -672,12 +714,12 @@ fun CartAiChatBubble(
                         )
                         .border(1.dp, CartAiSecondary.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
                         .clickable {
-                            onAddMoreFromSame()
+                            onGoToRestaurant()
                         },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "➕ Mais do mesmo",
+                        "📋 Cardápio",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = CartAiSecondary
