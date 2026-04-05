@@ -103,12 +103,18 @@ fun AiSearchScreen(
                         onTextChange = onTextChange,
                         onSendClick = onSendClick
                     )
-                    else -> AiHowItWorksCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .align(Alignment.TopCenter)
-                    )
+                    else -> LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        item {
+                            AiHowItWorksCard(modifier = Modifier.fillMaxWidth())
+                        }
+                        item {
+                            AiFavoritesCard(modifier = Modifier.fillMaxWidth())
+                        }
+                    }
                 }
             }
 
@@ -497,6 +503,220 @@ private fun AiHowItWorksCard(modifier: Modifier = Modifier) { var expanded by re
                                 Text("Entende o que\ndeseja comer", fontSize = 10.sp, color = AiText, lineHeight = 14.sp)
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Card "Favoritos com IA" ──────────────────────────────────────────────────
+@Composable
+private fun AiFavoritesCard(modifier: Modifier = Modifier) {
+    var expanded by remember { mutableStateOf(false) }
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(300),
+        label = "favArrowRotation"
+    )
+
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(AiCard)
+            .border(1.dp, AiSecondary.copy(alpha = 0.22f), RoundedCornerShape(20.dp))
+            .clickable { expanded = !expanded }
+            .padding(20.dp)
+    ) {
+        // ── Cabeçalho sempre visível ──────────────────────────────────────────
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(
+                        Brush.radialGradient(listOf(AiSecondary.copy(alpha = 0.25f), Color.Transparent)),
+                        CircleShape
+                    )
+                    .border(1.dp, AiSecondary.copy(alpha = 0.4f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("⭐", fontSize = 13.sp)
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                "Favoritos — repita o seu pedido com IA",
+                fontWeight = FontWeight.Bold,
+                color = AiSecondary,
+                fontSize = 13.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = if (expanded) "Recolher" else "Expandir",
+                tint = AiSecondary.copy(alpha = 0.7f),
+                modifier = Modifier
+                    .size(20.dp)
+                    .graphicsLayer { rotationZ = arrowRotation }
+            )
+        }
+
+        // Dica de toque apenas quando recolhido
+        AnimatedVisibility(
+            visible = !expanded,
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(150))
+        ) {
+            Text(
+                text = "Toque para saber mais",
+                fontSize = 10.sp,
+                color = AiTextMuted.copy(alpha = 0.6f),
+                modifier = Modifier.padding(top = 4.dp, start = 38.dp)
+            )
+        }
+
+        // ── Conteúdo expansível ───────────────────────────────────────────────
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn(tween(300)) + expandVertically(tween(350, easing = EaseOutQuart)),
+            exit = fadeOut(tween(200)) + shrinkVertically(tween(250, easing = EaseInQuart))
+        ) {
+            Column {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                val steps = listOf(
+                    Triple("⭐", "Favorite ao finalizar o pedido",
+                        "Após concluir um pedido, toque na estrela ⭐ para o guardar nos seus favoritos."),
+                    Triple("✏️", "Dê um apelido ao pedido",
+                        "Em Favoritos, toque no lápis ✏️ para editar um apelido personalizado para esse pedido e toque em Guardar."),
+                    Triple("🤖", "Repita com a IA quando quiser",
+                        "Abra a IA e diga \"Pedir\" seguido do apelido. A IA irá repetir o pedido verificando primeiro a disponibilidade do restaurante e dos produtos.")
+                )
+
+                steps.forEachIndexed { index, (emoji, title, desc) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(
+                                    Brush.radialGradient(listOf(AiSecondary.copy(alpha = 0.2f), Color.Transparent)),
+                                    CircleShape
+                                )
+                                .border(1.dp, AiSecondary.copy(alpha = 0.35f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(emoji, fontSize = 14.sp)
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = AiText)
+                            Text(desc, fontSize = 11.sp, color = AiTextMuted, lineHeight = 15.sp)
+                        }
+                    }
+                    if (index < steps.size - 1) {
+                        Box(
+                            modifier = Modifier
+                                .padding(start = 15.dp)
+                                .width(2.dp)
+                                .height(8.dp)
+                                .background(AiSecondary.copy(alpha = 0.2f), RoundedCornerShape(1.dp))
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Exemplo prático
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(AiPrimary.copy(alpha = 0.07f))
+                        .border(1.dp, AiPrimary.copy(alpha = 0.22f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                ) {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("💡", fontSize = 15.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Exemplo prático",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                color = AiPrimary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Passo 1
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .background(AiPrimary.copy(alpha = 0.18f), CircleShape)
+                                    .border(1.dp, AiPrimary.copy(alpha = 0.4f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("1", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = AiPrimary)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Dá o apelido  \"Lanche de sábado\"  ao pedido favorito",
+                                fontSize = 11.sp,
+                                color = AiTextMuted,
+                                lineHeight = 15.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        // Passo 2
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .background(AiPrimary.copy(alpha = 0.18f), CircleShape)
+                                    .border(1.dp, AiPrimary.copy(alpha = 0.4f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("2", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = AiPrimary)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Abre a IA e diz:",
+                                fontSize = 11.sp,
+                                color = AiTextMuted
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        // Frase de exemplo
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(AiBotBubble)
+                                .border(1.dp, AiSecondary.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "\"Pedir lanche de sábado\"",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = AiSecondary,
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "A IA verifica a disponibilidade do restaurante e dos produtos e repete o pedido automaticamente. ✅",
+                            fontSize = 10.sp,
+                            color = AiTextMuted.copy(alpha = 0.8f),
+                            lineHeight = 14.sp
+                        )
                     }
                 }
             }
