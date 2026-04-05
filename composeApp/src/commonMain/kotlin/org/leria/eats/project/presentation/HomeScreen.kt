@@ -244,9 +244,9 @@ private fun HomeRestaurantList(
         }
         item {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                columns = GridCells.Fixed(1),
+                horizontalArrangement = Arrangement.spacedBy(0.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 4000.dp)
@@ -345,7 +345,7 @@ private fun SmartRestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
 
     Column(
         modifier = Modifier
-            .width(130.dp)
+            .width(200.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(SmartCardBg)
             .border(
@@ -362,7 +362,7 @@ private fun SmartRestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(110.dp)
+                .aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
         ) {
             KamelImage(
@@ -482,79 +482,110 @@ private fun SmartRestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
 
 
 
-// ─── Restaurant Grid Item ─────────────────────────────────────────────────────
+// ─── Restaurant Grid Item — padrão Glovo / Bolt Food ─────────────────────────
 @Composable
 fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AiCard)
             .clickable(enabled = restaurant.isClosed != true) { onClick() }
-            .then(if (restaurant.isClosed == true) Modifier.alpha(0.6f) else Modifier),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .then(if (restaurant.isClosed == true) Modifier.alpha(0.55f) else Modifier)
     ) {
+        // ── Imagem landscape 16:9 ──────────────────────────────────────
         Box(
             modifier = Modifier
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(14.dp))
-                .border(1.dp, AiPrimary.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
         ) {
             KamelImage(
                 resource = asyncPainterResource(data = restaurant.image_url ?: ""),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
-                onLoading = { Box(Modifier.fillMaxSize().background(AiCard), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = AiPrimary) } },
-                onFailure = { Box(Modifier.fillMaxSize().background(AiCard)) }
+                onLoading = {
+                    Box(
+                        Modifier.fillMaxSize().background(AiSurface),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            strokeWidth = 2.dp,
+                            color = AiPrimary
+                        )
+                    }
+                },
+                onFailure = { Box(Modifier.fillMaxSize().background(AiSurface)) }
             )
-            // subtle gradient overlay
+            // Gradient inferior suave
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, AiDeepBg.copy(alpha = 0.5f))))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, AiDeepBg.copy(alpha = 0.45f))
+                        )
+                    )
             )
-            // Badge "FECHADO" sobre a imagem
+            // Badge FECHADO centralizado
             if (restaurant.isClosed == true) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFFB71C1C).copy(alpha = 0.90f)
+                        color = Color(0xFFB71C1C).copy(alpha = 0.92f)
                     ) {
                         Text(
                             text = "🔒 FECHADO",
                             color = Color.White,
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 10.sp,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                         )
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = restaurant.name,
-            fontWeight = FontWeight.SemiBold,
-            color = AiText,
-            fontSize = 11.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center
-        )
-
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-            Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB800), modifier = Modifier.size(9.dp))
-            Spacer(modifier = Modifier.width(2.dp))
+        // ── Info abaixo da imagem ──────────────────────────────────────
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
             Text(
-                text = "${restaurant.rating ?: 5.0}",
-                color = AiTextMuted,
-                fontSize = 9.sp,
-                maxLines = 1
+                text = restaurant.name,
+                fontWeight = FontWeight.Bold,
+                color = AiText,
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = restaurant.category,
+                color = AiTextMuted,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Star,
+                    contentDescription = null,
+                    tint = Color(0xFFFFB800),
+                    modifier = Modifier.size(12.dp)
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Text(
+                    text = "${restaurant.rating ?: 5.0}",
+                    color = AiText,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
     }
 }
