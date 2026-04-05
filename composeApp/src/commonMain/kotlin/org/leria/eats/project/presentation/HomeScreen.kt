@@ -6,6 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -175,6 +177,12 @@ private fun AiThinkingIndicator(modifier: Modifier = Modifier) {
     }
 }
 
+// ─── Paleta SMART ─────────────────────────────────────────────────────────────
+private val SmartGold       = Color(0xFFFFD700)
+private val SmartGoldDark   = Color(0xFFB8860B)
+private val SmartCardBg     = Color(0xFF132B1A)
+private val SmartBorder     = Color(0xFFFFD700)
+
 // ─── Home: lista completa de restaurantes ─────────────────────────────────────
 @Composable
 private fun HomeRestaurantList(
@@ -197,11 +205,26 @@ private fun HomeRestaurantList(
         return
     }
 
+    val smartRestaurants = restaurants.filter { it.plan?.uppercase() == "SMART" }
+    val otherRestaurants = restaurants.filter { it.plan?.uppercase() != "SMART" }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
+        // ── Seção SMART em destaque ──────────────────────────────────────
+        if (smartRestaurants.isNotEmpty()) {
+            item {
+                SmartHighlightSection(
+                    smartRestaurants = smartRestaurants,
+                    onRestaurantClick = onRestaurantClick
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+        }
+
+        // ── Todos os outros restaurantes ─────────────────────────────────
         item {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -216,7 +239,7 @@ private fun HomeRestaurantList(
                     color = AiText
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("(${restaurants.size})", fontSize = 11.sp, color = AiTextMuted)
+                Text("(${otherRestaurants.size})", fontSize = 11.sp, color = AiTextMuted)
             }
         }
         item {
@@ -228,7 +251,7 @@ private fun HomeRestaurantList(
                     .fillMaxWidth()
                     .heightIn(max = 4000.dp)
             ) {
-                items(restaurants) { restaurant ->
+                items(otherRestaurants) { restaurant ->
                     RestaurantGridItem(
                         restaurant = restaurant,
                         onClick = { onRestaurantClick(restaurant) }
@@ -238,6 +261,225 @@ private fun HomeRestaurantList(
         }
     }
 }
+
+// ─── Seção de destaque SMART ──────────────────────────────────────────────────
+@Composable
+private fun SmartHighlightSection(
+    smartRestaurants: List<Restaurant>,
+    onRestaurantClick: (Restaurant) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Cabeçalho da seção
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(
+                        Brush.horizontalGradient(listOf(SmartGold, SmartGoldDark))
+                    )
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = "⭐",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF061510),
+                    letterSpacing = 1.sp
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Destaques",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = AiText
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text("(${smartRestaurants.size})", fontSize = 11.sp, color = AiTextMuted)
+        }
+
+        // Linha dourada decorativa
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(SmartGold.copy(alpha = 0.8f), Color.Transparent)
+                    )
+                )
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Row horizontal com scroll
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp)
+        ) {
+            items(smartRestaurants) { restaurant ->
+                SmartRestaurantCard(
+                    restaurant = restaurant,
+                    onClick = { onRestaurantClick(restaurant) }
+                )
+            }
+        }
+    }
+}
+
+// ─── Card de restaurante SMART ────────────────────────────────────────────────
+@Composable
+private fun SmartRestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
+    val infiniteTransition = rememberInfiniteTransition(label = "smartGlow")
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 0.9f,
+        label = "glow",
+        animationSpec = infiniteRepeatable(
+            tween(1400, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse
+        )
+    )
+
+    Column(
+        modifier = Modifier
+            .width(130.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(SmartCardBg)
+            .border(
+                width = 1.5.dp,
+                brush = Brush.linearGradient(
+                    listOf(SmartGold.copy(alpha = glowAlpha), SmartGoldDark.copy(alpha = glowAlpha))
+                ),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .clickable(enabled = restaurant.isClosed != true) { onClick() }
+            .then(if (restaurant.isClosed == true) Modifier.alpha(0.6f) else Modifier),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(110.dp)
+                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+        ) {
+            KamelImage(
+                resource = asyncPainterResource(data = restaurant.image_url ?: ""),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                onLoading = {
+                    Box(
+                        Modifier.fillMaxSize().background(AiCard),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            strokeWidth = 2.dp,
+                            color = SmartGold
+                        )
+                    }
+                },
+                onFailure = { Box(Modifier.fillMaxSize().background(AiCard)) }
+            )
+            // Gradient overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(listOf(Color.Transparent, AiDeepBg.copy(alpha = 0.6f)))
+                    )
+            )
+            // Badge SMART no canto superior direito
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(
+                        Brush.horizontalGradient(listOf(SmartGold, SmartGoldDark))
+                    )
+                    .padding(horizontal = 5.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "⭐",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF061510)
+                )
+            }
+            // Badge FECHADO
+            if (restaurant.isClosed == true) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFB71C1C).copy(alpha = 0.90f)
+                    ) {
+                        Text(
+                            text = "🔒 FECHADO",
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Infos abaixo da imagem
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = restaurant.name,
+                fontWeight = FontWeight.Bold,
+                color = AiText,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = restaurant.category,
+                color = AiTextMuted,
+                fontSize = 10.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    Icons.Default.Star,
+                    contentDescription = null,
+                    tint = SmartGold,
+                    modifier = Modifier.size(11.dp)
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Text(
+                    text = "${restaurant.rating ?: 5.0}",
+                    color = SmartGold,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
 
 
 // ─── Restaurant Grid Item ─────────────────────────────────────────────────────

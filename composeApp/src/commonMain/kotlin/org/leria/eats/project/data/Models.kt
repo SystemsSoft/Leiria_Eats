@@ -35,7 +35,8 @@ data class Restaurant(
     val image_url: String?,
     val products: List<Product> = emptyList(),
     val latitude: Double? = null,
-    val longitude: Double? = null
+    val longitude: Double? = null,
+    val plan: String? = null
 )
 
 @Serializable
