@@ -296,7 +296,7 @@ class SearchViewModel(
 
     fun selectRestaurantOrAddToCart(restaurant: Restaurant) {
         if (_uiState.value.isSuggestionMode) {
-            // Modo sugestão: buscar produtos e adicionar à sacola
+            // Modo sugestão: abrir cardápio do restaurante selecionado
             _uiState.update { it.copy(isLoading = true, isSuggestionMode = false) }
             viewModelScope.launch {
                 val company = apiClient.getCompanyById(restaurant.id)
@@ -307,27 +307,15 @@ class SearchViewModel(
                     image_url = company.imageUrl,
                     products = company.products
                 ) else restaurant
-                val products = resolvedRestaurant.products
-                if (products.isNotEmpty()) {
-                    // Adiciona à sacola directamente sem chamar fetchCompanyById de novo
-                    _uiState.update { currentState ->
-                        currentState.copy(
-                            cartItems = currentState.cartItems + products,
-                            cartRestaurantId = resolvedRestaurant.id,
-                            selectedRestaurant = resolvedRestaurant
-                        )
-                    }
-                    val productNames = products.take(3).joinToString(", ") { it.name }
-                    val aiMsg = buildString {
-                        append("✅ Adicionei à sua sacola: $productNames")
-                        if (products.size > 3) append(" e mais ${products.size - 3} itens")
-                        append(".\n\n💡 Quer que sugira outro restaurante com pratos semelhantes, ou gostaria de adicionar mais alguma coisa deste restaurante?")
-                    }
-                    _uiState.update { it.copy(isLoading = false, cartAiMessage = aiMsg, cartAiMessageSpoken = false) }
-                } else {
-                    _uiState.update { it.copy(isLoading = false, selectedRestaurant = resolvedRestaurant) }
+
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        selectedRestaurant = resolvedRestaurant,
+                        selectedCategory = null,
+                        currentTab = MainTab.HOME
+                    )
                 }
-                onTabSelected(MainTab.CART)
             }
         } else {
             selectRestaurant(restaurant)
