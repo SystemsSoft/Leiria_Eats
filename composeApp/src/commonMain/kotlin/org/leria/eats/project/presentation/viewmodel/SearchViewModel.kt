@@ -564,15 +564,21 @@ class SearchViewModel(
     private fun fetchCompanyById(id: Int) {
         viewModelScope.launch {
             val company = apiClient.getCompanyById(id)
+            if (company == null) return@launch
             _uiState.update {
-                if (it.selectedRestaurant == null) {
+                val shouldUpdateRestaurant =
+                    it.selectedRestaurant == null ||
+                    it.selectedRestaurant.id != company.id ||
+                    it.selectedRestaurant.products.isEmpty()
+
+                if (shouldUpdateRestaurant) {
                     it.copy(
                         selectedRestaurant = Restaurant(
-                            id = company?.id ?: 0,
-                            name = company?.name ?: "",
-                            category = company?.category ?: "",
-                            image_url = company?.imageUrl ?: "",
-                            products = company?.products ?: listOf()
+                            id = company.id,
+                            name = company.name,
+                            category = company.category,
+                            image_url = company.imageUrl,
+                            products = company.products
                         )
                     )
                 } else {
@@ -1202,6 +1208,8 @@ class SearchViewModel(
     }
 
     private fun addProductsToCart(products: List<Product>) {
+        if (products.isEmpty()) return
+
         _uiState.update { currentState ->
             val cartMap = currentState.cartItems.associateBy { it.id }.toMutableMap()
             for (product in products) {
@@ -1217,5 +1225,8 @@ class SearchViewModel(
                 cartRestaurantId = products.firstOrNull()?.restaurant_id ?: currentState.cartRestaurantId
             )
         }
+
+        // AI product-only flows bypass addToCart(), so ensure restaurant metadata is also loaded.
+        fetchCompanyById(products.first().restaurant_id)
     }
 }
