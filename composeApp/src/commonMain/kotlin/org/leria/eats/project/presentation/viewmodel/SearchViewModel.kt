@@ -274,7 +274,24 @@ class SearchViewModel(
     }
 
     fun selectRestaurant(restaurant: Restaurant) {
-        _uiState.update { it.copy(selectedRestaurant = restaurant, selectedCategory = null) }
+        if (restaurant.products.isEmpty()) {
+            // Se o restaurante não tem produtos carregados, buscar pela API
+            _uiState.update { it.copy(isLoading = true) }
+            viewModelScope.launch {
+                val company = apiClient.getCompanyById(restaurant.id)
+                val resolvedRestaurant = if (company != null) Restaurant(
+                    id = company.id,
+                    name = company.name,
+                    category = company.category,
+                    image_url = company.imageUrl,
+                    products = company.products
+                ) else restaurant
+                _uiState.update { it.copy(selectedRestaurant = resolvedRestaurant, selectedCategory = null, isLoading = false) }
+            }
+        } else {
+            // Restaurante já tem produtos carregados
+            _uiState.update { it.copy(selectedRestaurant = restaurant, selectedCategory = null) }
+        }
     }
 
     fun selectRestaurantOrAddToCart(restaurant: Restaurant) {

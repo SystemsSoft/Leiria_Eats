@@ -25,14 +25,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -319,74 +315,19 @@ fun ProductItemWithCounter(
         animationSpec = spring(stiffness = Spring.StiffnessMedium),
         label = "borderColor"
     )
-    var zoomedImage by remember { mutableStateOf(false) }
+    var showExpandedDetails by remember { mutableStateOf(false) }
 
-    // ── Zoom Dialog ───────────────────────────────────────────────────────────
-    if (zoomedImage && !product.image_url.isNullOrBlank()) {
-        var animScale by remember { mutableFloatStateOf(0.78f) }
-        val scale by animateFloatAsState(
-            targetValue = animScale,
-            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-            label = "zoomScale"
+    // ── Expanded Details Modal ─────────────────────────────────────────
+    if (showExpandedDetails) {
+        ExpandedProductDetailsModal(
+            product = product,
+            quantity = quantity,
+            onDismiss = { showExpandedDetails = false },
+            onAdd = onAdd,
+            onRemove = onRemove
         )
-        LaunchedEffect(Unit) { animScale = 1f }
-
-        Dialog(
-            onDismissRequest = { zoomedImage = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.85f))
-                    .clickable { zoomedImage = false },
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    modifier = Modifier.scale(scale)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.82f)
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(22.dp))
-                            .background(RdSurface)
-                            .border(
-                                1.5.dp,
-                                Brush.horizontalGradient(listOf(RdPrimary.copy(alpha = 0.65f), RdSecondary.copy(alpha = 0.45f))),
-                                RoundedCornerShape(22.dp)
-                            )
-                    ) {
-                        KamelImage(
-                            resource = asyncPainterResource(data = product.image_url),
-                            contentDescription = product.name,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            onLoading = {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator(modifier = Modifier.size(32.dp), strokeWidth = 2.dp, color = RdPrimary)
-                                }
-                            }
-                        )
-                    }
-                    Text(
-                        text = product.name,
-                        color = RdText,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "Toque para fechar",
-                        color = RdMuted.copy(alpha = 0.6f),
-                        fontSize = 12.sp
-                    )
-                }
-            }
-        }
     }
+
 
     // ── Card ──────────────────────────────────────────────────────────────────
     Box(
@@ -396,6 +337,7 @@ fun ProductItemWithCounter(
             .background(RdCard)
             .border(1.dp, borderColor, RoundedCornerShape(14.dp))
             .padding(12.dp)
+            .clickable { showExpandedDetails = true }
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -407,7 +349,6 @@ fun ProductItemWithCounter(
                         .size(76.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(RdSurface)
-                        .clickable { zoomedImage = true }
                 ) {
                     KamelImage(
                         resource = asyncPainterResource(data = product.image_url),
@@ -417,21 +358,6 @@ fun ProductItemWithCounter(
                         onLoading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = RdPrimary) } },
                         onFailure = { Box(Modifier.fillMaxSize().background(RdSurface)) }
                     )
-                    // Zoom hint
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(18.dp)
-                            .background(Color.Black.copy(alpha = 0.55f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ZoomIn,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(11.dp)
-                        )
-                    }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
             }
@@ -626,6 +552,256 @@ fun ProductItemWithCounter(
                     }
                 }
             }
+        }
+    }
+}
+
+// ─── Expanded Product Details Modal ────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExpandedProductDetailsModal(
+    product: Product,
+    quantity: Int,
+    onDismiss: () -> Unit,
+    onAdd: () -> Unit,
+    onRemove: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = RdDeepBg,
+        scrimColor = Color.Black.copy(alpha = 0.6f),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        modifier = Modifier.fillMaxHeight(0.9f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 20.dp)
+        ) {
+            // Fechar button
+            Box(
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(RdCard)
+                    .clickable { onDismiss() },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("✕", color = RdText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Imagem produto (maior)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(250.dp)
+                    .clip(RoundedCornerShape(16.dp))
+            ) {
+                KamelImage(
+                    resource = asyncPainterResource(data = product.image_url ?: ""),
+                    contentDescription = product.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    onLoading = {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .background(RdSurface),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                strokeWidth = 2.dp,
+                                color = RdSecondary
+                            )
+                        }
+                    },
+                    onFailure = { Box(Modifier.fillMaxSize().background(RdSurface)) }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Nome e preço
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = product.name,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RdText,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Text(
+                    text = formatCurrency(product.price),
+                    fontWeight = FontWeight.Bold,
+                    color = RdSecondary,
+                    fontSize = 22.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Separador
+            HorizontalDivider(color = RdCard, thickness = 1.dp)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Descrição completa
+            if (product.description.isNotEmpty()) {
+                Text(
+                    text = "Descrição",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RdPrimary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = product.description,
+                    fontSize = 14.sp,
+                    color = RdText,
+                    lineHeight = 20.sp
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Tempo de preparo
+            if (product.preparationTime.isNotEmpty()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(RdCard)
+                        .padding(12.dp)
+                ) {
+                    Text("⏱️", fontSize = 18.sp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Tempo de preparo",
+                            fontSize = 12.sp,
+                            color = RdMuted
+                        )
+                        Text(
+                            text = product.preparationTime,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = RdText
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Categoria
+            if (product.category.isNotEmpty()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(RdCard)
+                        .padding(12.dp)
+                ) {
+                    Text("🏷️", fontSize = 18.sp)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Categoria",
+                            fontSize = 12.sp,
+                            color = RdMuted
+                        )
+                        Text(
+                            text = product.category,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = RdText
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Seletor de quantidade
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(RdCard)
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Quantidade", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = RdText)
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(RdPrimary.copy(alpha = 0.14f), RdSecondary.copy(alpha = 0.10f))
+                            )
+                        )
+                        .border(
+                            1.dp,
+                            Brush.horizontalGradient(listOf(RdPrimary.copy(alpha = 0.55f), RdSecondary.copy(alpha = 0.45f))),
+                            RoundedCornerShape(50.dp)
+                        )
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(RdAccent.copy(alpha = 0.18f))
+                            .border(1.dp, RdAccent.copy(alpha = 0.45f), CircleShape)
+                            .clickable { onRemove() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Remove, null, tint = RdAccent, modifier = Modifier.size(15.dp))
+                    }
+
+                    Text(
+                        text = "$quantity",
+                        color = RdText,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        modifier = Modifier.width(30.dp),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.horizontalGradient(listOf(RdPrimary, RdSecondary))
+                            )
+                            .clickable { onAdd() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(15.dp))
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

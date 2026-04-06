@@ -499,6 +499,7 @@ fun MainScreenWithAI(
                                     // ...existing code...
                                     cartItems = uiState.cartItems,
                                     restaurantSelected = uiState.selectedRestaurant,
+                                    onAddItem = { product -> viewModel.addToCart(product) },
                                     onRemoveItem = { product -> viewModel.removeFromCart(product) },
                                     onCheckout = { address, deliveryFee, serviceFee, deliveryType ->
                                         viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType)

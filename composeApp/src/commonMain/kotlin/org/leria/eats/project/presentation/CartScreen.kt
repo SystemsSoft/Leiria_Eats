@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.StoreMallDirectory
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -71,6 +73,7 @@ private val CartMuted     = Color(0xFF6EE7A0)   // Muted green
 fun CartScreen(
     cartItems: List<Product>,
     onRemoveItem: (Product) -> Unit,
+    onAddItem: (Product) -> Unit = {},
     onCheckout: (Address, Double, Double, String) -> Unit,
     restaurantSelected: Restaurant?,
     userAddresses: List<Address> = emptyList(),
@@ -88,6 +91,7 @@ fun CartScreen(
 ) {
     val total = cartItems.sumOf { it.price * it.quantity }
     var showServiceFeeSheet by remember { mutableStateOf(false) }
+    var expandedProduct by remember { mutableStateOf<Product?>(null) }
 
     if (showServiceFeeSheet) {
         ServiceFeeBottomSheet(
@@ -101,6 +105,17 @@ fun CartScreen(
                 showServiceFeeSheet = false
                 onCheckout(address, deliveryFee, serviceFee, deliveryType)
             }
+        )
+    }
+
+    expandedProduct?.let { product ->
+        val quantity = cartItems.find { it.id == product.id }?.quantity ?: 0
+        CartExpandedProductDetailsModal(
+            product = product,
+            quantity = quantity,
+            onDismiss = { expandedProduct = null },
+            onAdd = { onAddItem(product) },
+            onRemove = { onRemoveItem(product) }
         )
     }
 
@@ -142,7 +157,7 @@ fun CartScreen(
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    Text("Carrinho", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = CartText)
+                    Text("Sacola", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = CartText)
                     Text(
                         if (cartItems.isEmpty()) "Vazia" else "${cartItems.size} ${if (cartItems.size == 1) "item" else "itens"}",
                         fontSize = 12.sp, color = CartMuted
@@ -198,7 +213,7 @@ fun CartScreen(
                             Icon(Icons.Default.ShoppingBag, contentDescription = null, tint = CartMuted, modifier = Modifier.size(32.dp))
                         }
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Seu carrinho está vazio", color = CartText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Sua sacola está vazia", color = CartText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                         Spacer(modifier = Modifier.height(6.dp))
                         Text("Pesquise um prato ou restaurante", color = CartMuted, fontSize = 13.sp)
                         if (onGoToHome != null) {
@@ -234,7 +249,11 @@ fun CartScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(cartItems) { product ->
-                        CartItemRow(product, onRemove = { onRemoveItem(product) })
+                        CartItemRow(
+                            product = product,
+                            onRemove = { onRemoveItem(product) },
+                            onClick = { expandedProduct = product }
+                        )
                     }
                 }
             }
@@ -279,7 +298,7 @@ fun CartScreen(
 }
 
 @Composable
-fun CartItemRow(product: Product, onRemove: () -> Unit) {
+fun CartItemRow(product: Product, onRemove: () -> Unit, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -287,6 +306,7 @@ fun CartItemRow(product: Product, onRemove: () -> Unit) {
             .background(CartCard)
             .border(1.dp, CartPrimary.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
             .padding(12.dp)
+            .clickable { onClick() }
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -395,6 +415,204 @@ fun CartItemRow(product: Product, onRemove: () -> Unit) {
             ) {
                 Icon(Icons.Default.Delete, contentDescription = "Remover", tint = CartAccent, modifier = Modifier.size(16.dp))
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CartExpandedProductDetailsModal(
+    product: Product,
+    quantity: Int,
+    onDismiss: () -> Unit,
+    onAdd: () -> Unit,
+    onRemove: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = CartDeepBg,
+        scrimColor = Color.Black.copy(alpha = 0.6f),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        modifier = Modifier.fillMaxHeight(0.9f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 20.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(CartCard)
+                    .clickable { onDismiss() },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("X", color = CartText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(250.dp)
+                    .clip(RoundedCornerShape(16.dp))
+            ) {
+                KamelImage(
+                    resource = asyncPainterResource(data = product.image_url ?: ""),
+                    contentDescription = product.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    onLoading = {
+                        Box(
+                            Modifier.fillMaxSize().background(CartSurface),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                strokeWidth = 2.dp,
+                                color = CartSecondary
+                            )
+                        }
+                    },
+                    onFailure = { Box(Modifier.fillMaxSize().background(CartSurface)) }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = product.name,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CartText,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Text(
+                    text = formatCurrency(product.price),
+                    fontWeight = FontWeight.Bold,
+                    color = CartSecondary,
+                    fontSize = 22.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = CartCard, thickness = 1.dp)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (product.description.isNotEmpty()) {
+                Text(
+                    text = "Descricao",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = CartPrimary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = product.description,
+                    fontSize = 14.sp,
+                    color = CartText,
+                    lineHeight = 20.sp
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            if (product.preparationTime.isNotEmpty()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CartCard)
+                        .padding(12.dp)
+                ) {
+                    Text("Tempo", fontSize = 12.sp, color = CartMuted)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = product.preparationTime,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CartText
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(CartCard)
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Quantidade", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = CartText)
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(CartPrimary.copy(alpha = 0.14f), CartSecondary.copy(alpha = 0.10f))
+                            )
+                        )
+                        .border(
+                            1.dp,
+                            Brush.horizontalGradient(listOf(CartPrimary.copy(alpha = 0.55f), CartSecondary.copy(alpha = 0.45f))),
+                            RoundedCornerShape(50.dp)
+                        )
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(CartAccent.copy(alpha = 0.18f))
+                            .border(1.dp, CartAccent.copy(alpha = 0.45f), CircleShape)
+                            .clickable { onRemove() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Remove, null, tint = CartAccent, modifier = Modifier.size(15.dp))
+                    }
+
+                    Text(
+                        text = "$quantity",
+                        color = CartText,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        modifier = Modifier.width(30.dp)
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Brush.horizontalGradient(listOf(CartPrimary, CartSecondary)))
+                            .clickable { onAdd() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(15.dp))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

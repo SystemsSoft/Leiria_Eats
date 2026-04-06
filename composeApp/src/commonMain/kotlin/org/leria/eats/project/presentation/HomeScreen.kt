@@ -584,16 +584,251 @@ fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
     }
 }
 
-// ─── Product Grid Item ────────────────────────────────────────────────────────
+// ─── Expanded Product Modal ───────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExpandedProductModal(
+    product: Product,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = AiDeepBg,
+        scrimColor = Color.Black.copy(alpha = 0.6f),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        modifier = Modifier.fillMaxHeight(0.9f)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 20.dp)
+            ) {
+                // Fechar button
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(AiCard)
+                                .clickable { onDismiss() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("✕", color = AiText, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // Imagem produto (maior)
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(250.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                    ) {
+                        KamelImage(
+                            resource = asyncPainterResource(data = product.image_url ?: ""),
+                            contentDescription = product.name,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            onLoading = {
+                                Box(
+                                    Modifier
+                                        .fillMaxSize()
+                                        .background(AiSurface),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp),
+                                        strokeWidth = 2.dp,
+                                        color = AiSecondary
+                                    )
+                                }
+                            },
+                            onFailure = { Box(Modifier.fillMaxSize().background(AiSurface)) }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
+
+                // Nome e preço
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = product.name,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AiText,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (product.rating != null && product.rating != 0.0) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val fullStars = product.rating.toInt()
+                                    val hasHalf = (product.rating - fullStars) >= 0.5
+                                    (1..5).forEach { star ->
+                                        Icon(
+                                            imageVector = Icons.Default.Star,
+                                            contentDescription = null,
+                                            tint = if (star <= fullStars) Color(0xFFFFB800)
+                                            else if (star == fullStars + 1 && hasHalf) Color(0xFFFFB800).copy(alpha = 0.5f)
+                                            else Color(0xFF444444),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "${(product.rating * 10).toInt() / 10.0}",
+                                        fontSize = 13.sp,
+                                        color = AiTextMuted
+                                    )
+                                }
+                            }
+                        }
+                        Text(
+                            text = formatCurrency(product.price),
+                            fontWeight = FontWeight.Bold,
+                            color = AiSecondary,
+                            fontSize = 22.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // Separador
+                item {
+                    HorizontalDivider(color = AiCard, thickness = 1.dp)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // Descrição completa
+                if (product.description.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Descrição",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AiPrimary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = product.description,
+                            fontSize = 14.sp,
+                            color = AiText,
+                            lineHeight = 20.sp
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+
+                // Tempo de preparo
+                if (product.preparationTime.isNotEmpty()) {
+                    item {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(AiCard)
+                                .padding(12.dp)
+                        ) {
+                            Text("⏱️", fontSize = 18.sp)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Tempo de preparo",
+                                    fontSize = 12.sp,
+                                    color = AiTextMuted
+                                )
+                                Text(
+                                    text = product.preparationTime,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = AiText
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+
+                // Categoria
+                if (product.category.isNotEmpty()) {
+                    item {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(AiCard)
+                                .padding(12.dp)
+                        ) {
+                            Text("🏷️", fontSize = 18.sp)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Categoria",
+                                    fontSize = 12.sp,
+                                    color = AiTextMuted
+                                )
+                                Text(
+                                    text = product.category,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = AiText
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            }
+        }
+    }
+}
 @Composable
 fun ProductGridItem(product: Product, onAddToCart: () -> Unit) {
+    var showExpandedView by remember { mutableStateOf(false) }
+
+    if (showExpandedView) {
+        ExpandedProductModal(
+            product = product,
+            onDismiss = { showExpandedView = false }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(AiCard)
             .border(1.dp, AiSecondary.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
-            .padding(bottom = 8.dp),
+            .padding(bottom = 8.dp)
+            .clickable { showExpandedView = true },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
