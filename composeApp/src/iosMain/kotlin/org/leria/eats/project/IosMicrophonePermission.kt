@@ -10,6 +10,8 @@ import platform.Speech.SFSpeechRecognizer
 import platform.Speech.SFSpeechRecognizerAuthorizationStatus
 import platform.UIKit.UIApplication
 import platform.UIKit.UIApplicationOpenSettingsURLString
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_main_queue
 
 
 class IosPermissionManager : PermissionManager {
@@ -41,18 +43,28 @@ class IosPermissionManager : PermissionManager {
     }
 
     override fun askForPermission() {
-        // Step 1: Request microphone permission
-        AVAudioSession.sharedInstance().requestRecordPermission { micGranted ->
-            if (!micGranted) {
-                _status.value = PermissionStatus.DENIED
-                return@requestRecordPermission
-            }
-            // Step 2: Request speech recognition permission
-            SFSpeechRecognizer.requestAuthorization { speechStatus ->
-                _status.value = if (speechStatus == SFSpeechRecognizerAuthorizationStatus.SFSpeechRecognizerAuthorizationStatusAuthorized) {
-                    PermissionStatus.GRANTED
-                } else {
-                    PermissionStatus.DENIED
+        // Must run on the main thread — AVAudioSession and SFSpeechRecognizer
+        // both require main-thread access for permission requests on iOS.
+        dispatch_async(dispatch_get_main_queue()) {
+            // Step 1: Request microphone permission
+            AVAudioSession.sharedInstance().requestRecordPermission { micGranted ->
+                if (!micGranted) {
+                    dispatch_async(dispatch_get_main_queue()) {
+                        _status.value = PermissionStatus.DENIED
+                    }
+                    return@requestRecordPermission
+                }
+                // Step 2: Request speech recognition permission
+                SFSpeechRecognizer.requestAuthorization { speechStatus ->
+                    // Callback may arrive on a background queue — dispatch to main
+                    dispatch_async(dispatch_get_main_queue()) {
+                        _status.value =
+                            if (speechStatus == SFSpeechRecognizerAuthorizationStatus.SFSpeechRecognizerAuthorizationStatusAuthorized) {
+                                PermissionStatus.GRANTED
+                            } else {
+                                PermissionStatus.DENIED
+                            }
+                    }
                 }
             }
         }
