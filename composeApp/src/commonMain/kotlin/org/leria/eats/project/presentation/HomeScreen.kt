@@ -120,28 +120,29 @@ fun HomeScreen(
 // ─── Header AI ────────────────────────────────────────────────────────────────
 @Composable
 private fun AiHeader() {
-            Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(AiSurface)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AiDeepBg)
+            .padding(top = 8.dp, bottom = 4.dp),
+        contentAlignment = Alignment.CenterStart
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            KamelImage(
-                resource = asyncPainterResource("https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo%3Dpato.png"),
-                contentDescription = "Logo",
-                modifier = Modifier.size(80.dp),
-                contentScale = ContentScale.Fit,
-                onFailure = {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = AiPrimary, modifier = Modifier.size(24.dp))
-                }
-            )
-        }
+        KamelImage(
+            resource = asyncPainterResource("https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo%3Dpato.png"),
+            contentDescription = "Logo",
+            modifier = Modifier
+                .height(100.dp)
+                .widthIn(max = 240.dp),
+            contentScale = ContentScale.Fit,
+            onFailure = {
+                Icon(
+                    Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = AiPrimary,
+                    modifier = Modifier.size(56.dp)
+                )
+            }
+        )
     }
 }
 
