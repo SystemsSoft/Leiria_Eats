@@ -46,16 +46,17 @@ import io.kamel.image.asyncPainterResource
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.presentation.util.formatCurrency
+import org.leria.eats.project.theme.*
 
-// ─── Paleta KOMAAI ───────────────────────────────────────────────────────────
-private val RdDeepBg    = Color(0xFF061510)   // Deep forest black-green
-private val RdSurface   = Color(0xFF0A2218)   // Dark teal surface
-private val RdCard      = Color(0xFF0E2E20)   // Card teal
-private val RdPrimary   = Color(0xFFFFC107)   // KOMAAI Gold
-private val RdSecondary = Color(0xFF4ADE80)   // Modern lime-green
-private val RdAccent    = Color(0xFFFFD54F)   // Warm amber accent
-private val RdText      = Color(0xFFF0FDF4)   // Near-white green tint
-private val RdMuted     = Color(0xFF6EE7A0)   // Muted green
+// ─── Aliases locais → paleta central ─────────────────────────────────────────
+private val RdDeepBg    = KomaBg
+private val RdSurface   = KomaSurface
+private val RdCard      = KomaCard
+private val RdPrimary   = KomaGold
+private val RdSecondary = KomaBrandGreen
+private val RdAccent    = KomaGoldDark
+private val RdText      = KomaTextPrimary
+private val RdMuted     = KomaTextSec
 
 @Composable
 fun RestaurantDetailScreen(
@@ -94,7 +95,7 @@ fun RestaurantDetailScreen(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Brush.horizontalGradient(listOf(RdAccent, Color(0xFFE65100))))
+                        .background(Brush.horizontalGradient(listOf(RdAccent, KomaOrangeEnd)))
                         .clickable { showBackDialog = false; onBackAndClearCart() }
                         .padding(horizontal = 18.dp, vertical = 9.dp)
                 ) {
@@ -138,9 +139,7 @@ fun RestaurantDetailScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(listOf(RdSurface, RdDeepBg))
-                    )
+                    .background(RdSurface)
                     .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
                 Row(
@@ -178,7 +177,7 @@ fun RestaurantDetailScreen(
                                 color = RdMuted
                             )
                             Text(" · ", color = RdMuted, fontSize = 12.sp)
-                            Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB800), modifier = Modifier.size(12.dp))
+                            Icon(Icons.Default.Star, contentDescription = null, tint = KomaStarYellow, modifier = Modifier.size(12.dp))
                             Spacer(modifier = Modifier.width(2.dp))
                             Text(
                                 text = "${restaurant.rating}",
@@ -205,7 +204,7 @@ fun RestaurantDetailScreen(
                             .clip(RoundedCornerShape(20.dp))
                             .background(
                                 if (isSelected)
-                                    Brush.horizontalGradient(listOf(RdPrimary, Color(0xFFE65100)))
+                                    Brush.horizontalGradient(listOf(RdPrimary, KomaOrangeEnd))
                                 else
                                     Brush.horizontalGradient(listOf(RdCard, RdCard))
                             )
@@ -271,7 +270,7 @@ fun RestaurantDetailScreen(
                         .fillMaxWidth()
                         .height(60.dp)
                         .clip(RoundedCornerShape(18.dp))
-                        .background(Brush.horizontalGradient(listOf(RdPrimary, Color(0xFFE65100))))
+                        .background(Brush.horizontalGradient(listOf(RdPrimary, KomaOrangeEnd)))
                         .clickable { onViewCart() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -508,7 +507,7 @@ fun ProductItemWithCounter(
                                 ) { onAdd() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Add, null, tint = Color(0xFF061510), modifier = Modifier.size(15.dp))
+                            Icon(Icons.Default.Add, null, tint = KomaGoldOnDark, modifier = Modifier.size(15.dp))
                         }
                     }
                 } else {
@@ -524,7 +523,7 @@ fun ProductItemWithCounter(
                         modifier = Modifier
                             .scale(addScale)
                             .clip(RoundedCornerShape(50.dp))
-                            .background(Brush.linearGradient(listOf(RdPrimary, Color(0xFF84CC16))))
+                            .background(Brush.linearGradient(listOf(RdPrimary, KomaLimeGreen)))
                             .clickable(
                                 interactionSource = addSource,
                                 indication = null
@@ -539,12 +538,12 @@ fun ProductItemWithCounter(
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = null,
-                                tint = Color(0xFF061510),
+                                tint = KomaGoldOnDark,
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
                                 text = "Adicionar",
-                                color = Color(0xFF061510),
+                                color = KomaGoldOnDark,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
                             )

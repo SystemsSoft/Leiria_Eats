@@ -37,17 +37,18 @@ import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
 import org.leria.eats.project.presentation.util.formatCurrency
+import org.leria.eats.project.theme.*
 
-// ─── Paleta KOMAAI ────────────────────────────────────────────────────────────
-private val AiDeepBg       = Color(0xFF061510)   // Deep forest black-green
-private val AiSurface      = Color(0xFF0A2218)   // Dark teal surface
-private val AiCard         = Color(0xFF0E2E20)   // Card teal
-private val AiPrimary      = Color(0xFFFFC107)   // KOMAAI Gold
-private val AiSecondary    = Color(0xFF4ADE80)   // Modern lime-green
-private val AiAccent       = Color(0xFFFFD54F)   // Warm amber accent
-private val AiText         = Color(0xFFF0FDF4)   // Near-white green tint
-private val AiTextMuted    = Color(0xFF6EE7A0)   // Muted green
-private val AiBotBubble    = Color(0xFF0D2419)   // Bot bubble dark teal
+// ─── Aliases locais → paleta central ─────────────────────────────────────────
+private val AiDeepBg    = KomaBg
+private val AiSurface   = KomaSurface
+private val AiCard      = KomaCard
+private val AiPrimary   = KomaGold
+private val AiSecondary = KomaBrandGreen
+private val AiAccent    = KomaGoldDark
+private val AiText      = KomaTextPrimary
+private val AiTextMuted = KomaTextSec
+private val AiBotBubble = KomaMintLight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,11 +120,11 @@ fun HomeScreen(
 // ─── Header AI ────────────────────────────────────────────────────────────────
 @Composable
 private fun AiHeader() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(AiSurface, AiDeepBg)))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(AiSurface)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
@@ -177,11 +178,11 @@ private fun AiThinkingIndicator(modifier: Modifier = Modifier) {
     }
 }
 
-// ─── Paleta SMART ─────────────────────────────────────────────────────────────
-private val SmartGold       = Color(0xFFFFD700)
-private val SmartGoldDark   = Color(0xFFB8860B)
-private val SmartCardBg     = Color(0xFF132B1A)
-private val SmartBorder     = Color(0xFFFFD700)
+// ─── Aliases SMART → paleta central ──────────────────────────────────────────
+private val SmartGold       = KomaSmartGold
+private val SmartGoldDark   = KomaSmartGoldDark
+private val SmartCardBg     = KomaSmartCardBg
+private val SmartBorder     = KomaSmartGold
 
 // ─── Home: lista completa de restaurantes ─────────────────────────────────────
 @Composable
@@ -286,8 +287,7 @@ private fun SmartHighlightSection(
                     text = "⭐",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF061510),
-                    letterSpacing = 1.sp
+                    color = Color(0xFF5C3D00),                    letterSpacing = 1.sp
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
@@ -389,7 +389,7 @@ private fun SmartRestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
-                        Brush.verticalGradient(listOf(Color.Transparent, AiDeepBg.copy(alpha = 0.6f)))
+                        Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)))
                     )
             )
             // Badge SMART no canto superior direito
@@ -519,7 +519,7 @@ fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color.Transparent, AiDeepBg.copy(alpha = 0.45f))
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.3f))
                         )
                     )
             )
@@ -692,9 +692,9 @@ private fun ExpandedProductModal(
                                         Icon(
                                             imageVector = Icons.Default.Star,
                                             contentDescription = null,
-                                            tint = if (star <= fullStars) Color(0xFFFFB800)
+                            tint = if (star <= fullStars) Color(0xFFFFB800)
                                             else if (star == fullStars + 1 && hasHalf) Color(0xFFFFB800).copy(alpha = 0.5f)
-                                            else Color(0xFF444444),
+                                            else Color(0xFFD1D5DB),
                                             modifier = Modifier.size(14.dp)
                                         )
                                     }
@@ -712,8 +712,7 @@ private fun ExpandedProductModal(
                             fontWeight = FontWeight.Bold,
                             color = AiSecondary,
                             fontSize = 22.sp
-                        )
-                    }
+                        )                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -847,7 +846,7 @@ fun ProductGridItem(product: Product, onAddToCart: () -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, AiDeepBg.copy(alpha = 0.5f))))
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f))))
             )
         }
 
@@ -878,9 +877,9 @@ fun ProductGridItem(product: Product, onAddToCart: () -> Unit) {
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = null,
-                            tint = if (star <= fullStars) Color(0xFFFFB800)
-                                   else if (star == fullStars + 1 && hasHalf) Color(0xFFFFB800).copy(alpha = 0.5f)
-                                   else Color(0xFF444444),
+                        tint = if (star <= fullStars) Color(0xFFFFB800)
+                               else if (star == fullStars + 1 && hasHalf) Color(0xFFFFB800).copy(alpha = 0.5f)
+                               else Color(0xFFD1D5DB),
                             modifier = Modifier.size(9.dp)
                         )
                     }

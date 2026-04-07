@@ -22,12 +22,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.leria.eats.project.data.Order
 import org.leria.eats.project.presentation.util.formatCurrency
-// ─── Paleta KOMAAI ──────────────────────────────────────────────────────────
-private val FDeepBg = Color(0xFF061510)
-private val FCard   = Color(0xFF0E2E20)
-private val FGold   = Color(0xFFFFC107)
-private val FText   = Color(0xFFF0FDF4)
-private val FMuted  = Color(0xFF6EE7A0)
+import org.leria.eats.project.theme.*
+
+// ─── Aliases locais → paleta central ─────────────────────────────────────────
+private val FDeepBg = KomaBg
+private val FCard   = KomaCard
+private val FGold   = KomaGold
+private val FText   = KomaTextPrimary
+private val FMuted  = KomaTextSec
 @Composable
 fun FavoritesScreen(
     orders: List<Order>,

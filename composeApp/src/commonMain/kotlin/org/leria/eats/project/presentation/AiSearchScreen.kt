@@ -34,17 +34,18 @@ import kotlinx.coroutines.delay
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
+import org.leria.eats.project.theme.*
 
-// ─── Paleta (mesma do HomeScreen) ─────────────────────────────────────────────
-private val AiDeepBg    = Color(0xFF061510)
-private val AiSurface   = Color(0xFF0A2218)
-private val AiCard      = Color(0xFF0E2E20)
-private val AiPrimary   = Color(0xFFFFC107)
-private val AiSecondary = Color(0xFF4ADE80)
-private val AiAccent    = Color(0xFFFFD54F)
-private val AiText      = Color(0xFFF0FDF4)
-private val AiTextMuted = Color(0xFF6EE7A0)
-private val AiBotBubble = Color(0xFF0D2419)
+// ─── Aliases locais → paleta central ─────────────────────────────────────────
+private val AiDeepBg    = KomaBg
+private val AiSurface   = KomaSurface
+private val AiCard      = KomaCard
+private val AiPrimary   = KomaGold
+private val AiSecondary = KomaBrandGreen
+private val AiAccent    = KomaGoldDark
+private val AiText      = KomaTextPrimary
+private val AiTextMuted = KomaTextSec
+private val AiBotBubble = KomaMintLight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -151,7 +152,7 @@ fun AiSearchScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(AiSurface, AiDeepBg)))
+                    .background(AiSurface)
                     .padding(horizontal = 24.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -205,7 +206,7 @@ fun AiSearchScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(
-                                    Brush.horizontalGradient(listOf(AiPrimary, Color(0xFFE65100))),
+                                    Brush.horizontalGradient(listOf(AiPrimary, KomaOrangeEnd)),
                                     RoundedCornerShape(16.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -224,7 +225,7 @@ fun AiSearchScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(
-                                    Brush.horizontalGradient(listOf(AiSecondary, Color(0xFF15803D))),
+                                    Brush.horizontalGradient(listOf(AiSecondary, KomaGreenDark)),
                                     RoundedCornerShape(16.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -260,11 +261,7 @@ private fun AiHeroHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF0A2218), AiDeepBg)
-                )
-            )
+            .background(AiSurface)
             .padding(horizontal = 16.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -311,7 +308,7 @@ private fun AiHeroHeader(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(
-                                Brush.horizontalGradient(listOf(AiPrimary, Color(0xFFFFD54F)))
+                                Brush.horizontalGradient(listOf(AiPrimary, KomaGoldAccent))
                             )
                             .padding(horizontal = 7.dp, vertical = 2.dp)
                     ) {
@@ -319,7 +316,7 @@ private fun AiHeroHeader(
                             text = "IA",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF061510)
+                            color = KomaGoldOnDark
                         )
                     }
                 }

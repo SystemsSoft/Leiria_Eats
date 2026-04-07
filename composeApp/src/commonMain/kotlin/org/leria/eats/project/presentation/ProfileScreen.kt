@@ -34,14 +34,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.leria.eats.project.data.Address
 import org.leria.eats.project.data.UserProfile
+import org.leria.eats.project.theme.*
 
-// ─── Paleta KOMAAI ────────────────────────────────────────────────────────────
-private val PDeepBg  = Color(0xFF061510)
-private val PCard    = Color(0xFF0E2E20)
-private val PGold    = Color(0xFFFFC107)
-private val PGreen   = Color(0xFF4ADE80)
-private val PText    = Color(0xFFF0FDF4)
-private val PMuted   = Color(0xFF6EE7A0)
+// ─── Aliases locais → paleta central ─────────────────────────────────────────
+private val PDeepBg  = KomaBg
+private val PCard    = KomaCard
+private val PGold    = KomaGold
+private val PGreen   = KomaBrandGreen
+private val PText    = KomaTextPrimary
+private val PMuted   = KomaTextSec
 
 @Composable
 fun ProfileScreen(
@@ -263,14 +264,14 @@ fun ProfileScreen(
                 .padding(horizontal = 20.dp, vertical = 20.dp)
                 .height(54.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Brush.horizontalGradient(listOf(PGold, Color(0xFFE65100))))
+                .background(Brush.horizontalGradient(listOf(PGold, KomaOrangeEnd)))
                 .clickable { onSave(name, email, phone, addresses) },
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF061510), modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Check, contentDescription = null, tint = KomaGoldOnDark, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Guardar Perfil ✦", color = Color(0xFF061510), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text("Guardar Perfil ✦", color = KomaGoldOnDark, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
         }
     }
@@ -342,11 +343,11 @@ fun AddressItem(
                     modifier = Modifier
                         .size(30.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFF87171).copy(alpha = 0.1f))
+                        .background(KomaSoftRed.copy(alpha = 0.1f))
                         .clickable { onDelete(address) },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Delete, contentDescription = "Remover", tint = Color(0xFFF87171), modifier = Modifier.size(15.dp))
+                    Icon(Icons.Default.Delete, contentDescription = "Remover", tint = KomaSoftRed, modifier = Modifier.size(15.dp))
                 }
             }
         }
@@ -464,7 +465,7 @@ fun AddressEntryDialog(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Brush.horizontalGradient(listOf(PGold, Color(0xFFE65100))))
+                    .background(Brush.horizontalGradient(listOf(PGold, KomaOrangeEnd)))
                     .clickable {
                         onSave(Address(
                             name = name.ifEmpty { "Endereço Sem Nome" },
@@ -476,7 +477,7 @@ fun AddressEntryDialog(
                     }
                     .padding(horizontal = 18.dp, vertical = 9.dp)
             ) {
-                Text("Guardar", color = Color(0xFF061510), fontWeight = FontWeight.Bold)
+                Text("Guardar", color = KomaGoldOnDark, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {

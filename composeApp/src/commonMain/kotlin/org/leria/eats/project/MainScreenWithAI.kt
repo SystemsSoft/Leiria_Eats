@@ -42,12 +42,13 @@ import org.leria.eats.project.presentation.viewmodel.SearchViewModel
 import org.leria.eats.project.service.LocationService
 import org.leria.eats.project.voice.VoiceRecognizer
 import org.leria.eats.project.voice.TextToSpeechService
+import org.leria.eats.project.theme.*
 
-// ─── Paleta KOMAAI ────────────────────────────────────────────────────────────
-private val KomaDeepBg   = Color(0xFF061510)
-private val KomaGold     = Color(0xFFFFC107)
-private val KomaGreen    = Color(0xFF4ADE80)
-private val KomaMuted    = Color(0xFF6EE7A0)
+// ─── Aliases locais → paleta central ─────────────────────────────────────────
+private val KomaDeepBg = KomaBg
+private val KomaNavGold  = KomaGold
+private val KomaNavGreen = KomaBrandGreen
+private val KomaMuted    = KomaTextSec
 
 @Composable
 fun MainScreenWithAI(
@@ -250,10 +251,10 @@ fun MainScreenWithAI(
                                     width = 1.dp,
                                     brush = Brush.horizontalGradient(
                                         listOf(
-                                            KomaGold.copy(alpha = 0.0f),
-                                            KomaGold.copy(alpha = 0.35f),
-                                            KomaGreen.copy(alpha = 0.25f),
-                                            KomaGold.copy(alpha = 0.0f)
+                                            KomaNavGold.copy(alpha = 0.0f),
+                                            KomaNavGold.copy(alpha = 0.35f),
+                                            KomaNavGreen.copy(alpha = 0.25f),
+                                            KomaNavGold.copy(alpha = 0.0f)
                                         )
                                     ),
                                     shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
@@ -266,8 +267,9 @@ fun MainScreenWithAI(
                                 tonalElevation = 0.dp,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                val selectedColor = KomaGold
+                                val selectedColor = KomaNavGold
                                 val unselectedColor = KomaMuted.copy(alpha = 0.55f)
+                                val selectedIconOnBadge = KomaGoldOnDark
 
                                 // ── Início ────────────────────────────────────────
                                 NavigationBarItem(
@@ -282,7 +284,7 @@ fun MainScreenWithAI(
                                     selected = uiState.currentTab == MainTab.HOME,
                                     onClick = { viewModel.onTabSelected(MainTab.HOME) },
                                     colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = KomaDeepBg,
+                                        selectedIconColor = selectedIconOnBadge,
                                         selectedTextColor = selectedColor,
                                         indicatorColor = KomaGold,
                                         unselectedIconColor = unselectedColor,
@@ -303,7 +305,7 @@ fun MainScreenWithAI(
                                     selected = uiState.currentTab == MainTab.AI,
                                     onClick = { viewModel.onTabSelected(MainTab.AI) },
                                     colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = KomaDeepBg,
+                                        selectedIconColor = selectedIconOnBadge,
                                         selectedTextColor = selectedColor,
                                         indicatorColor = KomaGold,
                                         unselectedIconColor = unselectedColor,
@@ -325,7 +327,7 @@ fun MainScreenWithAI(
                                     selected = uiState.currentTab == MainTab.ORDERS,
                                     onClick = { viewModel.onTabSelected(MainTab.ORDERS) },
                                     colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = KomaDeepBg,
+                                        selectedIconColor = selectedIconOnBadge,
                                         selectedTextColor = selectedColor,
                                         indicatorColor = KomaGold,
                                         unselectedIconColor = unselectedColor,
@@ -346,7 +348,7 @@ fun MainScreenWithAI(
                                     selected = uiState.currentTab == MainTab.FAVORITES,
                                     onClick = { viewModel.onTabSelected(MainTab.FAVORITES) },
                                     colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = KomaDeepBg,
+                                        selectedIconColor = selectedIconOnBadge,
                                         selectedTextColor = selectedColor,
                                         indicatorColor = KomaGold,
                                         unselectedIconColor = unselectedColor,
@@ -367,7 +369,7 @@ fun MainScreenWithAI(
                                     selected = uiState.currentTab == MainTab.PROFILE,
                                     onClick = { viewModel.onTabSelected(MainTab.PROFILE) },
                                     colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = KomaDeepBg,
+                                        selectedIconColor = selectedIconOnBadge,
                                         selectedTextColor = selectedColor,
                                         indicatorColor = KomaGold,
                                         unselectedIconColor = unselectedColor,

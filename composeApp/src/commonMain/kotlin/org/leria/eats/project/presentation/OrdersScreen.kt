@@ -28,16 +28,17 @@ import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
 import org.leria.eats.project.data.Order
 import org.leria.eats.project.presentation.util.formatCurrency
+import org.leria.eats.project.theme.*
 
-// ─── Paleta KOMAAI ────────────────────────────────────────────────────────────
-private val ODeepBg    = Color(0xFF061510)
-private val OSurface   = Color(0xFF0A2218)
-private val OCard      = Color(0xFF0E2E20)
-private val OGold      = Color(0xFFFFC107)
-private val OGreen     = Color(0xFF4ADE80)
-private val OAmber     = Color(0xFFFFD54F)
-private val OText      = Color(0xFFF0FDF4)
-private val OMuted     = Color(0xFF6EE7A0)
+// ─── Aliases locais → paleta central ─────────────────────────────────────────
+private val ODeepBg    = KomaBg
+private val OSurface   = KomaSurface
+private val OCard      = KomaCard
+private val OGold      = KomaGold
+private val OGreen     = KomaBrandGreen
+private val OAmber     = KomaGoldDark
+private val OText      = KomaTextPrimary
+private val OMuted     = KomaTextSec
 
 @Composable
 fun OrdersScreen(
@@ -396,7 +397,7 @@ fun OrderDetailView(
                                 .clip(RoundedCornerShape(14.dp))
                                 .background(
                                     Brush.horizontalGradient(
-                                        listOf(OGreen, Color(0xFF22C55E))
+                                        listOf(OGreen, KomaStatusEntrega)
                                     )
                                 )
                                 .clickable { onMarkDelivered(order.id) },
@@ -406,7 +407,7 @@ fun OrderDetailView(
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
                                     contentDescription = null,
-                                    tint = Color(0xFF061510),
+                                    tint = KomaGoldOnDark,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -414,7 +415,7 @@ fun OrderDetailView(
                                     text = "Confirmar Entrega",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF061510)
+                                    color = KomaGoldOnDark
                                 )
                             }
                         }
@@ -586,13 +587,13 @@ private fun OrderItemRatingRow(
 @Composable
 private fun getStatusColor(status: String): Color {
     return when (status) {
-        "Pendente"              -> Color(0xFFFFC107)
-        "Em Preparo"            -> Color(0xFF60A5FA)
-        "Saiu para Entrega"     -> Color(0xFF4ADE80)
-        "Entregue"              -> Color(0xFFFFD54F)
-        "Pronto para Recolha"   -> Color(0xFF4ADE80)
-        "Cancelado"             -> Color(0xFFF87171)
-        else                    -> Color(0xFF6EE7A0)
+        "Pendente"              -> KomaStatusPendente
+        "Em Preparo"            -> KomaStatusPreparo
+        "Saiu para Entrega"     -> KomaStatusEntrega
+        "Entregue"              -> KomaStatusEntregue
+        "Pronto para Recolha"   -> KomaStatusRecolha
+        "Cancelado"             -> KomaStatusCancelado
+        else                    -> KomaStatusDefault
     }
 }
 

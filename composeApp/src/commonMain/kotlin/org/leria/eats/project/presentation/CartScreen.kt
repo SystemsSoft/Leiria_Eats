@@ -62,16 +62,17 @@ import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.data.SavedPaymentMethod
 import org.leria.eats.project.presentation.util.formatCurrency
+import org.leria.eats.project.theme.*
 
-// ─── Paleta KOMAAI (shared) ───────────────────────────────────────────────────
-private val CartDeepBg    = Color(0xFF061510)   // Deep forest black-green
-private val CartSurface   = Color(0xFF0A2218)   // Dark teal surface
-private val CartCard      = Color(0xFF0E2E20)   // Card teal
-private val CartPrimary   = Color(0xFFFFC107)   // KOMAAI Gold
-private val CartSecondary = Color(0xFF4ADE80)   // Modern lime-green
-private val CartAccent    = Color(0xFFFFD54F)   // Warm amber accent
-private val CartText      = Color(0xFFF0FDF4)   // Near-white green tint
-private val CartMuted     = Color(0xFF6EE7A0)   // Muted green
+// ─── Aliases locais → paleta central ─────────────────────────────────────────
+private val CartDeepBg    = KomaBg
+private val CartSurface   = KomaSurface
+private val CartCard      = KomaCard
+private val CartPrimary   = KomaGold
+private val CartSecondary = KomaBrandGreen
+private val CartAccent    = KomaGoldDark
+private val CartText      = KomaTextPrimary
+private val CartMuted     = KomaTextSec
 
 @Composable
 fun CartScreen(
@@ -226,7 +227,7 @@ fun CartScreen(
                                 onClick = onGoToHome,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = CartPrimary,
-                                    contentColor = Color(0xFF061510)
+                                    contentColor = KomaGoldOnDark
                                 ),
                                 shape = RoundedCornerShape(14.dp),
                                 modifier = Modifier.height(48.dp)
@@ -272,7 +273,7 @@ fun CartScreen(
                     .clip(RoundedCornerShape(16.dp))
                     .background(
                         Brush.horizontalGradient(
-                            listOf(CartPrimary, Color(0xFFE65100))
+                            listOf(CartPrimary, KomaOrangeEnd)
                         )
                     )
                     .clickable { showServiceFeeSheet = true }
@@ -376,9 +377,9 @@ fun CartItemRow(product: Product, onRemove: () -> Unit, onClick: () -> Unit) {
                             Icon(
                                 imageVector = Icons.Default.Star,
                                 contentDescription = null,
-                                tint = if (star <= fullStars) Color(0xFFFFB800)
-                                       else if (star == fullStars + 1 && hasHalf) Color(0xFFFFB800).copy(alpha = 0.5f)
-                                       else Color(0xFF444444),
+                                tint = if (star <= fullStars) KomaStarYellow
+                                       else if (star == fullStars + 1 && hasHalf) KomaStarYellow.copy(alpha = 0.5f)
+                                       else KomaTextHint,
                                 modifier = Modifier.size(10.dp)
                             )
                         }
@@ -723,12 +724,12 @@ private fun stripEmojisForTts(text: String): String =
         .replace(Regex("\\s{2,}"), " ")
         .trim()
 
-private val CartAiBotBubble = Color(0xFF0D2419)
-private val CartAiPrimary   = Color(0xFFFFC107)
-private val CartAiSecondary = Color(0xFF4ADE80)
-private val CartAiText      = Color(0xFFF0FDF4)
-private val CartAiMuted     = Color(0xFF6EE7A0)
-private val CartAiCard2     = Color(0xFF0E2E20)
+private val CartAiBotBubble = KomaMintLight
+private val CartAiPrimary   = KomaGold
+private val CartAiSecondary = KomaBrandGreen
+private val CartAiText      = KomaTextPrimary
+private val CartAiMuted     = KomaTextSec
+private val CartAiCard2     = KomaCard
 
 @Composable
 fun CartAiChatBubble(
@@ -767,7 +768,7 @@ fun CartAiChatBubble(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
                         .background(
-                            Brush.horizontalGradient(listOf(CartPrimary, Color(0xFFE65100)))
+                            Brush.horizontalGradient(listOf(CartPrimary, KomaOrangeEnd))
                         )
                         .clickable {
                             showClearCartDialog = false
@@ -1042,7 +1043,7 @@ fun SavePaymentMethodSheet(
                         .clip(RoundedCornerShape(14.dp))
                         .background(
                             Brush.horizontalGradient(
-                                listOf(CartPrimary, Color(0xFFE65100))
+                                listOf(CartPrimary, KomaOrangeEnd)
                             )
                         )
                         .clickable { onConfirm(true) },
@@ -1143,7 +1144,7 @@ fun PaymentConfirmBottomSheet(
                         .clip(RoundedCornerShape(16.dp))
                         .background(
                             Brush.horizontalGradient(
-                                listOf(Color(0xFF0E2E20), Color(0xFF0A2218))
+                                listOf(KomaCard, KomaBg)
                             )
                         )
                         .border(
@@ -1225,7 +1226,7 @@ fun PaymentConfirmBottomSheet(
                         .height(54.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(
-                            Brush.horizontalGradient(listOf(CartPrimary, Color(0xFFE65100)))
+                            Brush.horizontalGradient(listOf(CartPrimary, KomaOrangeEnd))
                         )
                         .clickable { onUseSavedCard(primaryCard) },
                     contentAlignment = Alignment.Center
@@ -1532,7 +1533,7 @@ fun ServiceFeeBottomSheet(
                         .border(
                             1.dp,
                             if (selectedAddress != null) CartPrimary.copy(alpha = 0.3f)
-                            else Color(0xFFF87171).copy(alpha = 0.4f),
+                            else KomaSoftRed.copy(alpha = 0.4f),
                             RoundedCornerShape(14.dp)
                         )
                         .clickable { if (!isResolvingAddress) showAddressPicker = true }
@@ -1698,13 +1699,13 @@ fun ServiceFeeBottomSheet(
                             when {
                                 isPickup -> Text("Grátis", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = CartSecondary)
                                 deliveryFeeLoading -> CircularProgressIndicator(color = CartPrimary, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                                deliveryFeeError != null -> Text("⚠ Fora da área", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFF87171))
+                                deliveryFeeError != null -> Text("⚠ Fora da área", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = KomaSoftRed)
                                 deliveryFee != null -> Text(formatCurrency(deliveryFee!!), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = CartPrimary)
                                 else -> Text("—", fontSize = 14.sp, color = CartMuted)
                             }
                         }
                         if (!isPickup && deliveryFeeError != null) {
-                            Text(text = deliveryFeeError!!, fontSize = 11.sp, color = Color(0xFFF87171).copy(alpha = 0.85f), lineHeight = 15.sp)
+                            Text(text = deliveryFeeError!!, fontSize = 11.sp, color = KomaSoftRed.copy(alpha = 0.85f), lineHeight = 15.sp)
                         }
                         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(CartPrimary.copy(alpha = 0.12f)))
                         Row(
@@ -1745,7 +1746,7 @@ fun ServiceFeeBottomSheet(
                         .clip(RoundedCornerShape(14.dp))
                         .background(
                             if (canConfirm)
-                                Brush.horizontalGradient(listOf(CartPrimary, Color(0xFFE65100)))
+                                Brush.horizontalGradient(listOf(CartPrimary, KomaOrangeEnd))
                             else
                                 Brush.horizontalGradient(listOf(CartMuted.copy(alpha = 0.25f), CartMuted.copy(alpha = 0.15f)))
                         )
