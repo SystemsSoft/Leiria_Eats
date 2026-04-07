@@ -11,6 +11,9 @@
      <key>NSLocationWhenInUseUsageDescription</key>
      <string>Precisamos da sua localização para preencher o endereço de entrega.</string>
 
+     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+     <string>Precisamos da sua localização para preencher o endereço de entrega.</string>
+
     <key>NSMicrophoneUsageDescription</key>
     <string>Precisamos de acesso ao microfone para que você possa fazer pedidos por voz com a IA.</string>
 </dict>

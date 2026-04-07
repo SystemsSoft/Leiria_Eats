@@ -3,34 +3,39 @@ package org.leria.eats.project.voice
 import platform.AVFAudio.AVSpeechSynthesizer
 import platform.AVFAudio.AVSpeechUtterance
 import platform.AVFAudio.AVSpeechSynthesisVoice
+import platform.AVFAudio.AVSpeechBoundary
 
 class IosTextToSpeechService : TextToSpeechService {
 
     private val synthesizer = AVSpeechSynthesizer()
+    // AVSpeechBoundaryImmediate = 0 via CEnum.byValue
+    private val immediate = AVSpeechBoundary.byValue(0)
+
+    private fun stopSynthesizer() {
+        synthesizer.stopSpeakingAtBoundary(immediate)
+    }
 
     override fun speak(text: String) {
         if (synthesizer.isSpeaking()) {
-            synthesizer.stopSpeakingAtBoundary(0L) // 0 = AVSpeechBoundaryImmediate
+            stopSynthesizer()
         }
         val utterance = AVSpeechUtterance(string = text)
 
-        // Try to get a Portuguese (Portugal) female voice first
         utterance.voice = AVSpeechSynthesisVoice.voiceWithLanguage("pt-PT")
             ?: AVSpeechSynthesisVoice.voiceWithLanguage("pt-BR")
 
-        // Configure for animated and spontaneous voice
-        utterance.rate = 0.55f // Slightly faster for spontaneous feel (range: 0.0-1.0, default: 0.5)
-        utterance.pitchMultiplier = 1.15f // Higher pitch for more animated feminine voice (default: 1.0)
-        utterance.volume = 1.0f // Full volume for clear delivery
+        utterance.rate = 0.55f
+        utterance.pitchMultiplier = 1.15f
+        utterance.volume = 1.0f
 
         synthesizer.speakUtterance(utterance)
     }
 
     override fun stop() {
-        synthesizer.stopSpeakingAtBoundary(0L)
+        stopSynthesizer()
     }
 
     override fun shutdown() {
-        synthesizer.stopSpeakingAtBoundary(0L)
+        stopSynthesizer()
     }
 }

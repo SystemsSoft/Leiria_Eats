@@ -38,6 +38,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import org.leria.eats.project.voice.TextToSpeechService
 import androidx.compose.ui.Alignment
@@ -1289,6 +1291,29 @@ fun ServiceFeeBottomSheet(
     var selectedDeliveryType by remember { mutableStateOf("delivery") }
     val isPickup = selectedDeliveryType == "pickup"
 
+    // Pending map coordinates waiting for geocoding
+    var pendingMapCoords by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var isResolvingAddress by remember { mutableStateOf(false) }
+
+    // Resolve address from coordinates off the main thread
+    LaunchedEffect(pendingMapCoords) {
+        val coords = pendingMapCoords ?: return@LaunchedEffect
+        isResolvingAddress = true
+        val addressStr = withContext(Dispatchers.Default) {
+            onGetAddressFromMap(coords.first, coords.second)
+        }
+        if (addressStr != null) {
+            selectedAddress = Address(
+                name = "Localização personalizada",
+                address = addressStr,
+                latitude = coords.first,
+                longitude = coords.second
+            )
+        }
+        isResolvingAddress = false
+        pendingMapCoords = null
+    }
+
     // Delivery fee state
     var deliveryFee by remember { mutableStateOf<Double?>(null) }
     var deliveryFeeLoading by remember { mutableStateOf(false) }
@@ -1330,15 +1355,9 @@ fun ServiceFeeBottomSheet(
         MapDialog(
             onDismiss = { showMapDialog = false },
             onLocationSelected = { lat, long ->
-                val addressStr = onGetAddressFromMap(lat, long)
-                if (addressStr != null) {
-                    selectedAddress = Address(
-                        name = "Localização personalizada",
-                        address = addressStr,
-                        latitude = lat,
-                        longitude = long
-                    )
-                }
+                // Store coordinates; LaunchedEffect will resolve the address
+                // off the main thread (avoids deadlock on iOS with CLGeocoder).
+                pendingMapCoords = Pair(lat, long)
                 showMapDialog = false
                 showAddressPicker = false
             }
@@ -1513,10 +1532,25 @@ fun ServiceFeeBottomSheet(
                             else Color(0xFFF87171).copy(alpha = 0.4f),
                             RoundedCornerShape(14.dp)
                         )
-                        .clickable { showAddressPicker = true }
+                        .clickable { if (!isResolvingAddress) showAddressPicker = true }
                         .padding(14.dp)
                 ) {
-                    if (selectedAddress != null) {
+                    if (isResolvingAddress) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = CartPrimary
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "A obter endereço...",
+                                fontSize = 13.sp,
+                                color = CartMuted,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    } else if (selectedAddress != null) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier

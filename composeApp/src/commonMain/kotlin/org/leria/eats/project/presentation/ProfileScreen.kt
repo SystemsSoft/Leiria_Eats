@@ -66,14 +66,23 @@ fun ProfileScreen(
         if (userProfile.addresses.isNotEmpty()) addresses = userProfile.addresses
     }
 
+    var pendingMapCoords by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    LaunchedEffect(pendingMapCoords) {
+        val coords = pendingMapCoords ?: return@LaunchedEffect
+        val selectedAddress = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            onGetAddressFromMap(coords.first, coords.second)
+        }
+        if (selectedAddress != null) {
+            addresses = addresses + Address("Novo Endereço do Mapa", selectedAddress, latitude = coords.first, longitude = coords.second)
+        }
+        pendingMapCoords = null
+    }
+
     if (showMapDialog) {
         MapDialog(
             onDismiss = { showMapDialog = false },
             onLocationSelected = { lat, long ->
-                val selectedAddress = onGetAddressFromMap(lat, long)
-                if (selectedAddress != null) {
-                    addresses = addresses + Address("Novo Endereço do Mapa", selectedAddress, latitude = lat, longitude = long)
-                }
+                pendingMapCoords = Pair(lat, long)
                 showMapDialog = false
             }
         )
@@ -361,16 +370,27 @@ fun AddressEntryDialog(
     var isLocating by remember { mutableStateOf(false) }
     var showMapDialog by remember { mutableStateOf(false) }
 
+    var pendingMapCoords by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    LaunchedEffect(pendingMapCoords) {
+        val coords = pendingMapCoords ?: return@LaunchedEffect
+        val resolved = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            onGetAddressFromMap(coords.first, coords.second)
+        }
+        if (resolved != null) {
+            addressValue = resolved
+            lat = coords.first
+            lng = coords.second
+        }
+        pendingMapCoords = null
+    }
+
+    // iOS: MapDialog uses a native UIViewController presented on top of everything,
+    // so it works correctly even when called from inside an AlertDialog.
     if (showMapDialog) {
         MapDialog(
             onDismiss = { showMapDialog = false },
             onLocationSelected = { mapLat, mapLong ->
-                val selectedAddress = onGetAddressFromMap(mapLat, mapLong)
-                if (selectedAddress != null) {
-                    addressValue = selectedAddress
-                    lat = mapLat
-                    lng = mapLong
-                }
+                pendingMapCoords = Pair(mapLat, mapLong)
                 showMapDialog = false
             }
         )
@@ -424,7 +444,7 @@ fun AddressEntryDialog(
                                     Icon(Icons.Default.Home, contentDescription = "Localização atual", tint = PGold, modifier = Modifier.size(16.dp))
                             }
                             Spacer(modifier = Modifier.width(4.dp))
-                            Box(
+                             Box(
                                 modifier = Modifier
                                     .size(32.dp)
                                     .clip(CircleShape)

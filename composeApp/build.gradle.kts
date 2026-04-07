@@ -30,7 +30,7 @@ kotlin {
             implementation("androidx.compose.ui:ui")
 
             implementation("io.ktor:ktor-client-okhttp:2.3.7")
-            implementation("io.insert-koin:koin-android:3.5.3")
+            implementation("io.insert-koin:koin-android:4.1.0")
 
             implementation("com.google.android.gms:play-services-location:21.0.1")
             implementation("com.google.maps.android:maps-compose:2.11.4")
@@ -51,6 +51,7 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation("org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.4")
             implementation(compose.materialIconsExtended)
 
             implementation("media.kamel:kamel-image:0.9.4")
@@ -58,9 +59,9 @@ kotlin {
             implementation(libs.androidx.datastore.preferences.core)
 
             // Koin Core (Injeção de Dependência)
-            implementation("io.insert-koin:koin-core:3.5.3")
-            implementation("io.insert-koin:koin-compose:1.1.2")
-            implementation("io.insert-koin:koin-compose-viewmodel:4.0.0")
+            implementation("io.insert-koin:koin-core:4.1.0")
+            implementation("io.insert-koin:koin-compose:4.1.0")
+            implementation("io.insert-koin:koin-compose-viewmodel:4.1.0")
 
             // Ktor Core (Rede)
             implementation("io.ktor:ktor-client-core:2.3.7")

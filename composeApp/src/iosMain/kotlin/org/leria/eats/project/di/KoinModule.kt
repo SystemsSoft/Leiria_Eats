@@ -12,10 +12,7 @@ import org.leria.eats.project.voice.VoiceRecognizer
 
 actual val platformModule = module {
     single<PermissionManager> { IosPermissionManager() }
-
-    val iosModule = module {
-        single<LocationService> { IosLocationService() } }
-
+    single<LocationService> { IosLocationService() }
     single<VoiceRecognizer> { IosVoiceRecognizer() }
 
     single<TextToSpeechService> { IosTextToSpeechService() }
