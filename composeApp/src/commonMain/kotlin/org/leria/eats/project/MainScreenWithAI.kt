@@ -10,6 +10,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.EaseInOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -25,8 +26,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -119,6 +124,21 @@ fun MainScreenWithAI(
 
     Box(modifier = Modifier.fillMaxSize()) {
         var webViewLoading by remember { mutableStateOf(false) }
+
+        // ── Controlo de visibilidade da bottom bar (comportamento LinkedIn) ───
+        var bottomBarVisible by remember { mutableStateOf(true) }
+
+        LaunchedEffect(uiState.currentTab) { bottomBarVisible = true }
+
+        val nestedScrollConnection = remember {
+            object : NestedScrollConnection {
+                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                    if (available.y < -5f) bottomBarVisible = false
+                    else if (available.y > 5f) bottomBarVisible = true
+                    return Offset.Zero
+                }
+            }
+        }
 
         AnimatedVisibility(
             visible = uiState.checkoutUrl != null,
@@ -239,9 +259,15 @@ fun MainScreenWithAI(
                     val showBottomBar = !(uiState.currentTab == MainTab.HOME && uiState.selectedRestaurant != null)
                                         && uiState.currentTab != MainTab.CART
                     AnimatedVisibility(
-                        visible = showBottomBar,
-                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                        visible = showBottomBar && bottomBarVisible,
+                        enter = slideInVertically(
+                            animationSpec = tween(durationMillis = 400, easing = EaseInOut),
+                            initialOffsetY = { it }
+                        ) + fadeIn(animationSpec = tween(durationMillis = 400, easing = EaseInOut)),
+                        exit = slideOutVertically(
+                            animationSpec = tween(durationMillis = 350, easing = EaseInOut),
+                            targetOffsetY = { it }
+                        ) + fadeOut(animationSpec = tween(durationMillis = 350, easing = EaseInOut))
                     ) {
                         Box(
                             modifier = Modifier
@@ -385,6 +411,7 @@ fun MainScreenWithAI(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
+                        .nestedScroll(nestedScrollConnection)
                 ) {
                     // Animated content transition between tabs
                     AnimatedContent(
