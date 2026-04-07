@@ -32,10 +32,9 @@ kotlin {
             implementation("io.ktor:ktor-client-okhttp:2.3.7")
             implementation("io.insert-koin:koin-android:4.1.0")
 
+            // Google Maps removido — mapa unificado via Leaflet/OpenStreetMap (WebView)
+            // play-services-location mantido para GPS (FusedLocationProvider)
             implementation("com.google.android.gms:play-services-location:21.0.1")
-            implementation("com.google.maps.android:maps-compose:2.11.4")
-            implementation("com.google.android.gms:play-services-maps:18.2.0")
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.0")
         }
 
         iosMain.dependencies {
