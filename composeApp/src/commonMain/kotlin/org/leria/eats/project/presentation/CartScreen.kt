@@ -15,6 +15,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -1375,6 +1377,7 @@ fun ServiceFeeBottomSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp)
                     .padding(bottom = 48.dp, top = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -1738,7 +1741,7 @@ fun ServiceFeeBottomSheet(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp)
+                        .heightIn(min = 56.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(
                             if (canConfirm)
@@ -1749,10 +1752,15 @@ fun ServiceFeeBottomSheet(
                         .then(
                             if (canConfirm) Modifier.clickable { onConfirm(confirmAddress, effectiveDeliveryFee, serviceFee, selectedDeliveryType) }
                             else Modifier
-                        ),
+                        )
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = null,
@@ -1760,12 +1768,24 @@ fun ServiceFeeBottomSheet(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Confirmar pedido · ${formatCurrency(grandTotal)}",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (canConfirm) Color.White else CartMuted
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "Confirmar pedido",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (canConfirm) Color.White else CartMuted,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = formatCurrency(grandTotal),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (canConfirm) Color.White.copy(alpha = 0.85f) else CartMuted.copy(alpha = 0.7f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
 
