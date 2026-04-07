@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.Color
 
 // ── Backgrounds ───────────────────────────────────────────────────────────────
 val KomaBg          = Color(0xFFF0F1F3)  // Fundo principal — cinza suave
-val KomaSurface     = Color(0xFFFFFFFF)  // Superfície branca (cards, sheets, modais)
+val KomaSurface     = Color(0x46E8E8E8)  // Superfície branca (cards, sheets, modais)
 val KomaCard        = Color(0xFFF3F4F6)  // Cards secundários / campos de input
 
 // ── Primária: Amarelo/Ouro ─────────────────────────────────────────────────────
