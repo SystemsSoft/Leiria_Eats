@@ -1,16 +1,30 @@
 package org.leria.eats.project.presentation.components
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.cValue
+import platform.CoreGraphics.CGRect
+import platform.Foundation.NSURLRequest
 import platform.Foundation.NSURL
+import platform.UIKit.NSLayoutConstraint
 import platform.UIKit.UIApplication
+import platform.UIKit.UIColor
+import platform.UIKit.UIModalPresentationFullScreen
+import platform.UIKit.UIViewController
+import platform.WebKit.WKNavigationAction
+import platform.WebKit.WKNavigationActionPolicy
+import platform.WebKit.WKNavigationDelegateProtocol
+import platform.WebKit.WKWebView
+import platform.WebKit.WKWebViewConfiguration
+import platform.WebKit.WKUserContentController
+import platform.WebKit.WKScriptMessage
+import platform.WebKit.WKScriptMessageHandlerProtocol
+import platform.darwin.NSObject
 
+@OptIn(ExperimentalForeignApi::class)
 @Composable
 actual fun WebView(
     modifier: Modifier,
@@ -19,32 +33,102 @@ actual fun WebView(
     onCancel: () -> Unit,
     onLoadingChanged: (Boolean) -> Unit
 ) {
-    // Simple fallback for iOS: open checkout URL in external browser (Safari)
-    Column(
-        modifier = modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("O pagamento será aberto no navegador externo.", color = MaterialTheme.colorScheme.onBackground)
-        Spacer(modifier = Modifier.height(12.dp))
-        Button(onClick = {
-            val nsUrl = NSURL.URLWithString(url)
-            if (nsUrl != null) {
-                UIApplication.sharedApplication.openURL(nsUrl)
-                // We can't extract order id here, so we simply leave it to the web flow.
-                onLoadingChanged(true)
-            }
-        }) {
-            Text("Abrir pagamento")
+    val onSuccessRef = rememberUpdatedState(onSuccess)
+    val onCancelRef  = rememberUpdatedState(onCancel)
+    val onLoadRef    = rememberUpdatedState(onLoadingChanged)
+
+    DisposableEffect(url) {
+        val userContent = WKUserContentController()
+        val config      = WKWebViewConfiguration()
+        config.userContentController = userContent
+
+        val webView = WKWebView(frame = cValue<CGRect>(), configuration = config).apply {
+            backgroundColor = UIColor.blackColor
+            opaque          = false
+            scrollView.bounces = false
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        // WKScriptMessageHandler — receives messages posted by JS running in the page.
+        // We inject a small script via evaluateJavaScript after each page load to post
+        // "success:<orderId>" or "cancel" based on the URL.
+        val messageHandler = object : NSObject(), WKScriptMessageHandlerProtocol {
+            override fun userContentController(
+                userContentController: WKUserContentController,
+                didReceiveScriptMessage: WKScriptMessage
+            ) {
+                val msg = didReceiveScriptMessage.body as? String ?: return
+                when {
+                    msg.startsWith("success") -> {
+                        val orderId = msg.substringAfter("success:", "")
+                        onSuccessRef.value(orderId)
+                    }
+                    msg == "cancel" -> onCancelRef.value()
+                }
+            }
+        }
+        userContent.addScriptMessageHandler(messageHandler, name = "checkoutBridge")
 
-        Button(onClick = {
-            onCancel()
-        }) {
-            Text("Cancelar")
+        // Navigation delegate — intercept redirect URLs before they load
+        val navDelegate = object : NSObject(), WKNavigationDelegateProtocol {
+            @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+            override fun webView(
+                webView: WKWebView,
+                decidePolicyForNavigationAction: WKNavigationAction,
+                decisionHandler: (WKNavigationActionPolicy) -> Unit
+            ) {
+                val navUrl = decidePolicyForNavigationAction.request.URL?.absoluteString ?: ""
+                when {
+                    navUrl.contains("success", ignoreCase = true) -> {
+                        val orderId = navUrl.substringAfter("order_id=", "").substringBefore("&")
+                        onSuccessRef.value(orderId)
+                        decisionHandler(WKNavigationActionPolicy.WKNavigationActionPolicyCancel)
+                    }
+                    navUrl.contains("cancel", ignoreCase = true) -> {
+                        onCancelRef.value()
+                        decisionHandler(WKNavigationActionPolicy.WKNavigationActionPolicyCancel)
+                    }
+                    else -> decisionHandler(WKNavigationActionPolicy.WKNavigationActionPolicyAllow)
+                }
+            }
+        }
+        webView.navigationDelegate = navDelegate
+
+        // Host inside a full-screen UIViewController
+        val vc = UIViewController()
+        vc.modalPresentationStyle = UIModalPresentationFullScreen
+        vc.view.backgroundColor  = UIColor.blackColor
+
+        webView.translatesAutoresizingMaskIntoConstraints = false
+        vc.view.addSubview(webView)
+
+        NSLayoutConstraint.activateConstraints(listOf(
+            webView.topAnchor.constraintEqualToAnchor(vc.view.topAnchor),
+            webView.bottomAnchor.constraintEqualToAnchor(vc.view.bottomAnchor),
+            webView.leadingAnchor.constraintEqualToAnchor(vc.view.leadingAnchor),
+            webView.trailingAnchor.constraintEqualToAnchor(vc.view.trailingAnchor)
+        ))
+
+        // Load checkout URL
+        NSURL.URLWithString(url)?.let { nsUrl ->
+            onLoadRef.value(true)
+            webView.loadRequest(NSURLRequest(uRL = nsUrl))
+        }
+
+        // Present over Compose UI
+        val rootVc    = UIApplication.sharedApplication.keyWindow?.rootViewController
+        val presenter = rootVc?.presentedViewController ?: rootVc
+        presenter?.presentViewController(vc, animated = true, completion = null)
+
+        // Keep strong refs alive for the lifetime of this DisposableEffect.
+        // WKWebView holds only weak refs to navigationDelegate and messageHandlers,
+        // so we capture them here to prevent premature deallocation.
+        val keepAlive = listOf(messageHandler, navDelegate)
+
+        onDispose {
+            onLoadRef.value(false)
+            vc.dismissViewControllerAnimated(true, completion = null)
+            // keepAlive stays in scope until onDispose runs, holding refs
+            keepAlive.size // no-op reference to prevent compiler from optimising away
         }
     }
 }
-
