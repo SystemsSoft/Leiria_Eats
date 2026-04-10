@@ -13,7 +13,7 @@ val KomaSurface     = Color(0x46E8E8E8)  // Superfície branca (cards, sheets, m
 val KomaCard        = Color(0xFFFFFFFF)  // Cards secundários / campos de input
 
 // ── Primária: Amarelo/Ouro ─────────────────────────────────────────────────────
-val KomaGold        = Color(0xFFFFC107)  // CTA principal — botões, badges, FABs
+val KomaGold        = Color(0xFFD7A408)  // CTA principal — botões, badges, FABs
 val KomaGoldDark    = Color(0xFFE6A800)  // Pressed / gradiente escuro do ouro
 val KomaGoldOnDark  = Color(0xFF5C3D00)  // Texto/ícone escuro sobre fundo dourado
 
