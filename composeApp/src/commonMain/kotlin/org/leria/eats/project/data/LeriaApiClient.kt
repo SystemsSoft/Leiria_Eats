@@ -34,7 +34,7 @@ class LeriaApiClient {
         }
     }
 
-    private val baseUrl = "https://api.inovacloud.app/"
+    private val baseUrl = "https://api.inovacloud.app"
 
     suspend fun searchRestaurants(text: String): SearchResponse {
         val response = client.post("$baseUrl/search") {
