@@ -62,7 +62,7 @@ class SearchViewModel(
                     _uiState.update { it.copy(allRestaurants = response.restaurantResults) }
                 }
             } catch (e: Exception) {
-                // falha silenciosa — a lista ficará vazia até a próxima tentativa
+                e.printStackTrace()
             }
         }
     }
@@ -422,7 +422,7 @@ class SearchViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            aiReply = response.reply,
+                            aiReply = response.reply?: "",
                             textInput = "",
                             lastSearchQuery = resolvedQuery,
                             pendingRestaurantResults = response.restaurantResults,
@@ -445,7 +445,7 @@ class SearchViewModel(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            aiReply = resolvedReply,
+                            aiReply = resolvedReply?: "",
                             restaurantResults = response.restaurantResults,
                             productResults = response.productResults,
                             textInput = "",

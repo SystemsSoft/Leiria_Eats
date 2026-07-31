@@ -41,8 +41,8 @@ data class Restaurant(
 
 @Serializable
 data class SearchResponse(
-    val reply: String,
-    val intent: String,
+    val reply: String? = null,
+    val intent: String? = null,
     val restaurantResults: List<Restaurant> = emptyList(),
     val productResults: List<Product> = emptyList()
 )
