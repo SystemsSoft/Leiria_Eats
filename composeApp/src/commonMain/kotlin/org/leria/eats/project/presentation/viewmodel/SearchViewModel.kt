@@ -1067,7 +1067,7 @@ class SearchViewModel(
                     val order = updatedOrders.find { it.id == orderId.toString() }
 
                     if (order != null) {
-                        val successStatuses = listOf("Em Preparo", "Confirmado", "Pago", "Saiu para Entrega", "Entregue")
+                        val successStatuses = listOf("Em Preparo", "Confirmado", "Pago", "estafeta chegou ao seu endereco", "Entregue")
                         val failureStatuses = listOf("Falhou", "Cancelado", "Recusado")
 
                         when {

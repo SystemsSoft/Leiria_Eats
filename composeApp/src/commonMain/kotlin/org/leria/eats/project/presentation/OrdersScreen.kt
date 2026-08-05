@@ -388,7 +388,7 @@ fun OrderDetailView(
                     }
 
                     // ── "Entregue" button — shown only when out for delivery ──
-                    if (order.status == "Saiu para Entrega") {
+                    if (order.status == "estafeta chegou ao seu endereco") {
                         Spacer(modifier = Modifier.height(20.dp))
                         Box(
                             modifier = Modifier
@@ -589,7 +589,7 @@ private fun getStatusColor(status: String): Color {
     return when (status) {
         "Pendente"              -> KomaStatusPendente
         "Em Preparo"            -> KomaStatusPreparo
-        "Saiu para Entrega"     -> KomaStatusEntrega
+        "estafeta chegou ao seu endereco"     -> KomaStatusEntrega
         "Entregue"              -> KomaStatusEntregue
         "Pronto para Recolha"   -> KomaStatusRecolha
         "Cancelado"             -> KomaStatusCancelado
@@ -601,7 +601,7 @@ private fun getStatusIcon(status: String): ImageVector {
     return when (status) {
         "Pendente"              -> Icons.Default.HourglassEmpty
         "Em Preparo"            -> Icons.Default.Restaurant
-        "Saiu para Entrega"     -> Icons.Default.DeliveryDining
+        "estafeta chegou ao seu endereco"     -> Icons.Default.DeliveryDining
         "Entregue"              -> Icons.Default.CheckCircle
         "Pronto para Recolha"   -> Icons.Default.StoreMallDirectory
         "Cancelado"             -> Icons.Default.Close

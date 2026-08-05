@@ -49,7 +49,7 @@ val KomaSoftRed       = Color(0xFFF87171)  // Vermelho suave (erros inline, dele
 // ── Status de pedidos ─────────────────────────────────────────────────────────
 val KomaStatusPendente  = Color(0xFFFFC107)  // Pendente — amarelo
 val KomaStatusPreparo   = Color(0xFF60A5FA)  // Em Preparo — azul
-val KomaStatusEntrega   = Color(0xFF22C55E)  // Saiu para Entrega — verde vivo
+val KomaStatusEntrega   = Color(0xFF22C55E)  // estafeta chegou ao seu endereco — verde vivo
 val KomaStatusEntregue  = Color(0xFFFFD54F)  // Entregue — âmbar
 val KomaStatusRecolha   = Color(0xFF22C55E)  // Pronto para Recolha — verde vivo
 val KomaStatusCancelado = Color(0xFFF87171)  // Cancelado — vermelho suave
