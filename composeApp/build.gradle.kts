@@ -35,6 +35,9 @@ kotlin {
             // Google Maps removido — mapa unificado via Leaflet/OpenStreetMap (WebView)
             // play-services-location mantido para GPS (FusedLocationProvider)
             implementation("com.google.android.gms:play-services-location:21.0.1")
+
+            // ZXing para geração de QR codes localmente
+            implementation("com.google.zxing:core:3.5.3")
         }
 
         iosMain.dependencies {

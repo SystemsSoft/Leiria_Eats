@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
 import org.leria.eats.project.data.Order
+import org.leria.eats.project.presentation.components.QRCodeView
 import org.leria.eats.project.presentation.util.formatCurrency
 import org.leria.eats.project.theme.*
 
@@ -274,6 +275,19 @@ fun OrderDetailView(
                                     fontWeight = FontWeight.Bold
                                 )
                             }
+                        }
+
+                        // ── QR Code do pedido ─────────────────────────────────────
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            QRCodeView(
+                                data = order.trackingCode,
+                                size = 180,
+                                label = "🔖 Código QR do Pedido"
+                            )
                         }
                     }
 
