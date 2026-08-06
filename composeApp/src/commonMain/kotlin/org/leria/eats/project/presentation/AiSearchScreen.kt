@@ -80,13 +80,23 @@ fun AiSearchScreen(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Barra de ondas no topo quando ouvindo
+            AnimatedVisibility(
+                visible = isListening,
+                enter = fadeIn(tween(400)) + expandVertically(tween(400)),
+                exit = fadeOut(tween(300)) + shrinkVertically(tween(300))
+            ) {
+                ListeningWaveHeader()
+            }
+
             // ── HERO HEADER ─────────────────────────────────────────────────────
             AiHeroHeader(
                 uiState = uiState,
                 glowAlpha = glowAlpha,
                 hasResults = hasResults,
                 onTextChange = onTextChange,
-                onSendClick = onSendClick
+                onSendClick = onSendClick,
+                isListening = isListening
             )
 
             // ── CONTEÚDO CENTRAL ────────────────────────────────────────────────
@@ -240,6 +250,41 @@ fun AiSearchScreen(
     }
 }
 
+// ─── Listening Wave Header ────────────────────────────────────────────────────
+@Composable
+private fun ListeningWaveHeader() {
+    val infiniteTransition = rememberInfiniteTransition(label = "waveHeader")
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(4.dp)
+            .background(
+                Brush.horizontalGradient(
+                    colors = (0..20).map { index ->
+                        val offset by infiniteTransition.animateFloat(
+                            initialValue = 0f,
+                            targetValue = 1f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(1500 + index * 50, easing = EaseInOutSine),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "wave$index"
+                        )
+
+                        when (index % 5) {
+                            0 -> AiPrimary.copy(alpha = 0.3f + offset * 0.7f)
+                            1 -> KomaGoldAccent.copy(alpha = 0.4f + offset * 0.6f)
+                            2 -> AiSecondary.copy(alpha = 0.3f + offset * 0.7f)
+                            3 -> KomaGreenDark.copy(alpha = 0.4f + offset * 0.6f)
+                            else -> AiAccent.copy(alpha = 0.3f + offset * 0.7f)
+                        }
+                    }
+                )
+            )
+    )
+}
+
 // ─── Hero Header ──────────────────────────────────────────────────────────────
 @Composable
 private fun AiHeroHeader(
@@ -247,7 +292,8 @@ private fun AiHeroHeader(
     glowAlpha: Float,
     hasResults: Boolean,
     onTextChange: (String) -> Unit,
-    onSendClick: () -> Unit
+    onSendClick: () -> Unit,
+    isListening: Boolean = false
 ) {
     val displayedReply = remember { mutableStateOf("") }
     LaunchedEffect(uiState.aiReply) {
@@ -271,25 +317,86 @@ private fun AiHeroHeader(
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Ícone pulsante
+            // Ícone pulsante com efeito extra quando ouvindo
             Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .background(
-                        Brush.radialGradient(
-                            listOf(AiPrimary.copy(alpha = glowAlpha * 0.7f), Color.Transparent)
-                        ),
-                        CircleShape
-                    )
-                    .border(1.5.dp, AiPrimary.copy(alpha = 0.6f), CircleShape),
+                modifier = Modifier.size(52.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    tint = AiPrimary,
-                    modifier = Modifier.size(26.dp)
-                )
+                // Círculo externo pulsante quando ouvindo
+                if (isListening) {
+                    val listeningPulse by rememberInfiniteTransition(label = "iconPulse").animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.3f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1000, easing = EaseInOutSine),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "pulse"
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .graphicsLayer {
+                                scaleX = listeningPulse
+                                scaleY = listeningPulse
+                                alpha = 0.6f / listeningPulse
+                            }
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(
+                                        AiAccent.copy(alpha = 0.5f),
+                                        AiPrimary.copy(alpha = 0.3f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                CircleShape
+                            )
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(
+                            Brush.radialGradient(
+                                listOf(
+                                    AiPrimary.copy(alpha = if (isListening) glowAlpha * 1.2f else glowAlpha * 0.7f),
+                                    Color.Transparent
+                                )
+                            ),
+                            CircleShape
+                        )
+                        .border(
+                            1.5.dp,
+                            if (isListening)
+                                Brush.sweepGradient(
+                                    listOf(
+                                        AiAccent,
+                                        AiPrimary,
+                                        KomaGoldAccent,
+                                        AiSecondary,
+                                        AiAccent
+                                    )
+                                )
+                            else
+                                Brush.linearGradient(
+                                    listOf(
+                                        AiPrimary.copy(alpha = 0.6f),
+                                        AiPrimary.copy(alpha = 0.6f)
+                                    )
+                                ),
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = if (isListening) AiAccent else AiPrimary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -908,6 +1015,58 @@ private fun AiSemanticResultsBody(
     }
 }
 
+// ─── Gemini-style Listening Feedback ──────────────────────────────────────────
+@Composable
+private fun GeminiListeningFeedback() {
+    val infiniteTransition = rememberInfiniteTransition(label = "gemini")
+
+    // Pulsação suave e discreta
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.12f,
+        targetValue = 0.35f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+
+    // Pulsação de escala sutil
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.015f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(3.dp)
+            .padding(horizontal = 12.dp)
+            .graphicsLayer {
+                scaleX = pulseScale
+                alpha = pulseAlpha / 0.35f
+            }
+            .clip(RoundedCornerShape(1.5.dp))
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        AiCard.copy(alpha = pulseAlpha),
+                        AiSurface.copy(alpha = pulseAlpha * 1.2f),
+                        AiPrimary.copy(alpha = pulseAlpha * 0.8f),
+                        AiSecondary.copy(alpha = pulseAlpha * 0.7f),
+                        AiSurface.copy(alpha = pulseAlpha * 1.2f),
+                        AiCard.copy(alpha = pulseAlpha)
+                    )
+                )
+            )
+    )
+}
+
 // ─── Input Bar semântica ───────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -930,14 +1089,38 @@ private fun AiSemanticInputBar(
             .padding(horizontal = 12.dp)
             .padding(bottom = 8.dp, top = 4.dp)
     ) {
+        // Feedback visual Gemini-style quando ouvindo
+        AnimatedVisibility(
+            visible = isListening,
+            enter = fadeIn(tween(300)) + expandVertically(tween(300)),
+            exit = fadeOut(tween(200)) + shrinkVertically(tween(200))
+        ) {
+            Column {
+                GeminiListeningFeedback()
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+        }
+
         // Label contextual acima do input
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
         ) {
+            // Dot pulsante
+            val dotScale by rememberInfiniteTransition(label = "dot").animateFloat(
+                initialValue = 1f,
+                targetValue = if (isListening) 1.4f else 1f,
+                animationSpec = infiniteRepeatable(tween(800, easing = EaseInOutSine), RepeatMode.Reverse),
+                label = "dotScale"
+            )
+
             Box(
                 modifier = Modifier
                     .size(6.dp)
+                    .graphicsLayer {
+                        scaleX = dotScale
+                        scaleY = dotScale
+                    }
                     .background(
                         if (isListening) AiAccent else AiSecondary,
                         CircleShape
@@ -957,9 +1140,37 @@ private fun AiSemanticInputBar(
                 .clip(RoundedCornerShape(28.dp))
                 .background(AiCard)
                 .then(
-                    if (isListening)
-                        Modifier.border(1.5.dp, AiAccent.copy(alpha = borderAlpha), RoundedCornerShape(28.dp))
-                    else
+                    if (isListening) {
+                        // Gradiente animado fluido quando ouvindo
+                        val gradientShift by rememberInfiniteTransition(label = "gradientBorder").animateFloat(
+                            initialValue = 0f,
+                            targetValue = 1f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(2000, easing = LinearEasing),
+                                repeatMode = RepeatMode.Restart
+                            ),
+                            label = "shift"
+                        )
+
+                        Modifier.border(
+                            2.dp,
+                            Brush.sweepGradient(
+                                colors = listOf(
+                                    AiAccent,
+                                    AiPrimary,
+                                    KomaGoldAccent,
+                                    AiSecondary,
+                                    KomaGreenDark,
+                                    AiAccent
+                                ),
+                                center = androidx.compose.ui.geometry.Offset(
+                                    x = gradientShift * 1000f,
+                                    y = gradientShift * 1000f
+                                )
+                            ),
+                            RoundedCornerShape(28.dp)
+                        )
+                    } else {
                         Modifier.border(
                             1.5.dp,
                             Brush.horizontalGradient(
@@ -970,6 +1181,7 @@ private fun AiSemanticInputBar(
                             ),
                             RoundedCornerShape(28.dp)
                         )
+                    }
                 )
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -1033,20 +1245,170 @@ private fun AiSemanticInputBar(
                 )
             }
 
-            // Botão microfone
-            IconButton(onClick = onMic, enabled = !isLoading, modifier = Modifier.size(40.dp)) {
-                val micAlpha by rememberInfiniteTransition(label = "mic").animateFloat(
-                    initialValue = if (isListening) 0.4f else 1f,
-                    targetValue = 1f,
-                    label = "micPulse",
-                    animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse)
-                )
-                Icon(
-                    imageVector = if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
-                    contentDescription = "Microfone",
-                    tint = if (isListening) AiAccent.copy(alpha = micAlpha) else AiPrimary,
-                    modifier = Modifier.size(20.dp)
-                )
+            // Botão microfone com círculos pulsantes
+            Box(
+                modifier = Modifier.size(40.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                // Círculos concêntricos quando ouvindo (estilo Gemini)
+                if (isListening) {
+                    val infiniteMicTransition = rememberInfiniteTransition(label = "micWaves")
+
+                    // Círculo externo
+                    val outerScale by infiniteMicTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.8f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1200, easing = EaseOutQuad),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "outerScale"
+                    )
+                    val outerAlpha by infiniteMicTransition.animateFloat(
+                        initialValue = 0.6f,
+                        targetValue = 0f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1200, easing = LinearEasing),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "outerAlpha"
+                    )
+
+                    // Círculo médio
+                    val middleScale by infiniteMicTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.6f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1200, 150, easing = EaseOutQuad),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "middleScale"
+                    )
+                    val middleAlpha by infiniteMicTransition.animateFloat(
+                        initialValue = 0.5f,
+                        targetValue = 0f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1200, 150, easing = LinearEasing),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "middleAlpha"
+                    )
+
+                    // Círculo interno
+                    val innerScale by infiniteMicTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.4f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1200, 300, easing = EaseOutQuad),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "innerScale"
+                    )
+                    val innerAlpha by infiniteMicTransition.animateFloat(
+                        initialValue = 0.4f,
+                        targetValue = 0f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1200, 300, easing = LinearEasing),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "innerAlpha"
+                    )
+
+                    // Renderizar círculos
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .graphicsLayer {
+                                scaleX = outerScale
+                                scaleY = outerScale
+                                alpha = outerAlpha
+                            }
+                            .background(
+                                Brush.radialGradient(
+                                    colors = listOf(
+                                        AiAccent.copy(alpha = 0.3f),
+                                        AiPrimary.copy(alpha = 0.2f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                CircleShape
+                            )
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .graphicsLayer {
+                                scaleX = middleScale
+                                scaleY = middleScale
+                                alpha = middleAlpha
+                            }
+                            .background(
+                                Brush.radialGradient(
+                                    colors = listOf(
+                                        AiSecondary.copy(alpha = 0.4f),
+                                        KomaGoldAccent.copy(alpha = 0.3f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                CircleShape
+                            )
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .graphicsLayer {
+                                scaleX = innerScale
+                                scaleY = innerScale
+                                alpha = innerAlpha
+                            }
+                            .background(
+                                Brush.radialGradient(
+                                    colors = listOf(
+                                        AiPrimary.copy(alpha = 0.5f),
+                                        AiAccent.copy(alpha = 0.4f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                CircleShape
+                            )
+                    )
+                }
+
+                // Botão do microfone
+                IconButton(onClick = onMic, enabled = !isLoading, modifier = Modifier.size(40.dp)) {
+                    val micAlpha by rememberInfiniteTransition(label = "mic").animateFloat(
+                        initialValue = if (isListening) 0.4f else 1f,
+                        targetValue = 1f,
+                        label = "micPulse",
+                        animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse)
+                    )
+
+                    // Background colorido quando ouvindo
+                    if (isListening) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .background(
+                                    Brush.radialGradient(
+                                        colors = listOf(
+                                            AiAccent.copy(alpha = 0.3f),
+                                            Color.Transparent
+                                        )
+                                    ),
+                                    CircleShape
+                                )
+                        )
+                    }
+
+                    Icon(
+                        imageVector = if (isListening) Icons.Default.MicOff else Icons.Default.Mic,
+                        contentDescription = "Microfone",
+                        tint = if (isListening) AiAccent.copy(alpha = micAlpha) else AiPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
