@@ -738,7 +738,8 @@ class SearchViewModel(
         _uiState.update {
             it.copy(
                 showPaymentConfirmSheet = false,
-                pendingCheckoutSavePaymentMethod = useSavedCard
+                // Sempre passa false para não salvar cartão como padrão
+                pendingCheckoutSavePaymentMethod = false
             )
         }
         // Proceed directly with the type already chosen in the summary
@@ -778,7 +779,8 @@ class SearchViewModel(
         _uiState.update {
             it.copy(
                 showSavePaymentSheet = false,
-                pendingCheckoutSavePaymentMethod = savePaymentMethod
+                // Sempre passa false para não salvar cartão como padrão
+                pendingCheckoutSavePaymentMethod = false
             )
         }
         // Use the delivery type already chosen in the summary

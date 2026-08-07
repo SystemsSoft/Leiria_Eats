@@ -982,9 +982,11 @@ fun SavePaymentMethodSheet(
                     .border(1.dp, CartPrimary.copy(alpha = 0.3f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "💳",
-                    fontSize = 32.sp
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = CartPrimary,
+                    modifier = Modifier.size(34.dp)
                 )
             }
 
@@ -992,7 +994,7 @@ fun SavePaymentMethodSheet(
 
             // Title
             Text(
-                text = "Salvar cartão como padrão?",
+                text = "Realizar pagamento?",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = CartText
@@ -1002,7 +1004,7 @@ fun SavePaymentMethodSheet(
 
             // Description
             Text(
-                text = "Deseja usar esse cartão como padrão para usarmos sempre que você fizer um pedido?",
+                text = "Deseja confirmar e processar o pagamento do seu pedido agora?",
                 fontSize = 14.sp,
                 color = CartMuted,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -1024,11 +1026,13 @@ fun SavePaymentMethodSheet(
                         .clip(RoundedCornerShape(14.dp))
                         .background(CartSurface)
                         .border(1.dp, CartMuted.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
-                        .clickable { onConfirm(false) },
+                        .clickable {
+                            onDismiss()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Não, obrigado",
+                        text = "Não, cancelar",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = CartMuted
@@ -1046,11 +1050,14 @@ fun SavePaymentMethodSheet(
                                 listOf(CartPrimary, KomaOrangeEnd)
                             )
                         )
-                        .clickable { onConfirm(true) },
+                        .clickable {
+                            // Sempre passa false para não salvar o cartão como padrão
+                            onConfirm(false)
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Sim, salvar",
+                        text = "Sim, confirmar",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
