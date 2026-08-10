@@ -295,7 +295,8 @@ private fun ChatMessagesView(
         modifier = modifier
             .fillMaxSize()
             .background(AiDeepBg),
-        contentPadding = PaddingValues(horizontal = 16.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(messages) { message ->
             when (message.type) {
