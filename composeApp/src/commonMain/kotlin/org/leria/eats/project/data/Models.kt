@@ -3,6 +3,19 @@ package org.leria.eats.project.data
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// ANTES: SearchRequest
+// DEPOIS: ChatRequest com IA Generativa
+@Serializable
+data class ChatRequest(
+    val message: String,                    // MUDOU: query → message
+    @SerialName("restaurant_id")
+    val restaurantId: Int? = null,         // NOVO
+    @SerialName("session_id")
+    val sessionId: String? = null          // NOVO
+)
+
+// Mantido para compatibilidade com código legado, mas não mais usado
+@Deprecated("Use ChatRequest instead", ReplaceWith("ChatRequest(message = query)"))
 @Serializable
 data class SearchRequest(
     val query: String
@@ -39,6 +52,19 @@ data class Restaurant(
     val plan: String? = null
 )
 
+// ANTES: SearchResponse
+// DEPOIS: ChatResponse com IA Generativa
+@Serializable
+data class ChatResponse(
+    val response: String? = null,           // MUDOU: reply → response
+    val intent: String? = null,             // MANTIDO
+    val restaurantResults: List<Restaurant> = emptyList(),  // Temporário
+    val productResults: List<Product> = emptyList(),        // Temporário
+    val products: List<Product> = emptyList()  // NOVO: padrão da IA
+)
+
+// Mantido para compatibilidade com código legado
+@Deprecated("Use ChatResponse instead", ReplaceWith("ChatResponse(response = reply, products = productResults)"))
 @Serializable
 data class SearchResponse(
     val reply: String? = null,

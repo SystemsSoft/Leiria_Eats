@@ -297,27 +297,6 @@ fun MainScreenWithAI(
                                 val unselectedColor = KomaMuted.copy(alpha = 0.55f)
                                 val selectedIconOnBadge = KomaGoldOnDark
 
-                                // ── Início ────────────────────────────────────────
-                                NavigationBarItem(
-                                    icon = { Icon(Icons.Default.Home, contentDescription = "Início") },
-                                    label = {
-                                        Text(
-                                            "Início",
-                                            fontSize = 10.sp,
-                                            fontWeight = if (uiState.currentTab == MainTab.HOME) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    },
-                                    selected = uiState.currentTab == MainTab.HOME,
-                                    onClick = { viewModel.onTabSelected(MainTab.HOME) },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = selectedIconOnBadge,
-                                        selectedTextColor = selectedColor,
-                                        indicatorColor = KomaGold,
-                                        unselectedIconColor = unselectedColor,
-                                        unselectedTextColor = unselectedColor
-                                    )
-                                )
-
                                 // ── IA ─────────────────────────────────────────────
                                 NavigationBarItem(
                                     icon = { Icon(Icons.Default.AutoAwesome, contentDescription = "IA") },
@@ -330,6 +309,27 @@ fun MainScreenWithAI(
                                     },
                                     selected = uiState.currentTab == MainTab.AI,
                                     onClick = { viewModel.onTabSelected(MainTab.AI) },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = selectedIconOnBadge,
+                                        selectedTextColor = selectedColor,
+                                        indicatorColor = KomaGold,
+                                        unselectedIconColor = unselectedColor,
+                                        unselectedTextColor = unselectedColor
+                                    )
+                                )
+
+                                // ── Início ────────────────────────────────────────
+                                NavigationBarItem(
+                                    icon = { Icon(Icons.Default.Home, contentDescription = "Início") },
+                                    label = {
+                                        Text(
+                                            "Início",
+                                            fontSize = 10.sp,
+                                            fontWeight = if (uiState.currentTab == MainTab.HOME) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    },
+                                    selected = uiState.currentTab == MainTab.HOME,
+                                    onClick = { viewModel.onTabSelected(MainTab.HOME) },
                                     colors = NavigationBarItemDefaults.colors(
                                         selectedIconColor = selectedIconOnBadge,
                                         selectedTextColor = selectedColor,

@@ -7,12 +7,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
@@ -69,7 +71,6 @@ fun AiSearchScreen(
         animationSpec = infiniteRepeatable(tween(2200, easing = EaseInOutSine), RepeatMode.Reverse)
     )
 
-    val hasResults = uiState.restaurantResults.isNotEmpty() || uiState.productResults.isNotEmpty()
 
     Box(
         modifier = Modifier
@@ -90,41 +91,40 @@ fun AiSearchScreen(
             }
 
             // ── HERO HEADER ─────────────────────────────────────────────────────
-            AiHeroHeader(
-                uiState = uiState,
+            AiSimpleHeader(
                 glowAlpha = glowAlpha,
-                hasResults = hasResults,
-                onTextChange = onTextChange,
-                onSendClick = onSendClick,
-                isListening = isListening
+                isListening = isListening,
+                showClearButton = uiState.chatMessages.size > 1,
+                onClearChat = onClearSearch
             )
 
-            // ── CONTEÚDO CENTRAL ────────────────────────────────────────────────
+            // ── CONTEÚDO CENTRAL (CHAT) ────────────────────────────────────────────────
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when {
-                    uiState.isLoading -> AiSemanticThinkingIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                    hasResults -> AiSemanticResultsBody(
-                        uiState = uiState,
-                        onRestaurantClick = onRestaurantClick,
-                        onAddToCart = onAddToCart,
-                        onViewCart = onViewCart,
-                        onClearSearch = onClearSearch,
-                        onTextChange = onTextChange,
-                        onSendClick = onSendClick
-                    )
-                    else -> LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        item {
-                            AiHowItWorksCard(modifier = Modifier.fillMaxWidth())
+                    uiState.chatMessages.size <= 1 && !uiState.isLoading -> {
+                        // Tela inicial sem mensagens
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            item {
+                                AiHowItWorksCard(modifier = Modifier.fillMaxWidth())
+                            }
+                            item {
+                                AiFavoritesCard(modifier = Modifier.fillMaxWidth())
+                            }
                         }
-                        item {
-                            AiFavoritesCard(modifier = Modifier.fillMaxWidth())
-                        }
+                    }
+                    else -> {
+                        // Exibir chat de mensagens
+                        ChatMessagesView(
+                            messages = uiState.chatMessages,
+                            isLoading = uiState.isLoading,
+                            onRestaurantClick = onRestaurantClick,
+                            onAddToCart = onAddToCart,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
             }
@@ -285,7 +285,473 @@ private fun ListeningWaveHeader() {
     )
 }
 
-// ─── Hero Header ──────────────────────────────────────────────────────────────
+// ─── Chat Messages View ───────────────────────────────────────────────────────
+@Composable
+private fun ChatMessagesView(
+    messages: List<ChatMessage>,
+    isLoading: Boolean,
+    onRestaurantClick: (Restaurant) -> Unit,
+    onAddToCart: (Product) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .background(AiDeepBg),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        items(messages) { message ->
+            when (message.type) {
+                ChatMessageType.USER -> UserMessageBubble(message = message)
+                ChatMessageType.AI -> AiMessageBubble(
+                    message = message,
+                    onRestaurantClick = onRestaurantClick,
+                    onAddToCart = onAddToCart
+                )
+            }
+        }
+
+        if (isLoading) {
+            item {
+                AiTypingIndicator()
+            }
+        }
+    }
+}
+
+// ─── User Message Bubble ──────────────────────────────────────────────────────
+@Composable
+private fun UserMessageBubble(message: ChatMessage) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End
+    ) {
+        Box(
+            modifier = Modifier
+                .widthIn(max = 280.dp)
+                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 4.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(AiPrimary, KomaGoldAccent)
+                    )
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Text(
+                text = message.text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Black
+            )
+        }
+    }
+}
+
+// ─── AI Message Bubble ────────────────────────────────────────────────────────
+@Composable
+private fun AiMessageBubble(
+    message: ChatMessage,
+    onRestaurantClick: (Restaurant) -> Unit,
+    onAddToCart: (Product) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Column(
+            modifier = Modifier.widthIn(max = 320.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Texto da mensagem
+            if (message.text.isNotBlank()) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp))
+                        .background(
+                            Brush.horizontalGradient(listOf(AiBotBubble, AiCard))
+                        )
+                        .border(
+                            1.dp,
+                            AiPrimary.copy(alpha = 0.2f),
+                            RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp)
+                        )
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Text(
+                        text = message.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AiText
+                    )
+                }
+            }
+
+            // Restaurantes
+            if (message.restaurants.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    message.restaurants.forEach { restaurant ->
+                        RestaurantChatCard(
+                            restaurant = restaurant,
+                            onClick = { onRestaurantClick(restaurant) }
+                        )
+                    }
+                }
+            }
+
+            // Produtos
+            if (message.products.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    message.products.forEach { product ->
+                        ProductChatCard(
+                            product = product,
+                            onAddToCart = { onAddToCart(product) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── AI Typing Indicator ──────────────────────────────────────────────────────
+@Composable
+private fun AiTypingIndicator() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp))
+                .background(AiBotBubble)
+                .border(
+                    1.dp,
+                    AiPrimary.copy(alpha = 0.2f),
+                    RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp)
+                )
+                .padding(horizontal = 20.dp, vertical = 14.dp)
+        ) {
+            val infiniteTransition = rememberInfiniteTransition(label = "typing")
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                (0..2).forEach { index ->
+                    val alpha by infiniteTransition.animateFloat(
+                        initialValue = 0.3f,
+                        targetValue = 1f,
+                        label = "dot$index",
+                        animationSpec = infiniteRepeatable(
+                            tween(600, delayMillis = index * 180),
+                            RepeatMode.Reverse
+                        )
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(AiPrimary.copy(alpha = alpha), CircleShape)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─── Restaurant Chat Card ─────────────────────────────────────────────────────
+@Composable
+private fun RestaurantChatCard(
+    restaurant: Restaurant,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AiCard)
+            .border(1.dp, AiPrimary.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(12.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Ícone do restaurante
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.radialGradient(
+                            listOf(AiPrimary.copy(alpha = 0.2f), Color.Transparent)
+                        )
+                    )
+                    .border(1.dp, AiPrimary.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("🍽️", fontSize = 24.sp)
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = restaurant.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = AiText
+                )
+                if (restaurant.category.isNotBlank()) {
+                    Text(
+                        text = restaurant.category,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AiTextMuted,
+                        maxLines = 2
+                    )
+                }
+            }
+
+            Icon(
+                Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                tint = AiPrimary,
+                modifier = Modifier
+                    .size(20.dp)
+                    .graphicsLayer { rotationZ = -90f }
+            )
+        }
+    }
+}
+
+// ─── Product Chat Card ────────────────────────────────────────────────────────
+@Composable
+private fun ProductChatCard(
+    product: Product,
+    onAddToCart: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AiCard)
+            .border(1.dp, AiSecondary.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+            .padding(12.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Ícone do produto
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.radialGradient(
+                            listOf(AiSecondary.copy(alpha = 0.2f), Color.Transparent)
+                        )
+                    )
+                    .border(1.dp, AiSecondary.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("🍕", fontSize = 24.sp)
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = AiText
+                )
+                Text(
+                    text = "${product.price} €",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AiSecondary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // Botão adicionar
+            IconButton(
+                onClick = onAddToCart,
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(
+                        Brush.linearGradient(listOf(AiSecondary, KomaGreenDark)),
+                        CircleShape
+                    )
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Adicionar ao carrinho",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+// ─── Simple Header (sem balão) ────────────────────────────────────────────────
+@Composable
+private fun AiSimpleHeader(
+    glowAlpha: Float,
+    isListening: Boolean = false,
+    showClearButton: Boolean = false,
+    onClearChat: () -> Unit = {}
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AiSurface)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // ── Ícone + título IA ──────────────────────────────────────────────────
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+            // Ícone pulsante com efeito extra quando ouvindo
+            Box(
+                modifier = Modifier.size(52.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                // Círculo externo pulsante quando ouvindo
+                if (isListening) {
+                    val listeningPulse by rememberInfiniteTransition(label = "iconPulse").animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.3f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1000, easing = EaseInOutSine),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "pulse"
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .graphicsLayer {
+                                scaleX = listeningPulse
+                                scaleY = listeningPulse
+                                alpha = 0.6f / listeningPulse
+                            }
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(
+                                        AiAccent.copy(alpha = 0.5f),
+                                        AiPrimary.copy(alpha = 0.3f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                CircleShape
+                            )
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(
+                            Brush.radialGradient(
+                                listOf(
+                                    AiPrimary.copy(alpha = if (isListening) glowAlpha * 1.2f else glowAlpha * 0.7f),
+                                    Color.Transparent
+                                )
+                            ),
+                            CircleShape
+                        )
+                        .border(
+                            1.5.dp,
+                            if (isListening)
+                                Brush.sweepGradient(
+                                    listOf(
+                                        AiAccent,
+                                        AiPrimary,
+                                        KomaGoldAccent,
+                                        AiSecondary,
+                                        AiAccent
+                                    )
+                                )
+                            else
+                                Brush.linearGradient(
+                                    listOf(
+                                        AiPrimary.copy(alpha = 0.6f),
+                                        AiPrimary.copy(alpha = 0.6f)
+                                    )
+                                ),
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = if (isListening) AiAccent else AiPrimary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Realizar pedido",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 18.sp,
+                        color = AiText
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    // Badge "IA"
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(
+                                Brush.horizontalGradient(listOf(AiPrimary, KomaGoldAccent))
+                            )
+                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "IA",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = KomaGoldOnDark
+                        )
+                    }
+                }
+                Text(
+                    text = "Diga livremente o que deseja comer",
+                    fontSize = 11.sp,
+                    color = AiTextMuted
+                )
+            }
+            }
+
+            // Botão de limpar chat
+            if (showClearButton) {
+                TextButton(
+                    onClick = onClearChat,
+                    modifier = Modifier.padding(start = 8.dp)
+                ) {
+                    Text(
+                        text = "Limpar",
+                        fontSize = 12.sp,
+                        color = AiTextMuted,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─── Hero Header (original, mantido para compatibilidade) ────────────────────
 @Composable
 private fun AiHeroHeader(
     uiState: SearchUiState,
@@ -1087,7 +1553,7 @@ private fun AiSemanticInputBar(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
-            .padding(bottom = 8.dp, top = 4.dp)
+            .padding(bottom = 8.dp, top = 4.dp, start = 8.dp, end = 8.dp)
     ) {
         // Feedback visual Gemini-style quando ouvindo
         AnimatedVisibility(
@@ -1153,7 +1619,7 @@ private fun AiSemanticInputBar(
                         )
 
                         Modifier.border(
-                            2.dp,
+                            6.dp,
                             Brush.sweepGradient(
                                 colors = listOf(
                                     AiAccent,

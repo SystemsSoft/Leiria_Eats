@@ -15,6 +15,19 @@ enum class MainTab {
     FAVORITES
 }
 
+enum class ChatMessageType {
+    USER,
+    AI
+}
+
+data class ChatMessage(
+    val id: String,
+    val type: ChatMessageType,
+    val text: String,
+    val restaurants: List<Restaurant> = emptyList(),
+    val products: List<Product> = emptyList()
+)
+
 data class SearchUiState(
     val isLoading: Boolean = false,
     val textInput: String = "",
@@ -30,7 +43,7 @@ data class SearchUiState(
     val selectedOrder: Order? = null,
     val cartRestaurantId: Int? = null,
     val cartItems: List<Product> = emptyList(),
-    val currentTab: MainTab = MainTab.HOME,
+    val currentTab: MainTab = MainTab.AI,
     val orderHistory: List<Order> = emptyList(),
     val userProfile: UserProfile = UserProfile(),
     val isFilterEnabled: Boolean = false,
@@ -66,7 +79,15 @@ data class SearchUiState(
     // key = "orderId::productName", value = productId
     val orderProductIds: Map<String, Int> = emptyMap(),
     // key = orderId, value = restaurantId
-    val orderRestaurantIds: Map<String, Int> = emptyMap()
+    val orderRestaurantIds: Map<String, Int> = emptyMap(),
+    // Lista de mensagens de chat da IA
+    val chatMessages: List<ChatMessage> = listOf(
+        ChatMessage(
+            id = "initial",
+            type = ChatMessageType.AI,
+            text = "Olá! O que deseja comer hoje?"
+        )
+    )
 ) {
     val cartCount: Int get() = cartItems.size
     val favoriteOrders: List<Order> get() = orderHistory

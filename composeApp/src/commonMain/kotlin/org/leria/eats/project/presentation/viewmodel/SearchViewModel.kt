@@ -21,6 +21,8 @@ import org.leria.eats.project.data.ProfileRepository
 import org.leria.eats.project.data.RatingItemRequest
 import org.leria.eats.project.data.RatingRequest
 import org.leria.eats.project.data.Restaurant
+import org.leria.eats.project.presentation.ChatMessage
+import org.leria.eats.project.presentation.ChatMessageType
 import org.leria.eats.project.presentation.MainTab
 import org.leria.eats.project.presentation.SearchUiState
 
@@ -349,8 +351,43 @@ class SearchViewModel(
                 productResults = emptyList(),
                 aiReply = greeting,
                 textInput = "",
-                error = null
+                error = null,
+                chatMessages = listOf(
+                    ChatMessage(
+                        id = "initial",
+                        type = ChatMessageType.AI,
+                        text = greeting
+                    )
+                )
             )
+        }
+    }
+
+    private fun addUserMessage(text: String) {
+        val message = ChatMessage(
+            id = "user_${System.currentTimeMillis()}",
+            type = ChatMessageType.USER,
+            text = text
+        )
+        _uiState.update {
+            it.copy(chatMessages = it.chatMessages + message)
+        }
+    }
+
+    private fun addAiMessage(
+        text: String,
+        restaurants: List<Restaurant> = emptyList(),
+        products: List<Product> = emptyList()
+    ) {
+        val message = ChatMessage(
+            id = "ai_${System.currentTimeMillis()}",
+            type = ChatMessageType.AI,
+            text = text,
+            restaurants = restaurants,
+            products = products
+        )
+        _uiState.update {
+            it.copy(chatMessages = it.chatMessages + message)
         }
     }
 
@@ -409,13 +446,17 @@ class SearchViewModel(
     }
 
     private fun fetchSearch(resolvedQuery: String, favoriteName: String? = null) {
+        // Adiciona a mensagem do usuário ao chat
+        addUserMessage(resolvedQuery)
+
         _uiState.update { it.copy(isLoading = true, error = null, isSuggestionMode = false) }
         viewModelScope.launch {
             try {
                 val response = apiClient.searchRestaurants(resolvedQuery.trim())
 
                 val hasBoth = response.restaurantResults.isNotEmpty() && response.productResults.isNotEmpty()
-                val isProductOnly = response.restaurantResults.isEmpty() && response.productResults.isNotEmpty()
+                val hasOnlyRestaurants = response.restaurantResults.isNotEmpty() && response.productResults.isEmpty()
+                val hasOnlyProducts = response.restaurantResults.isEmpty() && response.productResults.isNotEmpty()
 
                 if (hasBoth) {
                     // Guarda resultados pendentes e pede ao utilizador para escolher
@@ -430,12 +471,19 @@ class SearchViewModel(
                             showSearchTypeSheet = true
                         )
                     }
-                } else {
+                } else if (hasOnlyRestaurants) {
                     val resolvedReply = when {
                         resolvedQuery.equals("ver todos", ignoreCase = true) ->
                             _uiState.value.aiReply.ifBlank { "Todos os restaurantes disponíveis" }
                         else -> response.reply
                     }
+
+                    // Adiciona mensagem da IA com restaurantes
+                    addAiMessage(
+                        text = resolvedReply ?: "Encontrei estes restaurantes para você:",
+                        restaurants = response.restaurantResults
+                    )
+
                     // Se a pesquisa trouxe todos os restaurantes, atualiza também a lista do Home
                     val updatedAllRestaurants = if (
                         resolvedQuery.equals("ver todos", ignoreCase = true) &&
@@ -447,34 +495,52 @@ class SearchViewModel(
                             isLoading = false,
                             aiReply = resolvedReply?: "",
                             restaurantResults = response.restaurantResults,
-                            productResults = response.productResults,
+                            productResults = emptyList(),
                             textInput = "",
                             lastSearchQuery = resolvedQuery,
                             allRestaurants = updatedAllRestaurants
                         )
                     }
-                    if (isProductOnly) {
-                        addProductsToCart(response.productResults)
-                        val productNames = response.productResults
-                            .take(3)
-                            .joinToString(", ") { it.name }
-                        val aiMsg = buildString {
-                            if (favoriteName != null) {
-                                append("⭐ Pedido favorito \"$favoriteName\" adicionado à sacola: $productNames")
-                            } else {
-                                append("✅ Adicionei à sua sacola: $productNames")
-                            }
-                            if (response.productResults.size > 3)
-                                append(" e mais ${response.productResults.size - 3} itens")
-                            append(".\n\n💡 Quer que sugira outro restaurante com pratos semelhantes, ou gostaria de adicionar mais alguma coisa deste restaurante?")
-                        }
-                        _uiState.update { it.copy(cartAiMessage = aiMsg, cartAiMessageSpoken = false) }
-                        onTabSelected(MainTab.CART)
+                } else if (hasOnlyProducts) {
+                    val aiReplyText = response.reply ?: "Encontrei estes produtos para você:"
+
+                    // Adiciona mensagem da IA com produtos
+                    addAiMessage(
+                        text = aiReplyText,
+                        products = response.productResults
+                    )
+
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            aiReply = aiReplyText,
+                            restaurantResults = emptyList(),
+                            productResults = response.productResults,
+                            textInput = "",
+                            lastSearchQuery = resolvedQuery
+                        )
+                    }
+                } else {
+                    // Nenhum resultado encontrado
+                    val noResultsMessage = response.reply ?: "Desculpe, não encontrei nada relacionado à sua pesquisa. Tente usar outras palavras!"
+                    addAiMessage(text = noResultsMessage)
+
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            aiReply = noResultsMessage,
+                            restaurantResults = emptyList(),
+                            productResults = emptyList(),
+                            textInput = "",
+                            lastSearchQuery = resolvedQuery
+                        )
                     }
                 }
 
             } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, error = "Erro ao conectar: ${e.message}") }
+                val errorMessage = "Erro ao conectar: ${e.message}"
+                addAiMessage(text = errorMessage)
+                _uiState.update { it.copy(isLoading = false, error = errorMessage) }
                 e.printStackTrace()
             }
         }
@@ -483,6 +549,11 @@ class SearchViewModel(
     fun onSearchTypeSelected(showRestaurants: Boolean) {
         val state = _uiState.value
         if (showRestaurants) {
+            addAiMessage(
+                text = state.aiReply.ifBlank { "Aqui estão os restaurantes:" },
+                restaurants = state.pendingRestaurantResults
+            )
+
             _uiState.update {
                 it.copy(
                     showSearchTypeSheet = false,
@@ -494,6 +565,11 @@ class SearchViewModel(
             }
         } else {
             val products = state.pendingProductResults
+            addAiMessage(
+                text = state.aiReply.ifBlank { "Aqui estão os produtos:" },
+                products = products
+            )
+
             _uiState.update {
                 it.copy(
                     showSearchTypeSheet = false,
@@ -503,16 +579,6 @@ class SearchViewModel(
                     pendingProductResults = emptyList()
                 )
             }
-            products.forEach { product -> addToCart(product) }
-            val productNames = products.take(3).joinToString(", ") { it.name }
-            val aiMsg = buildString {
-                append("✅ Adicionei à sua sacola: $productNames")
-                if (products.size > 3) append(" e mais ${products.size - 3} itens")
-                append(".\n\n")
-                append("💡 Quer que sugira outro restaurante com pratos semelhantes, ou gostaria de adicionar mais alguma coisa deste restaurante?")
-            }
-            _uiState.update { it.copy(cartAiMessage = aiMsg, cartAiMessageSpoken = false) }
-            onTabSelected(MainTab.CART)
         }
     }
 

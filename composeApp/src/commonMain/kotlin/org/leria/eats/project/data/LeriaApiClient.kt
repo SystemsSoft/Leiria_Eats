@@ -34,14 +34,65 @@ class LeriaApiClient {
         }
     }
 
-    private val baseUrl = "https://api.leiriaeats.com"
+    private val baseUrl = "http://192.168.29.29:8000"
+    private val urlLocal = "http://192.168.29.29:8000"
 
-    suspend fun searchRestaurants(text: String): SearchResponse {
-        val response = client.post("$baseUrl/search") {
+    // Session ID para contexto conversacional com IA
+    private var sessionId: String? = null
+
+    private fun generateSessionId(): String {
+        // Gera um ID único baseado em valores aleatórios
+        val part1 = (100000..999999).random()
+        val part2 = (100000..999999).random()
+        val part3 = (1000..9999).random()
+        return "session_${part1}_${part2}_${part3}"
+    }
+
+    private fun getOrCreateSessionId(): String {
+        if (sessionId == null) {
+            sessionId = generateSessionId()
+        }
+        return sessionId!!
+    }
+
+    // NOVO: Endpoint com IA Generativa
+    suspend fun sendChatMessage(text: String, restaurantId: Int? = null): ChatResponse {
+        val response = client.post("$baseUrl/chat/sales") {
             contentType(ContentType.Application.Json)
-            setBody(SearchRequest(query = text))
+            setBody(ChatRequest(
+                message = text,
+                restaurantId = restaurantId,
+                sessionId = getOrCreateSessionId()
+            ))
         }
         return response.body()
+    }
+
+    // NOVO: Verificar status do servidor de IA
+    suspend fun checkChatStatus(): Boolean {
+        return try {
+            val response = client.get("$baseUrl/chat/status")
+            response.status.value == 200
+        } catch (e: Exception) {
+            println("⚠️ Erro ao verificar status da IA: ${e.message}")
+            false
+        }
+    }
+
+    // Mantido para compatibilidade (chama o novo endpoint)
+    @Deprecated("Use sendChatMessage instead", ReplaceWith("sendChatMessage(text, null)"))
+    suspend fun searchRestaurants(text: String): SearchResponse {
+        val chatResponse = sendChatMessage(text, null)
+        // Converte ChatResponse para SearchResponse para compatibilidade
+        return SearchResponse(
+            reply = chatResponse.response,
+            intent = chatResponse.intent,
+            restaurantResults = chatResponse.restaurantResults,
+            productResults = if (chatResponse.products.isNotEmpty())
+                chatResponse.products
+            else
+                chatResponse.productResults
+        )
     }
 
     suspend fun initiateCheckout(request: OrderRequest): PaymentIntentResponse? {
