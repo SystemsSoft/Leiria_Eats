@@ -133,7 +133,6 @@ fun AiSearchScreen(
             // ── INPUT BAR ───────────────────────────────────────────────────────
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .imePadding()
             ) {
                 AiSemanticInputBar(
@@ -144,15 +143,6 @@ fun AiSearchScreen(
                     onSend = onSendClick,
                     onMic = onMicClick
                 )
-
-                if (uiState.error != null) {
-                    Text(
-                        text = uiState.error,
-                        color = AiAccent,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(bottom = 6.dp, top = 2.dp)
-                    )
-                }
             }
         }
     }
