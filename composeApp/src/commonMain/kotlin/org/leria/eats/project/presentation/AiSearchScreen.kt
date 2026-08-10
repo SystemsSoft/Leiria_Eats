@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.imePadding
 import kotlinx.coroutines.delay
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
@@ -130,22 +131,28 @@ fun AiSearchScreen(
             }
 
             // ── INPUT BAR ───────────────────────────────────────────────────────
-            AiSemanticInputBar(
-                value = uiState.textInput,
-                isListening = isListening,
-                isLoading = uiState.isLoading,
-                onValueChange = onTextChange,
-                onSend = onSendClick,
-                onMic = onMicClick
-            )
-
-            if (uiState.error != null) {
-                Text(
-                    text = uiState.error,
-                    color = AiAccent,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(bottom = 6.dp, top = 2.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .imePadding()
+            ) {
+                AiSemanticInputBar(
+                    value = uiState.textInput,
+                    isListening = isListening,
+                    isLoading = uiState.isLoading,
+                    onValueChange = onTextChange,
+                    onSend = onSendClick,
+                    onMic = onMicClick
                 )
+
+                if (uiState.error != null) {
+                    Text(
+                        text = uiState.error,
+                        color = AiAccent,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(bottom = 6.dp, top = 2.dp)
+                    )
+                }
             }
         }
     }
@@ -298,8 +305,7 @@ private fun ChatMessagesView(
         modifier = modifier
             .fillMaxSize()
             .background(AiDeepBg),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
         items(messages) { message ->
             when (message.type) {
