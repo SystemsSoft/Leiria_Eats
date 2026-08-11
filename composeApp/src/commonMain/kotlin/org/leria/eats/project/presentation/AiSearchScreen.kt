@@ -69,6 +69,9 @@ fun AiSearchScreen(
     onSearchTypeSelected: (showRestaurants: Boolean) -> Unit,
     onDismissSearchTypeSheet: () -> Unit,
 ) {
+    // Estado para controlar o produto selecionado
+    var selectedProduct by remember { mutableStateOf<Product?>(null) }
+
     // Pulsing glow animation
     val glowAlpha by rememberInfiniteTransition(label = "glow").animateFloat(
         initialValue = 0.15f, targetValue = 0.55f, label = "glowAlpha",
@@ -127,6 +130,7 @@ fun AiSearchScreen(
                             isLoading = uiState.isLoading,
                             onRestaurantClick = onRestaurantClick,
                             onAddToCart = onAddToCart,
+                            onProductClick = { product -> selectedProduct = product },
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -248,6 +252,26 @@ fun AiSearchScreen(
             }
         }
     }
+
+    // ── BOTTOM SHEET: detalhes do produto ───────────────────────────────────────
+    selectedProduct?.let { product ->
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+        ModalBottomSheet(
+            onDismissRequest = { selectedProduct = null },
+            sheetState = sheetState,
+            containerColor = AiSurface,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            ProductDetailBottomSheet(
+                product = product,
+                onAddToCart = {
+                    onAddToCart(product)
+                    selectedProduct = null
+                },
+                onDismiss = { selectedProduct = null }
+            )
+        }
+    }
 }
 
 // ─── Listening Wave Header ────────────────────────────────────────────────────
@@ -292,6 +316,7 @@ private fun ChatMessagesView(
     isLoading: Boolean,
     onRestaurantClick: (Restaurant) -> Unit,
     onAddToCart: (Product) -> Unit,
+    onProductClick: (Product) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -307,7 +332,8 @@ private fun ChatMessagesView(
                 ChatMessageType.AI -> AiMessageBubble(
                     message = message,
                     onRestaurantClick = onRestaurantClick,
-                    onAddToCart = onAddToCart
+                    onAddToCart = onAddToCart,
+                    onProductClick = onProductClick
                 )
             }
         }
@@ -352,7 +378,8 @@ private fun UserMessageBubble(message: ChatMessage) {
 private fun AiMessageBubble(
     message: ChatMessage,
     onRestaurantClick: (Restaurant) -> Unit,
-    onAddToCart: (Product) -> Unit
+    onAddToCart: (Product) -> Unit,
+    onProductClick: (Product) -> Unit = {}
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -403,7 +430,8 @@ private fun AiMessageBubble(
                     message.products.forEach { product ->
                         ProductChatCard(
                             product = product,
-                            onAddToCart = { onAddToCart(product) }
+                            onAddToCart = { onAddToCart(product) },
+                            onClick = { onProductClick(product) }
                         )
                     }
                 }
@@ -524,12 +552,14 @@ private fun RestaurantChatCard(
 @Composable
 private fun ProductChatCard(
     product: Product,
-    onAddToCart: () -> Unit
+    onAddToCart: () -> Unit,
+    onClick: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
+            .clickable { onClick() }
             .background(AiCard)
             .border(1.dp, AiSecondary.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
             .padding(12.dp)
@@ -1926,4 +1956,202 @@ private fun AiSemanticInputBar(
         }
     }
 }
+
+// ─── Product Detail Bottom Sheet ──────────────────────────────────────────────
+@Composable
+private fun ProductDetailBottomSheet(
+    product: Product,
+    onAddToCart: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AiSurface)
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Handle do bottom sheet
+        Box(
+            modifier = Modifier
+                .width(44.dp)
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(AiTextMuted.copy(alpha = 0.3f))
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Imagem grande do produto
+        if (!product.image_url.isNullOrBlank()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .clip(RoundedCornerShape(20.dp))
+            ) {
+                KamelImage(
+                    resource = asyncPainterResource(data = product.image_url),
+                    contentDescription = product.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    onLoading = {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .background(AiCard),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(40.dp),
+                                strokeWidth = 3.dp,
+                                color = AiSecondary
+                            )
+                        }
+                    },
+                    onFailure = {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .background(AiCard),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("🍕", fontSize = 80.sp)
+                        }
+                    }
+                )
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+
+        // Nome do produto
+        Text(
+            text = product.name,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = AiText,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Preço
+        Text(
+            text = "${product.price} €",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = AiSecondary
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Informações adicionais (rating e tempo de preparo)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            if (product.rating != null && product.rating > 0) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text("⭐", fontSize = 16.sp)
+                    Text(
+                        text = product.rating.toString(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AiText
+                    )
+                }
+            }
+
+            if (product.preparationTime.isNotBlank()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text("⏱️", fontSize = 16.sp)
+                    Text(
+                        text = product.preparationTime,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AiText
+                    )
+                }
+            }
+        }
+
+        // Descrição do produto
+        if (product.description.isNotBlank()) {
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(AiCard)
+                    .padding(16.dp)
+            ) {
+                Column {
+                    Text(
+                        text = "Descrição",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = AiPrimary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = product.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = AiText,
+                        lineHeight = 22.sp
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Botão adicionar ao carrinho
+        Button(
+            onClick = onAddToCart,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.horizontalGradient(listOf(AiSecondary, KomaGreenDark)),
+                        RoundedCornerShape(16.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+                    Text(
+                        "Adicionar ao Carrinho",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
 
