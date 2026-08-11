@@ -33,6 +33,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.ui.layout.ContentScale
+import io.kamel.image.KamelImage
+import io.kamel.image.asyncPainterResource
 import kotlinx.coroutines.delay
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
@@ -535,20 +538,67 @@ private fun ProductChatCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Ícone do produto
+            // Imagem do produto
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        Brush.radialGradient(
-                            listOf(AiSecondary.copy(alpha = 0.2f), Color.Transparent)
-                        )
-                    )
                     .border(1.dp, AiSecondary.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text("🍕", fontSize = 24.sp)
+                if (!product.image_url.isNullOrBlank()) {
+                    KamelImage(
+                        resource = asyncPainterResource(data = product.image_url),
+                        contentDescription = product.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        onLoading = {
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.radialGradient(
+                                            listOf(AiSecondary.copy(alpha = 0.2f), Color.Transparent)
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = AiSecondary
+                                )
+                            }
+                        },
+                        onFailure = {
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.radialGradient(
+                                            listOf(AiSecondary.copy(alpha = 0.2f), Color.Transparent)
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("🍕", fontSize = 24.sp)
+                            }
+                        }
+                    )
+                } else {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(AiSecondary.copy(alpha = 0.2f), Color.Transparent)
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🍕", fontSize = 24.sp)
+                    }
+                }
             }
 
             Column(modifier = Modifier.weight(1f)) {
