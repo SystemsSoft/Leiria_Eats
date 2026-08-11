@@ -42,11 +42,8 @@ class SearchViewModel(
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
     private fun buildGreeting(name: String): String {
-        val firstName = name.trim().split(" ").firstOrNull { it.isNotBlank() }
-        return if (!firstName.isNullOrBlank())
-            "Olá ${firstName.replaceFirstChar { it.uppercaseChar() }}! O que deseja comer hoje?"
-        else
-            "Olá! O que deseja comer hoje?"
+        // Saudação removida - retorna string vazia
+        return ""
     }
 
     private fun buildWelcomeMessage(): String {

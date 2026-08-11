@@ -31,7 +31,7 @@ data class ChatMessage(
 data class SearchUiState(
     val isLoading: Boolean = false,
     val textInput: String = "",
-    val aiReply: String = "Olá! O que deseja comer hoje?",
+    val aiReply: String = "",
     val restaurantResults: List<Restaurant> = emptyList(),
     val productResults: List<Product> = emptyList(),
     // Lista exclusiva do Home — carregada uma vez e nunca sobrescrita por pesquisas da IA
@@ -81,13 +81,7 @@ data class SearchUiState(
     // key = orderId, value = restaurantId
     val orderRestaurantIds: Map<String, Int> = emptyMap(),
     // Lista de mensagens de chat da IA
-    val chatMessages: List<ChatMessage> = listOf(
-        ChatMessage(
-            id = "initial",
-            type = ChatMessageType.AI,
-            text = "Olá! O que deseja comer hoje?"
-        )
-    )
+    val chatMessages: List<ChatMessage> = emptyList()
 ) {
     val cartCount: Int get() = cartItems.size
     val favoriteOrders: List<Order> get() = orderHistory
