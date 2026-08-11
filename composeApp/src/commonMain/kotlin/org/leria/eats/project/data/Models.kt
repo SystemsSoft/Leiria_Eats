@@ -60,7 +60,9 @@ data class ChatResponse(
     val intent: String? = null,             // MANTIDO
     val restaurantResults: List<Restaurant> = emptyList(),  // Temporário
     val productResults: List<Product> = emptyList(),        // Temporário
-    val products: List<Product> = emptyList()  // NOVO: padrão da IA
+    val products: List<Product> = emptyList(),  // NOVO: padrão da IA
+    @SerialName("order_confirmed")
+    val orderConfirmed: Boolean = false     // NOVO: indica que o pedido está pronto para checkout
 )
 
 // Mantido para compatibilidade com código legado

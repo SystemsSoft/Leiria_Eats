@@ -32,6 +32,9 @@ class IosVoiceRecognizer : VoiceRecognizer {
     private val _error = MutableStateFlow<String?>(null)
     override val error = _error.asStateFlow()
 
+    private val _shouldAutoSend = MutableStateFlow(false)
+    override val shouldAutoSend = _shouldAutoSend.asStateFlow()
+
     // Use pt-BR locale — it has broader speech recognition support than pt-PT.
     // Falls back to device locale if pt-BR recognizer is unavailable.
     private val speechRecognizer: SFSpeechRecognizer = run {
@@ -64,6 +67,9 @@ class IosVoiceRecognizer : VoiceRecognizer {
             stopListening()
             return
         }
+
+        // Reset auto-send flag
+        _shouldAutoSend.value = false
 
         // Guard: microphone permission
         if (AVAudioSession.sharedInstance().recordPermission() != AVAudioSessionRecordPermissionGranted) {

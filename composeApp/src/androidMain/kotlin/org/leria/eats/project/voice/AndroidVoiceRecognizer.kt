@@ -25,6 +25,10 @@ class AndroidVoiceRecognizer(private val context: Context) : VoiceRecognizer {
     // Aqui guardamos tudo o que você já falou antes da pausa
     private var accumulatedText = ""
 
+    // Timer para detectar pausa e enviar automaticamente (estilo Gemini)
+    private var autoPauseTimer: Runnable? = null
+    private var lastTextReceived = ""
+
     // --- FLUXOS (Observables) ---
     private val _results = MutableStateFlow("")
     override val results: StateFlow<String> = _results.asStateFlow()
@@ -34,6 +38,9 @@ class AndroidVoiceRecognizer(private val context: Context) : VoiceRecognizer {
 
     private val _error = MutableStateFlow<String?>(null)
     override val error: StateFlow<String?> = _error.asStateFlow()
+
+    private val _shouldAutoSend = MutableStateFlow(false)
+    override val shouldAutoSend: StateFlow<Boolean> = _shouldAutoSend.asStateFlow()
 
     init {
         initializeRecognizer()
@@ -55,8 +62,13 @@ class AndroidVoiceRecognizer(private val context: Context) : VoiceRecognizer {
             val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
             if (!matches.isNullOrEmpty()) {
                 val currentPhrase = matches[0]
+                lastTextReceived = currentPhrase
                 // Mostra na tela: O que já estava salvo + O que você está falando agora
                 _results.value = "$accumulatedText $currentPhrase".trim()
+
+                // Cancela o timer anterior e inicia um novo (a pessoa ainda está falando)
+                cancelAutoPauseTimer()
+                scheduleAutoPauseTimer()
             }
         }
 
@@ -68,12 +80,15 @@ class AndroidVoiceRecognizer(private val context: Context) : VoiceRecognizer {
                 // Salva na memória permanente para não perder quando reiniciar
                 accumulatedText = "$accumulatedText $finalPhrase".trim()
                 _results.value = accumulatedText
+                lastTextReceived = finalPhrase
             }
 
             // A LÓGICA DO "SÓ PARA NO PAUSE":
             // Se o usuário NÃO clicou em pause (userWantsToListen == true),
             // a gente reinicia o microfone imediatamente!
             if (userWantsToListen) {
+                // Agenda o auto-envio antes de reiniciar
+                scheduleAutoPauseTimer()
                 restartListening()
             } else {
                 _isListening.value = false
@@ -129,9 +144,9 @@ class AndroidVoiceRecognizer(private val context: Context) : VoiceRecognizer {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
 
-                // Pedimos para o Android ter paciência (5 segundos de silêncio)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 5000)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 5000)
+                // Tempo de silêncio reduzido para 1.8s para detecção rápida de pausa (estilo Gemini)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1800)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1800)
             }
             speechRecognizer?.startListening(intent)
             _isListening.value = true
@@ -147,6 +162,9 @@ class AndroidVoiceRecognizer(private val context: Context) : VoiceRecognizer {
             userWantsToListen = true
             accumulatedText = ""
             _results.value = ""
+            _shouldAutoSend.value = false // Reset auto-send flag
+            lastTextReceived = ""
+            cancelAutoPauseTimer()
             startListeningIntent()
         }
     }
@@ -154,8 +172,37 @@ class AndroidVoiceRecognizer(private val context: Context) : VoiceRecognizer {
     override fun stopListening() {
         mainHandler.post {
             userWantsToListen = false // Desativa a flag (Agora pode parar de verdade)
+            cancelAutoPauseTimer()
             speechRecognizer?.stopListening()
             _isListening.value = false
         }
     }
+
+    // ── Funções para gerenciar o timer de auto-pausa (estilo Gemini) ──
+    private fun scheduleAutoPauseTimer() {
+        // Cancela qualquer timer anterior
+        cancelAutoPauseTimer()
+
+        // Cria novo timer: se passar 1.8s sem novos resultados, envia automaticamente
+        autoPauseTimer = Runnable {
+            if (userWantsToListen && _results.value.isNotBlank()) {
+                // Detectou pausa significativa - sinaliza para enviar automaticamente
+                _shouldAutoSend.value = true
+                userWantsToListen = false
+                speechRecognizer?.stopListening()
+                _isListening.value = false
+            }
+        }
+
+        // Agenda para 1.8 segundos (mesmo tempo do silêncio do recognizer)
+        mainHandler.postDelayed(autoPauseTimer!!, 1800)
+    }
+
+    private fun cancelAutoPauseTimer() {
+        autoPauseTimer?.let {
+            mainHandler.removeCallbacks(it)
+            autoPauseTimer = null
+        }
+    }
 }
+

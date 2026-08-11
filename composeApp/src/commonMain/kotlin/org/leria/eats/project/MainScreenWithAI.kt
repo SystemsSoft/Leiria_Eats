@@ -63,6 +63,7 @@ fun MainScreenWithAI(
     val tts = koinInject<TextToSpeechService>()
     val voiceText by voiceRecognizer.results.collectAsState()
     val isListening by voiceRecognizer.isListening.collectAsState()
+    val shouldAutoSend by voiceRecognizer.shouldAutoSend.collectAsState()
     val permissionStatus by permissionManager.status.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var isMuted by remember { mutableStateOf(false) }
@@ -100,6 +101,18 @@ fun MainScreenWithAI(
     LaunchedEffect(voiceText) {
         if (voiceText.isNotEmpty()) {
             viewModel.updateInputFromVoice(voiceText)
+        }
+    }
+
+    // Auto-send quando detectar pausa na fala (estilo Gemini)
+    LaunchedEffect(shouldAutoSend) {
+        if (shouldAutoSend) {
+            val capturedText = voiceText.trim()
+            if (capturedText.isNotEmpty()) {
+                viewModel.updateInputFromVoice(capturedText)
+                delay(300)
+                viewModel.sendSearch()
+            }
         }
     }
 
