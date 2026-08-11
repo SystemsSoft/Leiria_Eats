@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.leria.eats.project.data.Address
+import org.leria.eats.project.data.ChatResponse
 import org.leria.eats.project.data.DeliveryFeeRequest
 import org.leria.eats.project.data.DeliveryFeeResponse
 import org.leria.eats.project.data.LeriaApiClient
@@ -21,6 +22,7 @@ import org.leria.eats.project.data.ProfileRepository
 import org.leria.eats.project.data.RatingItemRequest
 import org.leria.eats.project.data.RatingRequest
 import org.leria.eats.project.data.Restaurant
+import org.leria.eats.project.data.SearchResponse
 import org.leria.eats.project.presentation.ChatMessage
 import org.leria.eats.project.presentation.ChatMessageType
 import org.leria.eats.project.presentation.MainTab
@@ -365,7 +367,7 @@ class SearchViewModel(
 
     private fun addUserMessage(text: String) {
         val message = ChatMessage(
-            id = "user_${System.currentTimeMillis()}",
+            id = "user_${kotlin.random.Random.nextLong()}",
             type = ChatMessageType.USER,
             text = text
         )
@@ -380,7 +382,7 @@ class SearchViewModel(
         products: List<Product> = emptyList()
     ) {
         val message = ChatMessage(
-            id = "ai_${System.currentTimeMillis()}",
+            id = "ai_${kotlin.random.Random.nextLong()}",
             type = ChatMessageType.AI,
             text = text,
             restaurants = restaurants,
@@ -452,7 +454,25 @@ class SearchViewModel(
         _uiState.update { it.copy(isLoading = true, error = null, isSuggestionMode = false) }
         viewModelScope.launch {
             try {
-                val response = apiClient.searchRestaurants(resolvedQuery.trim())
+                // Usa o novo endpoint com IA Generativa
+                val chatResponse = apiClient.sendChatMessage(resolvedQuery.trim())
+
+                // Verifica se o pedido foi confirmado pela IA
+                if (chatResponse.orderConfirmed) {
+                    handleOrderConfirmation(chatResponse)
+                    return@launch
+                }
+
+                // Converte para SearchResponse para compatibilidade com código existente
+                val response = SearchResponse(
+                    reply = chatResponse.response,
+                    intent = chatResponse.intent,
+                    restaurantResults = chatResponse.restaurantResults,
+                    productResults = if (chatResponse.products.isNotEmpty())
+                        chatResponse.products
+                    else
+                        chatResponse.productResults
+                )
 
                 val hasBoth = response.restaurantResults.isNotEmpty() && response.productResults.isNotEmpty()
                 val hasOnlyRestaurants = response.restaurantResults.isNotEmpty() && response.productResults.isEmpty()
@@ -544,6 +564,64 @@ class SearchViewModel(
                 e.printStackTrace()
             }
         }
+    }
+
+    /**
+     * Processa a confirmação do pedido pela IA.
+     * Agrupa produtos do carrinho por restaurante e inicia o checkout.
+     */
+    private suspend fun handleOrderConfirmation(chatResponse: ChatResponse) {
+        val currentState = _uiState.value
+
+        // Adiciona mensagem da IA confirmando o pedido
+        val confirmationMessage = chatResponse.response ?: "Perfeito! Vou finalizar o seu pedido."
+        addAiMessage(text = confirmationMessage)
+
+        // Verifica se há produtos no carrinho
+        if (currentState.cartItems.isEmpty()) {
+            val errorMsg = "Não há produtos no carrinho para finalizar o pedido."
+            addAiMessage(text = errorMsg)
+            _uiState.update { it.copy(isLoading = false, error = errorMsg) }
+            return
+        }
+
+        // Verifica se todos os produtos são do mesmo restaurante
+        val restaurantIds = currentState.cartItems.mapNotNull { it.restaurant_id }.distinct()
+
+        if (restaurantIds.isEmpty()) {
+            val errorMsg = "Erro: Não foi possível identificar o restaurante dos produtos."
+            addAiMessage(text = errorMsg)
+            _uiState.update { it.copy(isLoading = false, error = errorMsg) }
+            return
+        }
+
+        if (restaurantIds.size > 1) {
+            // Múltiplos restaurantes - avisa o usuário
+            val warningMsg = "Os produtos no carrinho são de ${restaurantIds.size} restaurantes diferentes. Por favor, finalize um pedido por vez."
+            addAiMessage(text = warningMsg)
+            _uiState.update { it.copy(isLoading = false) }
+            // Navega para o carrinho para o usuário ver e escolher
+            onTabSelected(MainTab.CART)
+            return
+        }
+
+        // Um único restaurante - perfeito!
+        val restaurantId = restaurantIds.first()
+
+        // Atualiza o estado e navega para a tela de checkout (CART)
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                cartRestaurantId = restaurantId,
+                currentTab = MainTab.CART
+            )
+        }
+
+        // Adiciona pequeno delay para dar feedback visual
+        delay(300)
+
+        // Inicia o checkout automaticamente
+        checkout()
     }
 
     fun onSearchTypeSelected(showRestaurants: Boolean) {
