@@ -79,24 +79,13 @@ fun AiSearchScreen(
 
     Scaffold(
         topBar = {
-            Column {
-                // Barra de ondas no topo quando ouvindo
-                AnimatedVisibility(
-                    visible = isListening,
-                    enter = fadeIn(tween(400)) + expandVertically(tween(400)),
-                    exit = fadeOut(tween(300)) + shrinkVertically(tween(300))
-                ) {
-                    ListeningWaveHeader()
-                }
-
-                // TopBar com AiSimpleHeader
-                AiTopBar(
-                    glowAlpha = glowAlpha,
-                    isListening = isListening,
-                    showClearButton = uiState.chatMessages.size > 1,
-                    onClearChat = onClearSearch
-                )
-            }
+            // TopBar com AiSimpleHeader
+            AiTopBar(
+                glowAlpha = glowAlpha,
+                isListening = isListening,
+                showClearButton = uiState.chatMessages.size > 1,
+                onClearChat = onClearSearch
+            )
         },
         bottomBar = {
             // ── INPUT BAR ───────────────────────────────────────────────────────
@@ -249,41 +238,6 @@ fun AiSearchScreen(
     }
 }
 
-// ─── Listening Wave Header ────────────────────────────────────────────────────
-@Composable
-private fun ListeningWaveHeader() {
-    val infiniteTransition = rememberInfiniteTransition(label = "waveHeader")
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(4.dp)
-            .background(
-                Brush.horizontalGradient(
-                    colors = (0..20).map { index ->
-                        val offset by infiniteTransition.animateFloat(
-                            initialValue = 0f,
-                            targetValue = 1f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(1500 + index * 50, easing = EaseInOutSine),
-                                repeatMode = RepeatMode.Reverse
-                            ),
-                            label = "wave$index"
-                        )
-
-                        when (index % 5) {
-                            0 -> AiPrimary.copy(alpha = 0.3f + offset * 0.7f)
-                            1 -> KomaGoldAccent.copy(alpha = 0.4f + offset * 0.6f)
-                            2 -> AiSecondary.copy(alpha = 0.3f + offset * 0.7f)
-                            3 -> KomaGreenDark.copy(alpha = 0.4f + offset * 0.6f)
-                            else -> AiAccent.copy(alpha = 0.3f + offset * 0.7f)
-                        }
-                    }
-                )
-            )
-    )
-}
-
 // ─── AI Top Bar ───────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -293,36 +247,31 @@ private fun AiTopBar(
     showClearButton: Boolean,
     onClearChat: () -> Unit
 ) {
-    TopAppBar(
+    CenterAlignedTopAppBar(
         title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+            // Ícone pulsante com efeito extra quando ouvindo
+            Box(
+                modifier = Modifier.size(170.dp),
+                contentAlignment = Alignment.Center
             ) {
-                // Ícone pulsante com efeito extra quando ouvindo
                 Box(
-                    modifier = Modifier.size(170.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(152.dp)
-                            .background(
-                                Brush.radialGradient(
-                                    listOf(
-                                        AiPrimary.copy(alpha = if (isListening) glowAlpha * 0.7f else glowAlpha * 0.1f),
-                                        Color.Transparent
-                                    )
-                                ),
-                            )
-                    ) {
-                        Image(
-                            painter = painterResource(Res.drawable.logo),
-                            contentDescription = "Koma",
-                            modifier = Modifier
-                                .size(250.dp)
+                    modifier = Modifier
+                        .size(152.dp)
+                        .background(
+                            Brush.radialGradient(
+                                listOf(
+                                    AiPrimary.copy(alpha = if (isListening) glowAlpha * 0.7f else glowAlpha * 0.1f),
+                                    Color.Transparent
+                                )
+                            ),
                         )
-                    }
+                ) {
+                    Image(
+                        painter = painterResource(Res.drawable.logo),
+                        contentDescription = "Koma",
+                        modifier = Modifier
+                            .size(250.dp)
+                    )
                 }
             }
         },
