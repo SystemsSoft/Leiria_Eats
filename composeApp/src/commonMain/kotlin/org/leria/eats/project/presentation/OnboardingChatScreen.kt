@@ -157,7 +157,7 @@ fun OnboardingChatScreen(
             delay(800)
             addAiMessage(
                 messages = messages,
-                text = "Perfeito! ✨ Tudo configurado! Agora podes começar a fazer os teus pedidos.",
+                text = "Perfeito! ✨ Tudo configurado! Vamos começar? Podes me pedir qualquer prato que quiseres!",
                 step = OnboardingStep.COMPLETE,
                 onUpdate = { messages = it },
                 tts = tts,
@@ -368,7 +368,7 @@ private suspend fun processUserInput(
             onUpdateAddress(Address("Casa", input))
             addAiMessage(
                 messages = newMessages,
-                text = "Perfeito! ✨ Tudo configurado! Agora podes começar a fazer os teus pedidos.",
+                text = "Perfeito! ✨ Tudo configurado! Vamos começar? Podes me pedir qualquer prato que quiseres!",
                 step = OnboardingStep.COMPLETE,
                 onUpdate = { onUpdateMessages(it) },
                 tts = tts,

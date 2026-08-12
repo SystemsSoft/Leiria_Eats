@@ -633,10 +633,10 @@ fun MainScreenWithAI(
                                             }
                                         },
                                         onComplete = { name: String, email: String, phone: String, address: Address? ->
-                                            // Salvar perfil do usuário
+                                            // Salvar perfil do usuário e redirecionar para a tela de IA
                                             val addresses: List<Address> = if (address != null) listOf(address) else emptyList()
                                             viewModel.updateUserProfile(name, email, phone, addresses)
-                                            viewModel.onTabSelected(MainTab.HOME)
+                                            viewModel.onTabSelected(MainTab.AI)
                                         },
                                         onGetAddressFromMap = { lat: Double, long: Double ->
                                             locationService.getAddressFromCoordinates(lat, long)
