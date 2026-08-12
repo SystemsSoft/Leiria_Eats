@@ -251,7 +251,9 @@ private fun AiTopBar(
         // 1. MUDAMOS DE "title" PARA "navigationIcon"
         navigationIcon = {
             Box(
-                modifier = Modifier.size(180.dp),
+                modifier = Modifier
+                    .padding(bottom = 14.dp)
+                    .size(180.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -276,9 +278,7 @@ private fun AiTopBar(
                 )
             }
         },
-        // 2. O TITLE PODE FICAR VAZIO (ou você pode colocar um texto se quiser depois)
         title = {},
-
         actions = {
             if (showClearButton) {
                 TextButton(

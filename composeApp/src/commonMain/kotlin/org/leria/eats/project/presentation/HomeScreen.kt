@@ -136,7 +136,7 @@ private fun AiHeader() {
             contentDescription = "Koma",
             modifier = Modifier.size(180.dp),
             contentScale = ContentScale.Fit,
-            alignment = Alignment.Center
+            alignment = Alignment.TopStart
         )
     }
 }
