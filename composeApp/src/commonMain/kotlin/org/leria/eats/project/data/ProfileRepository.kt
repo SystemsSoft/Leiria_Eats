@@ -24,6 +24,8 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
     private val ORDER_ITEM_RATINGS_KEY = stringPreferencesKey("order_item_ratings")
     private val ORDER_PRODUCT_IDS_KEY = stringPreferencesKey("order_product_ids")
     private val ORDER_RESTAURANT_IDS_KEY = stringPreferencesKey("order_restaurant_ids")
+    private val ALLERGIES_KEY = stringPreferencesKey("user_allergies")
+    private val LIFESTYLES_KEY = stringPreferencesKey("user_lifestyles")
 
     val userProfileFlow: Flow<UserProfile> = dataStore.data.map { preferences ->
         val addressesJson = preferences[ADDRESSES_KEY] ?: "[]"
@@ -44,7 +46,9 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
             email = preferences[EMAIL_KEY] ?: "",
             phone = preferences[PHONE_KEY] ?: "",
             addresses = addresses,
-            savedPaymentMethods = paymentMethods
+            savedPaymentMethods = paymentMethods,
+            allergies = preferences[ALLERGIES_KEY] ?: "",
+            lifestyles = preferences[LIFESTYLES_KEY] ?: ""
         )
     }
 
@@ -53,7 +57,10 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
         name: String,
         email: String,
         phone: String,
-        addresses: List<Address>, ) {
+        addresses: List<Address>,
+        allergies: String = "",
+        lifestyles: String = ""
+    ) {
         dataStore.edit { preferences ->
             val addressesJson = Json.encodeToString(addresses)
             preferences[ID_KEY] = id
@@ -61,6 +68,8 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
             preferences[EMAIL_KEY] = email
             preferences[PHONE_KEY] = phone
             preferences[ADDRESSES_KEY] = addressesJson
+            preferences[ALLERGIES_KEY] = allergies
+            preferences[LIFESTYLES_KEY] = lifestyles
         }
     }
 

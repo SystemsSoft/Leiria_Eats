@@ -675,8 +675,8 @@ fun MainScreenWithAI(
                                     // Usuário já tem perfil: tela de edição
                                     ProfileScreen(
                                         userProfile = uiState.userProfile,
-                                        onSave = { name, email, phone, addresses ->
-                                            viewModel.updateUserProfile(name, email, phone, addresses)
+                                        onSave = { name, email, phone, addresses, allergies, lifestyles ->
+                                            viewModel.updateUserProfile(name, email, phone, addresses, allergies, lifestyles)
                                             viewModel.onTabSelected(MainTab.HOME)
                                         },
                                         onGetLocation = { callbackUpdateAddress ->

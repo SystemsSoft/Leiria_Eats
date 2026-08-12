@@ -67,7 +67,7 @@ private val PMuted   = KomaTextSec
 @Composable
 fun ProfileScreen(
     userProfile: UserProfile,
-    onSave: (String, String, String, List<Address>) -> Unit,
+    onSave: (String, String, String, List<Address>, String, String) -> Unit,
     onGetLocation: ((String, Double?, Double?) -> Unit) -> Unit,
     onGetAddressFromMap: (Double, Double) -> String?,
     isMuted: Boolean = false
@@ -75,6 +75,8 @@ fun ProfileScreen(
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var allergies by remember { mutableStateOf("") }
+    var lifestyles by remember { mutableStateOf("") }
     var addresses by remember { mutableStateOf<List<Address>>(emptyList()) }
     var showMapDialog by remember { mutableStateOf(false) }
     var showAddAddressDialog by remember { mutableStateOf(false) }
@@ -84,6 +86,8 @@ fun ProfileScreen(
         if (userProfile.name.isNotEmpty()) name = userProfile.name
         if (userProfile.email.isNotEmpty()) email = userProfile.email
         if (userProfile.phone.isNotEmpty()) phone = userProfile.phone
+        allergies = userProfile.allergies
+        lifestyles = userProfile.lifestyles
         if (userProfile.addresses.isNotEmpty()) addresses = userProfile.addresses
     }
 
@@ -225,6 +229,24 @@ fun ProfileScreen(
                 )
                 Spacer(modifier = Modifier.height(28.dp))
 
+                // ── Section: Personalização Alimentar ──────────────────────
+                ProfileSectionLabel(label = "Personalização Alimentar")
+                Spacer(modifier = Modifier.height(12.dp))
+                ProfileTextField(
+                    value = allergies,
+                    onValueChange = { allergies = it },
+                    label = "Alergias / Intolerâncias",
+                    icon = Icons.Default.Add
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                ProfileTextField(
+                    value = lifestyles,
+                    onValueChange = { lifestyles = it },
+                    label = "Estilos de Vida (ex: Vegan, Keto)",
+                    icon = Icons.Default.Check
+                )
+                Spacer(modifier = Modifier.height(28.dp))
+
                 // ── Section: endereços ────────────────────────────────────
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -285,7 +307,7 @@ fun ProfileScreen(
                 .height(54.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(Brush.horizontalGradient(listOf(PGold, KomaOrangeEnd)))
-                .clickable { onSave(name, email, phone, addresses) },
+                .clickable { onSave(name, email, phone, addresses, allergies, lifestyles) },
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
