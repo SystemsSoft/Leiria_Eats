@@ -35,6 +35,9 @@ class IosVoiceRecognizer : VoiceRecognizer {
     private val _shouldAutoSend = MutableStateFlow(false)
     override val shouldAutoSend = _shouldAutoSend.asStateFlow()
 
+    private val _currentContext = MutableStateFlow<VoiceContext?>(null)
+    override val currentContext = _currentContext.asStateFlow()
+
     // Use pt-BR locale — it has broader speech recognition support than pt-PT.
     // Falls back to device locale if pt-BR recognizer is unavailable.
     private val speechRecognizer: SFSpeechRecognizer = run {
@@ -61,15 +64,16 @@ class IosVoiceRecognizer : VoiceRecognizer {
     private var tapInstalled = false
 
     @OptIn(ExperimentalForeignApi::class)
-    override fun startListening() {
+    override fun startListening(context: VoiceContext) {
         // If already running, stop first
         if (audioEngine.isRunning()) {
             stopListening()
             return
         }
 
-        // Reset auto-send flag
+        // Reset auto-send flag and set context
         _shouldAutoSend.value = false
+        _currentContext.value = context
 
         // Guard: microphone permission
         if (AVAudioSession.sharedInstance().recordPermission() != AVAudioSessionRecordPermissionGranted) {
@@ -180,6 +184,12 @@ class IosVoiceRecognizer : VoiceRecognizer {
 
     override fun stopListening() {
         cleanupSession()
+        _currentContext.value = null // Clear context when stopping
+    }
+
+    override fun clearResults() {
+        _results.value = ""
+        _shouldAutoSend.value = false
     }
 
     /** Stops everything and returns to a clean idle state. */

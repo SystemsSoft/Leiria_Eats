@@ -97,6 +97,7 @@ fun OnboardingChatScreen(
 
     var showMapDialog by remember { mutableStateOf(false) }
     var isProcessing by remember { mutableStateOf(false) }
+    var lastProcessedVoiceText by remember { mutableStateOf("") }
 
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
@@ -126,10 +127,36 @@ fun OnboardingChatScreen(
         )
     }
 
-    // Handle voice input
-    LaunchedEffect(recognizedText) {
-        if (recognizedText.isNotEmpty() && !isListening) {
+    // Handle voice input - mostrar em tempo real e enviar quando parar
+    LaunchedEffect(recognizedText, isListening) {
+        if (recognizedText.isNotEmpty()) {
+            // Atualiza o campo de texto em tempo real enquanto fala
             inputText = recognizedText
+            
+            // Quando parar de falar, envia automaticamente após um delay
+            if (!isListening && recognizedText.isNotBlank() && recognizedText != lastProcessedVoiceText) {
+                delay(300) // Pequeno delay para garantir que capturou tudo
+                lastProcessedVoiceText = recognizedText // Marca como processado
+                // Envia automaticamente
+                scope.launch {
+                    processUserInput(
+                        input = recognizedText,
+                        currentStep = currentStep,
+                        messages = messages,
+                        onUpdateMessages = { messages = it },
+                        onUpdateStep = { currentStep = it },
+                        onUpdateName = { userName = it },
+                        onUpdateEmail = { userEmail = it },
+                        onUpdatePhone = { userPhone = it },
+                        onUpdateAddress = { userAddress = it },
+                        onComplete = { onComplete(userName, userEmail, userPhone, userAddress) },
+                        tts = tts,
+                        isMuted = isMuted,
+                        onProcessing = { isProcessing = it }
+                    )
+                    inputText = "" // Limpa o campo após enviar
+                }
+            }
         }
     }
 
@@ -263,11 +290,18 @@ fun OnboardingChatScreen(
             // Input area
             OnboardingInputArea(
                 inputText = inputText,
-                onInputChange = { inputText = it },
+                onInputChange = {
+                    inputText = it
+                    // Se o usuário começar a digitar manualmente, limpa a flag
+                    if (it != recognizedText) {
+                        lastProcessedVoiceText = ""
+                    }
+                },
                 isListening = isListening,
                 onMicClick = onMicClick,
                 onSendClick = {
                     if (inputText.isNotBlank()) {
+                        lastProcessedVoiceText = "" // Reset flag ao enviar manualmente
                         scope.launch {
                             processUserInput(
                                 input = inputText,

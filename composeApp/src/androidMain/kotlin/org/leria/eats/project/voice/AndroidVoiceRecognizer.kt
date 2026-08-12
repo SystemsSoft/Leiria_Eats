@@ -42,6 +42,9 @@ class AndroidVoiceRecognizer(private val context: Context) : VoiceRecognizer {
     private val _shouldAutoSend = MutableStateFlow(false)
     override val shouldAutoSend: StateFlow<Boolean> = _shouldAutoSend.asStateFlow()
 
+    private val _currentContext = MutableStateFlow<VoiceContext?>(null)
+    override val currentContext: StateFlow<VoiceContext?> = _currentContext.asStateFlow()
+
     init {
         initializeRecognizer()
     }
@@ -157,12 +160,13 @@ class AndroidVoiceRecognizer(private val context: Context) : VoiceRecognizer {
     }
 
 
-    override fun startListening() {
+    override fun startListening(context: VoiceContext) {
         mainHandler.post {
             userWantsToListen = true
             accumulatedText = ""
             _results.value = ""
             _shouldAutoSend.value = false // Reset auto-send flag
+            _currentContext.value = context // Set the context
             lastTextReceived = ""
             cancelAutoPauseTimer()
             startListeningIntent()
@@ -175,7 +179,15 @@ class AndroidVoiceRecognizer(private val context: Context) : VoiceRecognizer {
             cancelAutoPauseTimer()
             speechRecognizer?.stopListening()
             _isListening.value = false
+            _currentContext.value = null // Clear context when stopping
         }
+    }
+
+    override fun clearResults() {
+        _results.value = ""
+        _shouldAutoSend.value = false
+        accumulatedText = ""
+        lastTextReceived = ""
     }
 
     // ── Funções para gerenciar o timer de auto-pausa (estilo Gemini) ──

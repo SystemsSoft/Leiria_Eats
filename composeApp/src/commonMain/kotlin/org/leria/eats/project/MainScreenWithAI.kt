@@ -43,6 +43,7 @@ import org.leria.eats.project.presentation.components.WebView
 import org.leria.eats.project.presentation.viewmodel.SearchViewModel
 import org.leria.eats.project.service.LocationService
 import org.leria.eats.project.voice.VoiceRecognizer
+import org.leria.eats.project.voice.VoiceContext
 import org.leria.eats.project.voice.TextToSpeechService
 import org.leria.eats.project.theme.*
 
@@ -85,6 +86,7 @@ fun MainScreenWithAI(
     val voiceText by voiceRecognizer.results.collectAsState()
     val isListening by voiceRecognizer.isListening.collectAsState()
     val shouldAutoSend by voiceRecognizer.shouldAutoSend.collectAsState()
+    val voiceContext by voiceRecognizer.currentContext.collectAsState()
     val permissionStatus by permissionManager.status.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var isMuted by remember { mutableStateOf(false) }
@@ -126,15 +128,17 @@ fun MainScreenWithAI(
         }
     }
 
-    LaunchedEffect(voiceText) {
-        if (voiceText.isNotEmpty()) {
+    // Só processa voz se o contexto for AI ou Home Search
+    LaunchedEffect(voiceText, voiceContext) {
+        // Só atualiza o input se o contexto for de IA ou Home Search
+        if (voiceText.isNotEmpty() && (voiceContext == VoiceContext.AI_SEARCH || voiceContext == VoiceContext.HOME_SEARCH)) {
             viewModel.updateInputFromVoice(voiceText)
         }
     }
 
-    // Auto-send quando detectar pausa na fala (estilo Gemini)
-    LaunchedEffect(shouldAutoSend) {
-        if (shouldAutoSend) {
+    // Auto-send quando detectar pausa na fala (estilo Gemini) - apenas para AI e Home Search
+    LaunchedEffect(shouldAutoSend, voiceContext) {
+        if (shouldAutoSend && (voiceContext == VoiceContext.AI_SEARCH || voiceContext == VoiceContext.HOME_SEARCH)) {
             val capturedText = voiceText.trim()
             if (capturedText.isNotEmpty()) {
                 viewModel.updateInputFromVoice(capturedText)
@@ -144,8 +148,9 @@ fun MainScreenWithAI(
         }
     }
 
-    LaunchedEffect(isListening) {
-        if (!isListening) {
+    LaunchedEffect(isListening, voiceContext) {
+        // Só auto-envia se o contexto for de IA ou Home Search
+        if (!isListening && (voiceContext == VoiceContext.AI_SEARCH || voiceContext == VoiceContext.HOME_SEARCH)) {
             val capturedText = voiceText.trim()
             if (capturedText.isNotEmpty()) {
                 viewModel.updateInputFromVoice(capturedText)
@@ -157,6 +162,12 @@ fun MainScreenWithAI(
 
     LaunchedEffect(permissionStatus) {
         if (permissionStatus != PermissionStatus.GRANTED) voiceRecognizer.stopListening()
+    }
+
+    // Limpa os resultados de voz ao trocar de tab
+    LaunchedEffect(uiState.currentTab) {
+        voiceRecognizer.stopListening()
+        voiceRecognizer.clearResults()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -494,7 +505,7 @@ fun MainScreenWithAI(
                                 HomeScreen(
                                     // ...existing code...
                                     uiState = uiState,
-                                    isListening = isListening,
+                                    isListening = isListening && voiceContext == VoiceContext.HOME_SEARCH,
                                     permissionStatus = permissionStatus,
                                     onMicClick = {
                                         when (permissionStatus) {
@@ -504,7 +515,7 @@ fun MainScreenWithAI(
                                                 if (isListening) voiceRecognizer.stopListening()
                                                 else {
                                                     viewModel.onQueryChange("")
-                                                    voiceRecognizer.startListening()
+                                                    voiceRecognizer.startListening(VoiceContext.HOME_SEARCH)
                                                 }
                                             }
                                         }
@@ -529,7 +540,7 @@ fun MainScreenWithAI(
                             MainTab.AI -> {
                                 AiSearchScreen(
                                     uiState = uiState,
-                                    isListening = isListening,
+                                    isListening = isListening && voiceContext == VoiceContext.AI_SEARCH,
                                     permissionStatus = permissionStatus,
                                     onMicClick = {
                                         when (permissionStatus) {
@@ -539,7 +550,7 @@ fun MainScreenWithAI(
                                                 if (isListening) voiceRecognizer.stopListening()
                                                 else {
                                                     viewModel.onQueryChange("")
-                                                    voiceRecognizer.startListening()
+                                                    voiceRecognizer.startListening(VoiceContext.AI_SEARCH)
                                                 }
                                             }
                                         }
@@ -637,11 +648,11 @@ fun MainScreenWithAI(
                                 if (uiState.userProfile.name.isEmpty()) {
                                     // Onboarding: usuário novo sem perfil
                                     OnboardingChatScreen(
-                                        isListening = isListening,
-                                        recognizedText = voiceText,
+                                        isListening = isListening && voiceContext == VoiceContext.ONBOARDING,
+                                        recognizedText = if (voiceContext == VoiceContext.ONBOARDING) voiceText else "",
                                         onMicClick = {
                                             if (permissionStatus == PermissionStatus.GRANTED) {
-                                                if (!isListening) voiceRecognizer.startListening()
+                                                if (!isListening) voiceRecognizer.startListening(VoiceContext.ONBOARDING)
                                                 else voiceRecognizer.stopListening()
                                             } else {
                                                 permissionManager.askForPermission()
