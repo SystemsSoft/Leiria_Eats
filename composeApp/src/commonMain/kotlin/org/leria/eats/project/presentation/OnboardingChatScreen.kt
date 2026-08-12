@@ -241,7 +241,12 @@ fun OnboardingChatScreen(
             ) {
                 items(messages) { message ->
                     if (message.isAi) {
-                        AiMessageBubble(message = message)
+                        AiMessageBubble(
+                            message = message,
+                            onMapClick = if (message.step == OnboardingStep.ADDRESS) {
+                                { showMapDialog = true }
+                            } else null
+                        )
                     } else {
                         UserMessageBubble(message = message)
                     }
@@ -401,49 +406,88 @@ private fun addAiMessage(
 }
 
 @Composable
-private fun AiMessageBubble(message: OnboardingMessage) {
-    Row(
+private fun AiMessageBubble(
+    message: OnboardingMessage,
+    onMapClick: (() -> Unit)? = null
+) {
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Start
+        horizontalAlignment = Alignment.Start
     ) {
-        Box(
-            modifier = Modifier
-                .widthIn(max = 280.dp)
-                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp))
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            OGold.copy(alpha = 0.15f),
-                            OGreen.copy(alpha = 0.10f)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Box(
+                modifier = Modifier
+                    .widthIn(max = 280.dp)
+                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                OGold.copy(alpha = 0.15f),
+                                OGreen.copy(alpha = 0.10f)
+                            )
                         )
                     )
-                )
-                .border(
-                    1.dp,
-                    Brush.horizontalGradient(
-                        listOf(
-                            OGold.copy(alpha = 0.4f),
-                            OGreen.copy(alpha = 0.3f)
-                        )
-                    ),
-                    RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp)
-                )
-                .padding(12.dp)
-        ) {
-            Column {
-                Text(
-                    "KOMA AI",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = OGold,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-                Text(
-                    message.text,
-                    fontSize = 14.sp,
-                    color = OText,
-                    lineHeight = 20.sp
-                )
+                    .border(
+                        1.dp,
+                        Brush.horizontalGradient(
+                            listOf(
+                                OGold.copy(alpha = 0.4f),
+                                OGreen.copy(alpha = 0.3f)
+                            )
+                        ),
+                        RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 18.dp)
+                    )
+                    .padding(12.dp)
+            ) {
+                Column {
+                    Text(
+                        "KOMA AI",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = OGold,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    Text(
+                        message.text,
+                        fontSize = 14.sp,
+                        color = OText,
+                        lineHeight = 20.sp
+                    )
+                }
+            }
+        }
+
+        // Show map button if this is an address message
+        if (onMapClick != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(OGreen.copy(alpha = 0.15f))
+                    .border(1.dp, OGreen.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                    .clickable { onMapClick() }
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Map,
+                        contentDescription = "Abrir Mapa",
+                        tint = OGreen,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        "Selecionar no Mapa",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = OText
+                    )
+                }
             }
         }
     }
