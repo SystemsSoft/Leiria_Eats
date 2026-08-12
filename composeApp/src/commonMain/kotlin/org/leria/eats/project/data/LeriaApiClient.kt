@@ -160,7 +160,8 @@ class LeriaApiClient {
                         name = company.name,
                         category = company.category,
                         image_url = company.imageUrl,
-                        products = company.products
+                        products = company.products,
+                        plan = company.plan
                     )
                 }
             } else {
