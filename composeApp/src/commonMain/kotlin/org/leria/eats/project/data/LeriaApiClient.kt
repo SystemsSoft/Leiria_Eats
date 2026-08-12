@@ -147,6 +147,33 @@ class LeriaApiClient {
         }
     }
 
+    /** Busca todos os restaurantes da API (/restaurants) e converte para o modelo local Restaurant. */
+    suspend fun getAllRestaurants(): List<Restaurant> {
+        return try {
+            val response = client.get("$baseUrl/restaurants")
+            if (response.status.value == 200) {
+                // A API do backend retorna uma lista de CompanyResponse
+                val companies: List<CompanyResponse> = response.body()
+                companies.map { company ->
+                    Restaurant(
+                        id = company.id,
+                        name = company.name,
+                        category = company.category,
+                        image_url = company.imageUrl,
+                        products = company.products
+                    )
+                }
+            } else {
+                val errorBody: String = response.body()
+                println("⚠️ Erro ${response.status.value} ao buscar restaurantes: $errorBody")
+                emptyList()
+            }
+        } catch (e: Exception) {
+            println("🚨 Falha ao buscar restaurantes: ${e.message}")
+            emptyList()
+        }
+    }
+
     suspend fun getSavedPaymentMethods(userId: String): SavedPaymentMethodsResponse? {
         return try {
             val response = client.get("$baseUrl/users/$userId/saved-payment-methods")

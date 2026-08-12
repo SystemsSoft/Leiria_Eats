@@ -58,9 +58,9 @@ class SearchViewModel(
     private fun loadAllRestaurantsForHome() {
         viewModelScope.launch {
             try {
-                val response = apiClient.searchRestaurants("ver todos")
-                if (response.restaurantResults.isNotEmpty()) {
-                    _uiState.update { it.copy(allRestaurants = response.restaurantResults) }
+                val restaurants = apiClient.getAllRestaurants()
+                if (restaurants.isNotEmpty()) {
+                    _uiState.update { it.copy(allRestaurants = restaurants) }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -460,11 +460,28 @@ class SearchViewModel(
                     return@launch
                 }
 
+                // Se o usuário pediu para ver todos os restaurantes explicitamente,
+                // consome o endpoint /restaurants separado da IA para garantir que a
+                // lista completa seja obtida e separada do resultado gerado pela IA.
+                var aiRestaurantResults: List<Restaurant> = chatResponse.restaurantResults
+                if (resolvedQuery.equals("ver todos", ignoreCase = true)
+                    || resolvedQuery.equals("restaurantes", ignoreCase = true)
+                    || resolvedQuery.contains("todos os restaurantes", ignoreCase = true)
+                ) {
+                    try {
+                        val all = apiClient.getAllRestaurants()
+                        if (all.isNotEmpty()) aiRestaurantResults = all
+                    } catch (e: Exception) {
+                        // Mantém os resultados da IA caso o endpoint falhe
+                        println("⚠️ Falha ao buscar /restaurants: ${e.message}")
+                    }
+                }
+
                 // Converte para SearchResponse para compatibilidade com código existente
                 val response = SearchResponse(
                     reply = chatResponse.response,
                     intent = chatResponse.intent,
-                    restaurantResults = chatResponse.restaurantResults,
+                    restaurantResults = aiRestaurantResults,
                     productResults = if (chatResponse.products.isNotEmpty())
                         chatResponse.products
                     else
