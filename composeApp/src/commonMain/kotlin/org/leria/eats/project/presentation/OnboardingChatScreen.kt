@@ -111,10 +111,10 @@ fun OnboardingChatScreen(
             tts = tts,
             isMuted = isMuted
         )
-        delay(2000)
+        delay(4500)
         addAiMessage(
             messages = messages,
-            text = "Qual é o teu nome?",
+            text = "Me diga o teu nome?",
             step = OnboardingStep.NAME,
             onUpdate = {
                 messages = it
@@ -157,7 +157,7 @@ fun OnboardingChatScreen(
             delay(800)
             addAiMessage(
                 messages = messages,
-                text = "Perfeito! ✨ Tudo configurado! Vamos começar? Podes me pedir qualquer prato que quiseres!",
+                text = "Perfeito! ✨ Tudo configurado! Agora podes começar a fazer os teus pedidos.",
                 step = OnboardingStep.COMPLETE,
                 onUpdate = { messages = it },
                 tts = tts,
