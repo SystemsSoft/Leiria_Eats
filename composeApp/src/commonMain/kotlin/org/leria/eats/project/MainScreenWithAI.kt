@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -354,10 +355,10 @@ fun MainScreenWithAI(
 
                                 // ── Início ────────────────────────────────────────
                                 NavigationBarItem(
-                                    icon = { Icon(Icons.Default.Home, contentDescription = "Início") },
+                                    icon = { Icon(Icons.Default.Restaurant, contentDescription = "Início") },
                                     label = {
                                         Text(
-                                            "Início",
+                                            "Restaurantes",
                                             fontSize = 10.sp,
                                             fontWeight = if (uiState.currentTab == MainTab.HOME) FontWeight.Bold else FontWeight.Normal
                                         )
