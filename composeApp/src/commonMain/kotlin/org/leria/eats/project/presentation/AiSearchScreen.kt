@@ -247,36 +247,39 @@ private fun AiTopBar(
     showClearButton: Boolean,
     onClearChat: () -> Unit
 ) {
-    CenterAlignedTopAppBar(
-        title = {
-            // Ícone pulsante com efeito extra quando ouvindo
+    TopAppBar(
+        // 1. MUDAMOS DE "title" PARA "navigationIcon"
+        navigationIcon = {
             Box(
-                modifier = Modifier.size(170.dp),
+                modifier = Modifier.size(180.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
                     modifier = Modifier
-                        .size(152.dp)
+                        .matchParentSize()
                         .background(
                             Brush.radialGradient(
                                 listOf(
-                                    AiPrimary.copy(alpha = if (isListening) glowAlpha * 0.7f else glowAlpha * 0.1f),
+                                    AiPrimary.copy(alpha = if (isListening) glowAlpha * 0.7f else glowAlpha * 0.15f),
                                     Color.Transparent
-                                )
-                            ),
+                                ),
+                                radius = 200f
+                            )
                         )
-                ) {
-                    Image(
-                        painter = painterResource(Res.drawable.logo),
-                        contentDescription = "Koma",
-                        modifier = Modifier
-                            .size(250.dp)
-                    )
-                }
+                )
+                Image(
+                    painter = painterResource(Res.drawable.logo),
+                    contentDescription = "Koma",
+                    modifier = Modifier.size(180.dp),
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.Center
+                )
             }
         },
+        // 2. O TITLE PODE FICAR VAZIO (ou você pode colocar um texto se quiser depois)
+        title = {},
+
         actions = {
-            // Botão de limpar chat
             if (showClearButton) {
                 TextButton(
                     onClick = onClearChat,
@@ -297,7 +300,6 @@ private fun AiTopBar(
         )
     )
 }
-
 // ─── Chat Messages View ───────────────────────────────────────────────────────
 @Composable
 private fun ChatMessagesView(
