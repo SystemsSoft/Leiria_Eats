@@ -760,7 +760,7 @@ private fun AiSimpleHeader(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Koma Ai",
+                        text = "Koma",
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 18.sp,
                         color = AiText
@@ -776,7 +776,7 @@ private fun AiSimpleHeader(
                             .padding(horizontal = 7.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "IA",
+                            text = "AÍ",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = KomaGoldOnDark
@@ -809,181 +809,6 @@ private fun AiSimpleHeader(
     }
 }
 
-// ─── Hero Header (original, mantido para compatibilidade) ────────────────────
-@Composable
-private fun AiHeroHeader(
-    uiState: SearchUiState,
-    glowAlpha: Float,
-    hasResults: Boolean,
-    onTextChange: (String) -> Unit,
-    onSendClick: () -> Unit,
-    isListening: Boolean = false
-) {
-    val displayedReply = remember { mutableStateOf("") }
-    LaunchedEffect(uiState.aiReply) {
-        displayedReply.value = ""
-        for (i in uiState.aiReply.indices) {
-            displayedReply.value = uiState.aiReply.substring(0, i + 1)
-            delay(18)
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(AiSurface)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // ── Ícone + título IA ──────────────────────────────────────────────────
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            // Ícone pulsante com efeito extra quando ouvindo
-            Box(
-                modifier = Modifier.size(52.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                // Círculo externo pulsante quando ouvindo
-                if (isListening) {
-                    val listeningPulse by rememberInfiniteTransition(label = "iconPulse").animateFloat(
-                        initialValue = 1f,
-                        targetValue = 1.3f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(1000, easing = EaseInOutSine),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "pulse"
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .size(52.dp)
-                            .graphicsLayer {
-                                scaleX = listeningPulse
-                                scaleY = listeningPulse
-                                alpha = 0.6f / listeningPulse
-                            }
-                            .background(
-                                Brush.radialGradient(
-                                    listOf(
-                                        AiAccent.copy(alpha = 0.5f),
-                                        AiPrimary.copy(alpha = 0.3f),
-                                        Color.Transparent
-                                    )
-                                ),
-                                CircleShape
-                            )
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .background(
-                            Brush.radialGradient(
-                                listOf(
-                                    AiPrimary.copy(alpha = if (isListening) glowAlpha * 1.2f else glowAlpha * 0.7f),
-                                    Color.Transparent
-                                )
-                            ),
-                            CircleShape
-                        )
-                        .border(
-                            1.5.dp,
-                            if (isListening)
-                                Brush.sweepGradient(
-                                    listOf(
-                                        AiAccent,
-                                        AiPrimary,
-                                        KomaGoldAccent,
-                                        AiSecondary,
-                                        AiAccent
-                                    )
-                                )
-                            else
-                                Brush.linearGradient(
-                                    listOf(
-                                        AiPrimary.copy(alpha = 0.6f),
-                                        AiPrimary.copy(alpha = 0.6f)
-                                    )
-                                ),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.AutoAwesome,
-                        contentDescription = null,
-                        tint = if (isListening) AiAccent else AiPrimary,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Realizar pedido",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 18.sp,
-                        color = AiText
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    // Badge "IA"
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(
-                                Brush.horizontalGradient(listOf(AiPrimary, KomaGoldAccent))
-                            )
-                            .padding(horizontal = 7.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "IA",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = KomaGoldOnDark
-                        )
-                    }
-                }
-                Text(
-                    text = "Diga livremente o que deseja comer",
-                    fontSize = 11.sp,
-                    color = AiTextMuted
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // ── Bubble de resposta da IA ───────────────────────────────────────────
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp))
-                .background(Brush.horizontalGradient(listOf(AiBotBubble, AiCard)))
-                .border(
-                    1.dp,
-                    AiPrimary.copy(alpha = 0.2f),
-                    RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp)
-                )
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            Text(
-                text = displayedReply.value,
-                style = MaterialTheme.typography.bodyMedium,
-                color = AiText
-            )
-        }
-
-
-    }
-}
 
 // ─── Card "Como funciona" ─────────────────────────────────────────────────────
 @Composable
