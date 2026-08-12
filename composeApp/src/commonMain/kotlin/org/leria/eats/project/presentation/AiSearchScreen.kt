@@ -2,6 +2,7 @@ package org.leria.eats.project.presentation
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,6 +38,9 @@ import androidx.compose.ui.layout.ContentScale
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.painterResource
+import komaai.composeapp.generated.resources.Res
+import komaai.composeapp.generated.resources.logo
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
@@ -675,7 +679,7 @@ private fun AiSimpleHeader(
             ) {
             // Ícone pulsante com efeito extra quando ouvindo
             Box(
-                modifier = Modifier.size(52.dp),
+                modifier = Modifier.size(110.dp),
                 contentAlignment = Alignment.Center
             ) {
                 // Círculo externo pulsante quando ouvindo
@@ -701,19 +705,18 @@ private fun AiSimpleHeader(
                             .background(
                                 Brush.radialGradient(
                                     listOf(
-                                        AiAccent.copy(alpha = 0.5f),
-                                        AiPrimary.copy(alpha = 0.3f),
+                                        AiAccent.copy(alpha = 0.1f),
+                                        AiPrimary.copy(alpha = 0.1f),
                                         Color.Transparent
                                     )
                                 ),
-                                CircleShape
                             )
                     )
                 }
 
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
+                        .size(152.dp)
                         .background(
                             Brush.radialGradient(
                                 listOf(
@@ -746,48 +749,14 @@ private fun AiSimpleHeader(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        Icons.Default.AutoAwesome,
-                        contentDescription = null,
-                        tint = if (isListening) AiAccent else AiPrimary,
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Koma",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 18.sp,
-                        color = AiText
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    // Badge "IA"
-                    Box(
+                    Image(
+                        painter = painterResource(Res.drawable.logo),
+                        contentDescription = "Koma",
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(
-                                Brush.horizontalGradient(listOf(AiPrimary, KomaGoldAccent))
-                            )
-                            .padding(horizontal = 7.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "AÍ",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = KomaGoldOnDark
-                        )
-                    }
+                            .size(150.dp)
+                            .height(22.dp)
+                    )
                 }
-                Text(
-                    text = "Diga livremente o que deseja comer",
-                    fontSize = 11.sp,
-                    color = AiTextMuted
-                )
             }
             }
 
