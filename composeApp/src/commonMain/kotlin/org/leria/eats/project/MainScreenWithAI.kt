@@ -37,6 +37,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.leria.eats.project.permissions.PermissionManager
 import org.leria.eats.project.permissions.PermissionStatus
+import org.leria.eats.project.data.Address
 import org.leria.eats.project.presentation.*
 import org.leria.eats.project.presentation.components.WebView
 import org.leria.eats.project.presentation.viewmodel.SearchViewModel
@@ -617,33 +618,62 @@ fun MainScreenWithAI(
                             }
 
                             MainTab.PROFILE -> {
-                                ProfileScreen(
-                                    // ...existing code...
-                                    userProfile = uiState.userProfile,
-                                    onSave = { name, email, phone, addresses ->
-                                        viewModel.updateUserProfile(name, email, phone, addresses)
-                                        viewModel.onTabSelected(MainTab.HOME)
-                                    },
-                                    onGetLocation = { callbackUpdateAddress ->
-                                        if (permissionStatus == PermissionStatus.GRANTED) {
-                                            scope.launch {
-                                                val addressFound = locationService.getCurrentAddress()
-                                                val coords = locationService.getCurrentCoordinates()
-                                                callbackUpdateAddress(
-                                                    addressFound ?: "Localização não encontrada",
-                                                    coords?.first,
-                                                    coords?.second
-                                                )
-                                             }
-                                        } else {
-                                            permissionManager.askForPermission()
-                                            callbackUpdateAddress("", null, null)
-                                        }
-                                    },
-                                    onGetAddressFromMap = { lat, long ->
-                                        locationService.getAddressFromCoordinates(lat, long)
-                                    }
-                                )
+                                 // Verificar se o usuário tem perfil
+                                if (uiState.userProfile.name.isEmpty()) {
+                                    // Onboarding: usuário novo sem perfil
+                                    OnboardingChatScreen(
+                                        isListening = isListening,
+                                        recognizedText = voiceText,
+                                        onMicClick = {
+                                            if (permissionStatus == PermissionStatus.GRANTED) {
+                                                if (!isListening) voiceRecognizer.startListening()
+                                                else voiceRecognizer.stopListening()
+                                            } else {
+                                                permissionManager.askForPermission()
+                                            }
+                                        },
+                                        onComplete = { name: String, email: String, phone: String, address: Address? ->
+                                            // Salvar perfil do usuário
+                                            val addresses: List<Address> = if (address != null) listOf(address) else emptyList()
+                                            viewModel.updateUserProfile(name, email, phone, addresses)
+                                            viewModel.onTabSelected(MainTab.HOME)
+                                        },
+                                        onGetAddressFromMap = { lat: Double, long: Double ->
+                                            locationService.getAddressFromCoordinates(lat, long)
+                                        },
+                                        tts = tts,
+                                        isMuted = isMuted
+                                    )
+                                } else {
+                                    // Usuário já tem perfil: tela de edição
+                                    ProfileScreen(
+                                        userProfile = uiState.userProfile,
+                                        onSave = { name, email, phone, addresses ->
+                                            viewModel.updateUserProfile(name, email, phone, addresses)
+                                            viewModel.onTabSelected(MainTab.HOME)
+                                        },
+                                        onGetLocation = { callbackUpdateAddress ->
+                                            if (permissionStatus == PermissionStatus.GRANTED) {
+                                                scope.launch {
+                                                    val addressFound = locationService.getCurrentAddress()
+                                                    val coords = locationService.getCurrentCoordinates()
+                                                    callbackUpdateAddress(
+                                                        addressFound ?: "Localização não encontrada",
+                                                        coords?.first,
+                                                        coords?.second
+                                                    )
+                                                 }
+                                            } else {
+                                                permissionManager.askForPermission()
+                                                callbackUpdateAddress("", null, null)
+                                            }
+                                        },
+                                        onGetAddressFromMap = { lat, long ->
+                                            locationService.getAddressFromCoordinates(lat, long)
+                                        },
+                                        isMuted = isMuted
+                                    )
+                                }
                             }
                         }
                     }
