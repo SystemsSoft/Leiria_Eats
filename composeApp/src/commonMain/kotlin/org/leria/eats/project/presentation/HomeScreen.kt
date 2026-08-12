@@ -74,6 +74,12 @@ fun HomeScreen(
     onSearchTypeSelected: (showRestaurants: Boolean) -> Unit,
     onDismissSearchTypeSheet: () -> Unit
 ) {
+    // Pulsing glow animation
+    val glowAlpha by rememberInfiniteTransition(label = "glow").animateFloat(
+        initialValue = 0.15f, targetValue = 0.55f, label = "glowAlpha",
+        animationSpec = infiniteRepeatable(tween(2200, easing = EaseInOutSine), RepeatMode.Reverse)
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -98,7 +104,12 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                AiHeader()
+                AiTopBar(
+                    glowAlpha = glowAlpha,
+                    isListening = isListening,
+                    showClearButton = false,
+                    onClearChat = onClearSearch
+                )
 
                 Box(
                     modifier = Modifier
@@ -121,24 +132,66 @@ fun HomeScreen(
     }
 }
 
-// ─── Header AI ────────────────────────────────────────────────────────────────
+// ─── AI Top Bar ───────────────────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AiHeader() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(AiDeepBg)
-            .padding( bottom = 14.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Image(
-            painter = painterResource(Res.drawable.logo),
-            contentDescription = "Koma",
-            modifier = Modifier.size(180.dp),
-            contentScale = ContentScale.Fit,
-            alignment = Alignment.TopStart
+private fun AiTopBar(
+    glowAlpha: Float,
+    isListening: Boolean,
+    showClearButton: Boolean,
+    onClearChat: () -> Unit
+) {
+    TopAppBar(
+        navigationIcon = {
+            Box(
+                modifier = Modifier
+                    .padding(bottom = 14.dp)
+                    .size(180.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.radialGradient(
+                                listOf(
+                                    AiPrimary.copy(alpha = if (isListening) glowAlpha * 0.7f else glowAlpha * 0.15f),
+                                    Color.Transparent
+                                ),
+                                radius = 200f
+                            )
+                        )
+                )
+                Image(
+                    painter = painterResource(Res.drawable.logo),
+                    contentDescription = "Koma",
+                    modifier = Modifier.size(180.dp),
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.Center
+                )
+            }
+        },
+        title = {},
+        actions = {
+            if (showClearButton) {
+                TextButton(
+                    onClick = onClearChat,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text(
+                        text = "Limpar",
+                        fontSize = 12.sp,
+                        color = AiTextMuted,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = AiSurface,
+            titleContentColor = AiText
         )
-    }
+    )
 }
 
 // ─── Thinking indicator ───────────────────────────────────────────────────────
