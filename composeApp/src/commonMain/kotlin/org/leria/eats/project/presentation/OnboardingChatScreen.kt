@@ -111,7 +111,7 @@ fun OnboardingChatScreen(
             tts = tts,
             isMuted = isMuted
         )
-        delay(4500)
+        delay(5000)
         addAiMessage(
             messages = messages,
             text = "Me diga o teu nome?",
