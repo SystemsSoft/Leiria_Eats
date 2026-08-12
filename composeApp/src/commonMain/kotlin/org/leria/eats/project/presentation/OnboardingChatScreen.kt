@@ -105,7 +105,7 @@ fun OnboardingChatScreen(
         delay(500)
         addAiMessage(
             messages = messages,
-            text = "Olá! 👋 Bem-vindo ao KOMA Leiria Eats! Sou a tua assistente de IA e vou ajudar-te a configurar o teu perfil. Vamos começar?",
+            text = "Olá! 👋 Bem-vindo ao KOMA Aí, vamos começar com o teu perfil",
             step = OnboardingStep.WELCOME,
             onUpdate = { messages = it },
             tts = tts,
@@ -114,7 +114,7 @@ fun OnboardingChatScreen(
         delay(2000)
         addAiMessage(
             messages = messages,
-            text = "Qual é o teu nome completo?",
+            text = "Qual é o teu nome?",
             step = OnboardingStep.NAME,
             onUpdate = {
                 messages = it
