@@ -760,7 +760,7 @@ private fun AiSimpleHeader(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Realizar pedido",
+                        text = "Koma Ai",
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 18.sp,
                         color = AiText
@@ -1393,152 +1393,6 @@ private fun AiSemanticThinkingIndicator(modifier: Modifier = Modifier) {
     }
 }
 
-// ─── Results body (semântico) ─────────────────────────────────────────────────
-@Composable
-private fun AiSemanticResultsBody(
-    uiState: SearchUiState,
-    onRestaurantClick: (Restaurant) -> Unit,
-    onAddToCart: (Product) -> Unit,
-    onViewCart: () -> Unit,
-    onClearSearch: () -> Unit,
-    onTextChange: (String) -> Unit,
-    onSendClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-            .background(AiSurface)
-            .fillMaxSize()
-    ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 12.dp, bottom = 8.dp)
-        ) {
-            // Header row com badge IA
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = AiPrimary, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Resultados semânticos", color = AiTextMuted, fontSize = 13.sp)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(AiPrimary.copy(alpha = 0.15f))
-                                .border(1.dp, AiPrimary.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 5.dp, vertical = 1.dp)
-                        ) {
-                            Text("IA", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = AiPrimary)
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(
-                            "Ver todos",
-                            color = AiSecondary,
-                            fontSize = 12.sp,
-                            modifier = Modifier.clickable {
-                                if (!uiState.isLoading) { onTextChange("ver todos"); onSendClick() }
-                            }
-                        )
-                        Text(
-                            "Limpar",
-                            color = AiTextMuted,
-                            fontSize = 12.sp,
-                            modifier = Modifier.clickable { onClearSearch() }
-                        )
-                    }
-                }
-            }
-
-            // Query semântica usada
-            if (uiState.lastSearchQuery.isNotEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(AiPrimary.copy(alpha = 0.07f))
-                            .border(1.dp, AiPrimary.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = "🧠 \"${uiState.lastSearchQuery}\"",
-                            fontSize = 11.sp,
-                            color = AiTextMuted,
-                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                        )
-                    }
-                }
-            }
-
-            // Restaurantes
-            if (uiState.restaurantResults.isNotEmpty()) {
-                item {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 10.dp)
-                    ) {
-                        Box(modifier = Modifier.width(3.dp).height(16.dp).background(AiPrimary, RoundedCornerShape(2.dp)))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Restaurantes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AiText)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("(${uiState.restaurantResults.size})", fontSize = 11.sp, color = AiTextMuted)
-                    }
-                }
-                item {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                        modifier = Modifier.padding(horizontal = 12.dp).heightIn(max = 1000.dp)
-                    ) {
-                        items(uiState.restaurantResults) { restaurant ->
-                            RestaurantGridItem(restaurant = restaurant, onClick = { onRestaurantClick(restaurant) })
-                        }
-                    }
-                }
-            }
-
-            // Produtos
-            if (uiState.productResults.isNotEmpty()) {
-                item {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 10.dp)
-                    ) {
-                        Box(modifier = Modifier.width(3.dp).height(16.dp).background(AiSecondary, RoundedCornerShape(2.dp)))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Produtos", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AiText)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("(${uiState.productResults.size})", fontSize = 11.sp, color = AiTextMuted)
-                    }
-                }
-                item {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                        modifier = Modifier.padding(horizontal = 12.dp).heightIn(max = 1000.dp)
-                    ) {
-                        items(uiState.productResults) { product ->
-                            ProductGridItem(product = product, onAddToCart = {
-                                onAddToCart(product)
-                                onViewCart()
-                            })
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 // ─── Gemini-style Listening Feedback ──────────────────────────────────────────
 @Composable
 private fun GeminiListeningFeedback() {
@@ -1677,7 +1531,7 @@ private fun AiSemanticInputBar(
                         )
 
                         Modifier.border(
-                            6.dp,
+                            3.dp,
                             Brush.sweepGradient(
                                 colors = listOf(
                                     AiAccent,
