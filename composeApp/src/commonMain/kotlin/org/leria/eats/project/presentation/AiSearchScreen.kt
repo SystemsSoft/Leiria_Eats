@@ -9,9 +9,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,11 +30,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.ui.layout.ContentScale
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
-import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
 import komaai.composeapp.generated.resources.Res
 import komaai.composeapp.generated.resources.logo
@@ -82,60 +77,55 @@ fun AiSearchScreen(
         animationSpec = infiniteRepeatable(tween(2200, easing = EaseInOutSine), RepeatMode.Reverse)
     )
 
+    Scaffold(
+        topBar = {
+            Column {
+                // Barra de ondas no topo quando ouvindo
+                AnimatedVisibility(
+                    visible = isListening,
+                    enter = fadeIn(tween(400)) + expandVertically(tween(400)),
+                    exit = fadeOut(tween(300)) + shrinkVertically(tween(300))
+                ) {
+                    ListeningWaveHeader()
+                }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AiDeepBg)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Barra de ondas no topo quando ouvindo
-            AnimatedVisibility(
-                visible = isListening,
-                enter = fadeIn(tween(400)) + expandVertically(tween(400)),
-                exit = fadeOut(tween(300)) + shrinkVertically(tween(300))
-            ) {
-                ListeningWaveHeader()
-            }
-
-            // ── HERO HEADER ─────────────────────────────────────────────────────
-            AiSimpleHeader(
-                glowAlpha = glowAlpha,
-                isListening = isListening,
-                showClearButton = uiState.chatMessages.size > 1,
-                onClearChat = onClearSearch
-            )
-
-            // ── CONTEÚDO CENTRAL (CHAT) ────────────────────────────────────────────────
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                // Sempre exibir chat de mensagens (mesmo vazio)
-                ChatMessagesView(
-                    messages = uiState.chatMessages,
-                    isLoading = uiState.isLoading,
-                    onRestaurantClick = onRestaurantClick,
-                    onAddToCart = onAddToCart,
-                    onProductClick = { product -> selectedProduct = product },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-
-            // ── INPUT BAR ───────────────────────────────────────────────────────
-            Column(
-                modifier = Modifier
-                    .imePadding()
-            ) {
-                AiSemanticInputBar(
-                    value = uiState.textInput,
+                // TopBar com AiSimpleHeader
+                AiTopBar(
+                    glowAlpha = glowAlpha,
                     isListening = isListening,
-                    isLoading = uiState.isLoading,
-                    onValueChange = onTextChange,
-                    onSend = onSendClick,
-                    onMic = onMicClick
+                    showClearButton = uiState.chatMessages.size > 1,
+                    onClearChat = onClearSearch
                 )
             }
+        },
+        bottomBar = {
+            // ── INPUT BAR ───────────────────────────────────────────────────────
+            AiSemanticInputBar(
+                value = uiState.textInput,
+                isListening = isListening,
+                isLoading = uiState.isLoading,
+                onValueChange = onTextChange,
+                onSend = onSendClick,
+                onMic = onMicClick
+            )
+        },
+        containerColor = AiDeepBg
+    ) { paddingValues ->
+        // ── CONTEÚDO CENTRAL (CHAT) ────────────────────────────────────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Sempre exibir chat de mensagens (mesmo vazio)
+            ChatMessagesView(
+                messages = uiState.chatMessages,
+                isLoading = uiState.isLoading,
+                onRestaurantClick = onRestaurantClick,
+                onAddToCart = onAddToCart,
+                onProductClick = { product -> selectedProduct = product },
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 
@@ -291,6 +281,71 @@ private fun ListeningWaveHeader() {
                     }
                 )
             )
+    )
+}
+
+// ─── AI Top Bar ───────────────────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AiTopBar(
+    glowAlpha: Float,
+    isListening: Boolean,
+    showClearButton: Boolean,
+    onClearChat: () -> Unit
+) {
+    TopAppBar(
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Ícone pulsante com efeito extra quando ouvindo
+                Box(
+                    modifier = Modifier.size(170.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(152.dp)
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(
+                                        AiPrimary.copy(alpha = if (isListening) glowAlpha * 0.7f else glowAlpha * 0.1f),
+                                        Color.Transparent
+                                    )
+                                ),
+                            )
+                    ) {
+                        Image(
+                            painter = painterResource(Res.drawable.logo),
+                            contentDescription = "Koma",
+                            modifier = Modifier
+                                .size(250.dp)
+                        )
+                    }
+                }
+            }
+        },
+        actions = {
+            // Botão de limpar chat
+            if (showClearButton) {
+                TextButton(
+                    onClick = onClearChat,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text(
+                        text = "Limpar",
+                        fontSize = 12.sp,
+                        color = AiTextMuted,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = AiSurface,
+            titleContentColor = AiText
+        )
     )
 }
 
@@ -647,77 +702,6 @@ private fun ProductChatCard(
                     tint = Color.White,
                     modifier = Modifier.size(20.dp)
                 )
-            }
-        }
-    }
-}
-
-// ─── Simple Header (sem balão) ────────────────────────────────────────────────
-@Composable
-private fun AiSimpleHeader(
-    glowAlpha: Float,
-    isListening: Boolean = false,
-    showClearButton: Boolean = false,
-    onClearChat: () -> Unit = {}
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(AiSurface)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // ── Ícone + título IA ──────────────────────────────────────────────────
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-            // Ícone pulsante com efeito extra quando ouvindo
-            Box(
-                modifier = Modifier.size(170.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(152.dp)
-                        .background(
-                            Brush.radialGradient(
-                                listOf(
-                                    AiPrimary.copy(alpha = if (isListening) glowAlpha * 0.7f else glowAlpha * 0.1f),
-                                    Color.Transparent
-                                )
-                            ),
-                        )
-                ) {
-                    Image(
-                        painter = painterResource(Res.drawable.logo),
-                        contentDescription = "Koma",
-                        modifier = Modifier
-                            .size(250.dp)
-                            .height(80.dp)
-                    )
-                }
-            }
-            }
-
-            // Botão de limpar chat
-            if (showClearButton) {
-                TextButton(
-                    onClick = onClearChat,
-                    modifier = Modifier.padding(start = 8.dp)
-                ) {
-                    Text(
-                        text = "Limpar",
-                        fontSize = 12.sp,
-                        color = AiTextMuted,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
             }
         }
     }
