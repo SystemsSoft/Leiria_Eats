@@ -679,82 +679,27 @@ private fun AiSimpleHeader(
             ) {
             // Ícone pulsante com efeito extra quando ouvindo
             Box(
-                modifier = Modifier.size(110.dp),
+                modifier = Modifier.size(170.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // Círculo externo pulsante quando ouvindo
-                if (isListening) {
-                    val listeningPulse by rememberInfiniteTransition(label = "iconPulse").animateFloat(
-                        initialValue = 1f,
-                        targetValue = 1.3f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(1000, easing = EaseInOutSine),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "pulse"
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .size(52.dp)
-                            .graphicsLayer {
-                                scaleX = listeningPulse
-                                scaleY = listeningPulse
-                                alpha = 0.6f / listeningPulse
-                            }
-                            .background(
-                                Brush.radialGradient(
-                                    listOf(
-                                        AiAccent.copy(alpha = 0.1f),
-                                        AiPrimary.copy(alpha = 0.1f),
-                                        Color.Transparent
-                                    )
-                                ),
-                            )
-                    )
-                }
-
                 Box(
                     modifier = Modifier
                         .size(152.dp)
                         .background(
                             Brush.radialGradient(
                                 listOf(
-                                    AiPrimary.copy(alpha = if (isListening) glowAlpha * 1.2f else glowAlpha * 0.7f),
+                                    AiPrimary.copy(alpha = if (isListening) glowAlpha * 0.7f else glowAlpha * 0.1f),
                                     Color.Transparent
                                 )
                             ),
-                            CircleShape
                         )
-                        .border(
-                            1.5.dp,
-                            if (isListening)
-                                Brush.sweepGradient(
-                                    listOf(
-                                        AiAccent,
-                                        AiPrimary,
-                                        KomaGoldAccent,
-                                        AiSecondary,
-                                        AiAccent
-                                    )
-                                )
-                            else
-                                Brush.linearGradient(
-                                    listOf(
-                                        AiPrimary.copy(alpha = 0.6f),
-                                        AiPrimary.copy(alpha = 0.6f)
-                                    )
-                                ),
-                            CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
                 ) {
                     Image(
                         painter = painterResource(Res.drawable.logo),
                         contentDescription = "Koma",
                         modifier = Modifier
-                            .size(150.dp)
-                            .height(22.dp)
+                            .size(250.dp)
+                            .height(80.dp)
                     )
                 }
             }
