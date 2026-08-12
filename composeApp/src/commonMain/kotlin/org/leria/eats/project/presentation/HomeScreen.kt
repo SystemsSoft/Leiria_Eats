@@ -1,6 +1,7 @@
 package org.leria.eats.project.presentation
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,6 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
+import komaai.composeapp.generated.resources.Res
+import komaai.composeapp.generated.resources.logo
+import org.jetbrains.compose.resources.painterResource
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
@@ -124,24 +128,15 @@ private fun AiHeader() {
         modifier = Modifier
             .fillMaxWidth()
             .background(AiDeepBg)
-            .padding(top = 8.dp, bottom = 4.dp),
+            .padding( bottom = 14.dp),
         contentAlignment = Alignment.CenterStart
     ) {
-        KamelImage(
-            resource = asyncPainterResource("https://leiria-eats-repo.s3.us-east-2.amazonaws.com/logo%3Dpato.png"),
-            contentDescription = "Logo",
-            modifier = Modifier
-                .height(100.dp)
-                .widthIn(max = 240.dp),
+        Image(
+            painter = painterResource(Res.drawable.logo),
+            contentDescription = "Koma",
+            modifier = Modifier.size(180.dp),
             contentScale = ContentScale.Fit,
-            onFailure = {
-                Icon(
-                    Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    tint = AiPrimary,
-                    modifier = Modifier.size(56.dp)
-                )
-            }
+            alignment = Alignment.Center
         )
     }
 }
