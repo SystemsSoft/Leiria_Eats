@@ -441,6 +441,21 @@ fun MainScreenWithAI(
                         transitionSpec = {
                             // Smooth fade + slide animation based on navigation direction
                             when {
+                                // Profile (Onboarding) to AI - smooth fade transition
+                                initialState == MainTab.PROFILE && targetState == MainTab.AI -> {
+                                    fadeIn(
+                                        animationSpec = tween(
+                                            durationMillis = 800,
+                                            easing = EaseInOut
+                                        )
+                                    ) togetherWith fadeOut(
+                                        animationSpec = tween(
+                                            durationMillis = 800,
+                                            easing = EaseInOut
+                                        )
+                                    )
+                                }
+
                                 // Profile comes from the right (end of nav bar)
                                 targetState == MainTab.PROFILE && initialState != MainTab.PROFILE -> {
                                     slideInHorizontally(
@@ -453,8 +468,8 @@ fun MainScreenWithAI(
                                     ) + fadeOut(animationSpec = tween(400))
                                 }
 
-                                // Going back from Profile to other screens
-                                initialState == MainTab.PROFILE && targetState != MainTab.PROFILE -> {
+                                // Going back from Profile to other screens (except AI which is handled above)
+                                initialState == MainTab.PROFILE && targetState != MainTab.PROFILE && targetState != MainTab.AI -> {
                                     slideInHorizontally(
                                         animationSpec = tween(400),
                                         initialOffsetX = { -it / 3 }

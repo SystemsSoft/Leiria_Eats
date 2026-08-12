@@ -157,13 +157,13 @@ fun OnboardingChatScreen(
             delay(800)
             addAiMessage(
                 messages = messages,
-                text = "Perfeito! ✨ Tudo configurado! Agora podes começar a fazer os teus pedidos.",
+                text = "Perfeito! ✨ Tudo configurado! Vamos começar? Podes me pedir qualquer prato que quiseres!",
                 step = OnboardingStep.COMPLETE,
                 onUpdate = { messages = it },
                 tts = tts,
                 isMuted = isMuted
             )
-            delay(2000)
+            delay(2500)
             onComplete(userName, userEmail, userPhone, userAddress)
         }
         pendingMapCoords = null
@@ -374,7 +374,7 @@ private suspend fun processUserInput(
                 tts = tts,
                 isMuted = isMuted
             )
-            delay(2000)
+            delay(2500)
             onComplete()
         }
         else -> {}
