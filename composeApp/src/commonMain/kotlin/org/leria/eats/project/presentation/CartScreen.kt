@@ -714,13 +714,19 @@ fun RestaurantHeader(
 
 // ─── AI Chat Bubble in Cart ───────────────────────────────────────────────────
 
-/** Remove emojis and special symbols so TTS reads only plain text. */
+/** 
+ * Remove emojis, special symbols and prepares text for TTS.
+ * - Removes emojis and Unicode symbols
+ * - Replaces "x1" with "uma"
+ * - Normalizes spaces
+ */
 private fun stripEmojisForTts(text: String): String =
     text
         .replace(Regex("[\\p{So}\\p{Sm}\\p{Sk}\\p{Sc}]"), "") // Unicode symbols
         .replace(Regex("[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]"), "") // surrogate emoji pairs
         .replace(Regex("[\u2600-\u27FF]"), "")  // misc symbols, dingbats, arrows
         .replace(Regex("[\uFE00-\uFE0F]"), "")  // variation selectors
+        .replace(Regex("\\bx1\\b", RegexOption.IGNORE_CASE), "uma") // x1 → uma
         .replace(Regex("\\s{2,}"), " ")
         .trim()
 

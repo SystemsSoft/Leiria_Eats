@@ -107,34 +107,15 @@ fun AiSearchScreen(
 
             // ── CONTEÚDO CENTRAL (CHAT) ────────────────────────────────────────────────
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                when {
-                    uiState.chatMessages.size <= 1 && !uiState.isLoading -> {
-                        // Tela inicial sem mensagens
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            item {
-                                AiHowItWorksCard(modifier = Modifier.fillMaxWidth())
-                            }
-                            item {
-                                AiFavoritesCard(modifier = Modifier.fillMaxWidth())
-                            }
-                        }
-                    }
-                    else -> {
-                        // Exibir chat de mensagens
-                        ChatMessagesView(
-                            messages = uiState.chatMessages,
-                            isLoading = uiState.isLoading,
-                            onRestaurantClick = onRestaurantClick,
-                            onAddToCart = onAddToCart,
-                            onProductClick = { product -> selectedProduct = product },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                }
+                // Sempre exibir chat de mensagens (mesmo vazio)
+                ChatMessagesView(
+                    messages = uiState.chatMessages,
+                    isLoading = uiState.isLoading,
+                    onRestaurantClick = onRestaurantClick,
+                    onAddToCart = onAddToCart,
+                    onProductClick = { product -> selectedProduct = product },
+                    modifier = Modifier.fillMaxSize()
+                )
             }
 
             // ── INPUT BAR ───────────────────────────────────────────────────────

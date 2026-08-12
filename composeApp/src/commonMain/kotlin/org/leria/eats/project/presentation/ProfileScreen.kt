@@ -36,6 +36,26 @@ import org.leria.eats.project.data.Address
 import org.leria.eats.project.data.UserProfile
 import org.leria.eats.project.theme.*
 
+// ─── Função auxiliar para limpar texto para TTS ──────────────────────────────
+/**
+ * Prepara o texto para Text-to-Speech:
+ * - Remove emojis e símbolos especiais
+ * - Substitui "x1" por "uma"
+ * - Normaliza espaços
+ */
+private fun prepareTextForTts(text: String): String =
+    text
+        // Remove emojis e símbolos Unicode
+        .replace(Regex("[\\p{So}\\p{Sm}\\p{Sk}\\p{Sc}]"), "")
+        .replace(Regex("[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]"), "") // surrogate emoji pairs
+        .replace(Regex("[\u2600-\u27FF]"), "")  // misc symbols, dingbats, arrows
+        .replace(Regex("[\uFE00-\uFE0F]"), "")  // variation selectors
+        // Substitui x1 por "uma"
+        .replace(Regex("\\bx1\\b", RegexOption.IGNORE_CASE), "uma")
+        // Normaliza espaços múltiplos
+        .replace(Regex("\\s{2,}"), " ")
+        .trim()
+
 // ─── Aliases locais → paleta central ─────────────────────────────────────────
 private val PDeepBg  = KomaBg
 private val PCard    = KomaCard
@@ -546,15 +566,11 @@ fun ProfileAiChatBubble(
     // Typewriter animation and TTS
     LaunchedEffect(Unit) {
         if (!isMuted && !hasSpoken.value) {
-            // Strip emojis for TTS
-            val textForTts = fullMessage
-                .replace("✨", "")
-                .replace("📝", "")
-                .replace("🎯", "")
-                .replace("🔄", "")
-                .trim()
-            tts.speak(textForTts)
-            hasSpoken.value = true
+            val textForTts = prepareTextForTts(fullMessage)
+            if (textForTts.isNotBlank()) {
+                tts.speak(textForTts)
+                hasSpoken.value = true
+            }
         }
 
         // Typewriter effect

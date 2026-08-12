@@ -575,7 +575,7 @@ class SearchViewModel(
         addAiMessage(text = confirmationMessage)
 
         // Verifica se há produtos no carrinho
-        if (currentState.cartItems.isEmpty()) {
+        if (chatResponse.products.isEmpty()) {
             val errorMsg = "Não há produtos no carrinho para finalizar o pedido."
             addAiMessage(text = errorMsg)
             _uiState.update { it.copy(isLoading = false, error = errorMsg) }

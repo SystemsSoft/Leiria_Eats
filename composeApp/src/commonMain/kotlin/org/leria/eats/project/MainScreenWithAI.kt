@@ -45,6 +45,26 @@ import org.leria.eats.project.voice.VoiceRecognizer
 import org.leria.eats.project.voice.TextToSpeechService
 import org.leria.eats.project.theme.*
 
+// ─── Função auxiliar para limpar texto para TTS ──────────────────────────────
+/**
+ * Prepara o texto para Text-to-Speech:
+ * - Remove emojis e símbolos especiais
+ * - Substitui "x1" por "uma"
+ * - Normaliza espaços
+ */
+private fun prepareTextForTts(text: String): String =
+    text
+        // Remove emojis e símbolos Unicode
+        .replace(Regex("[\\p{So}\\p{Sm}\\p{Sk}\\p{Sc}]"), "")
+        .replace(Regex("[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]"), "") // surrogate emoji pairs
+        .replace(Regex("[\u2600-\u27FF]"), "")  // misc symbols, dingbats, arrows
+        .replace(Regex("[\uFE00-\uFE0F]"), "")  // variation selectors
+        // Substitui x1 por "uma"
+        .replace(Regex("\\bx1\\b", RegexOption.IGNORE_CASE), "uma")
+        // Normaliza espaços múltiplos
+        .replace(Regex("\\s{2,}"), " ")
+        .trim()
+
 // ─── Aliases locais → paleta central ─────────────────────────────────────────
 private val KomaDeepBg = KomaBg
 private val KomaNavGold  = KomaGold
@@ -68,9 +88,16 @@ fun MainScreenWithAI(
     val snackbarHostState = remember { SnackbarHostState() }
     var isMuted by remember { mutableStateOf(false) }
 
-    LaunchedEffect(uiState.aiReply) {
-        if (!isMuted && (uiState.aiReply.startsWith("Olá") || uiState.aiReply.startsWith("Outras opções"))) {
-            tts.speak(uiState.aiReply)
+    // Reproduz automaticamente a última mensagem da IA no chat
+    LaunchedEffect(uiState.chatMessages.size) {
+        if (!isMuted && uiState.chatMessages.isNotEmpty()) {
+            val lastMessage = uiState.chatMessages.lastOrNull()
+            if (lastMessage?.type == ChatMessageType.AI && lastMessage.text.isNotBlank()) {
+                val cleanedText = prepareTextForTts(lastMessage.text)
+                if (cleanedText.isNotBlank()) {
+                    tts.speak(cleanedText)
+                }
+            }
         }
     }
 
