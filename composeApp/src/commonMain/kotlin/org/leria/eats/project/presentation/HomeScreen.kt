@@ -51,7 +51,6 @@ private val AiSurface   = KomaSurface
 private val AiCard      = KomaCard
 private val AiPrimary   = KomaGold
 private val AiSecondary = KomaBrandGreen
-private val AiAccent    = KomaGoldDark
 private val AiText      = KomaTextPrimary
 private val AiTextMuted = KomaTextSec
 private val AiBotBubble = KomaMintLight
@@ -170,52 +169,68 @@ private fun CategoryCarousel(
     selectedCategory: String?,
     onCategorySelect: (String?) -> Unit
 ) {
-    Surface(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        color = AiCard,
-        shape = RoundedCornerShape(20.dp),
-        shadowElevation = 4.dp,
-        border = BorderStroke(1.dp, AiPrimary.copy(alpha = 0.15f))
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp)
+        // Cabeçalho da seção similar ao de todos os restaurantes
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(16.dp)
+                    .background(AiPrimary, RoundedCornerShape(2.dp))
+            )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "Categorias",
-                fontSize = 12.sp,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = AiText,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
+                color = AiText
             )
+        }
+
+        // Linha decorativa
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(AiPrimary.copy(alpha = 0.5f), Color.Transparent)
+                    )
+                )
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            item {
+                CategoryCard(
+                    category = "Tudo",
+                    isSelected = selectedCategory == null,
+                    onClick = { onCategorySelect(null) }
+                )
+            }
             
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                item {
-                    CategoryCard(
-                        category = "Tudo",
-                        isSelected = selectedCategory == null,
-                        onClick = { onCategorySelect(null) }
-                    )
-                }
-                
-                items(categories) { category ->
-                    CategoryCard(
-                        category = category,
-                        isSelected = category == selectedCategory,
-                        onClick = {
-                            if (selectedCategory == category) onCategorySelect(null)
-                            else onCategorySelect(category)
-                        }
-                    )
-                }
+            items(categories) { category ->
+                CategoryCard(
+                    category = category,
+                    isSelected = category == selectedCategory,
+                    onClick = {
+                        if (selectedCategory == category) onCategorySelect(null)
+                        else onCategorySelect(category)
+                    }
+                )
             }
         }
     }
