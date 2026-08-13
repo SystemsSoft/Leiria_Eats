@@ -112,22 +112,40 @@ fun HomeScreen(
                     onClearChat = onClearSearch
                 )
 
-                val categories = remember(uiState.allRestaurants) {
-                    uiState.allRestaurants
-                        .map { it.category }
-                        .flatMap { it.split(",").map { s -> s.trim() } }
-                        .filter { it.isNotBlank() }
-                        .distinct()
-                        .sorted()
+                var isProductCategoryMode by remember { mutableStateOf(false) }
+
+                val categories = remember(uiState.allRestaurants, isProductCategoryMode) {
+                    if (isProductCategoryMode) {
+                        uiState.allRestaurants
+                            .flatMap { it.products }
+                            .map { it.category }
+                            .flatMap { it.split(",").map { s -> s.trim() } }
+                            .filter { it.isNotBlank() }
+                            .distinct()
+                            .sorted()
+                    } else {
+                        uiState.allRestaurants
+                            .map { it.category }
+                            .flatMap { it.split(",").map { s -> s.trim() } }
+                            .filter { it.isNotBlank() }
+                            .distinct()
+                            .sorted()
+                    }
                 }
 
-                val filteredRestaurants = remember(uiState.allRestaurants, uiState.selectedCategory) {
+                val filteredRestaurants = remember(uiState.allRestaurants, uiState.selectedCategory, isProductCategoryMode) {
                     val selected = uiState.selectedCategory
                     if (selected == null) {
                         uiState.allRestaurants
                     } else {
-                        uiState.allRestaurants.filter {
-                            it.category.contains(selected, ignoreCase = true)
+                        if (isProductCategoryMode) {
+                            uiState.allRestaurants.filter { rest ->
+                                rest.products.any { it.category.contains(selected, ignoreCase = true) }
+                            }
+                        } else {
+                            uiState.allRestaurants.filter {
+                                it.category.contains(selected, ignoreCase = true)
+                            }
                         }
                     }
                 }
@@ -151,10 +169,15 @@ fun HomeScreen(
                 }
 
                 // ── CARROSSEL DE CATEGORIAS (Inferior) ──────────────────────
-                if (categories.isNotEmpty()) {
+                if (categories.isNotEmpty() || uiState.selectedCategory != null) {
                     CategoryCarousel(
                         categories = categories,
                         selectedCategory = uiState.selectedCategory,
+                        isProductMode = isProductCategoryMode,
+                        onModeChange = { 
+                            isProductCategoryMode = it
+                            onCategorySelect(null) // Reset selection when mode changes
+                        },
                         onCategorySelect = onCategorySelect
                     )
                 }
@@ -167,6 +190,8 @@ fun HomeScreen(
 private fun CategoryCarousel(
     categories: List<String>,
     selectedCategory: String?,
+    isProductMode: Boolean,
+    onModeChange: (Boolean) -> Unit,
     onCategorySelect: (String?) -> Unit
 ) {
     Column(
@@ -174,24 +199,47 @@ private fun CategoryCarousel(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        // Cabeçalho da seção similar ao de todos os restaurantes
+        // Cabeçalho da seção com seletor de modo
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
+            modifier = Modifier.padding(start = 4.dp, bottom = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .width(3.dp)
+                        .height(16.dp)
+                        .background(AiPrimary, RoundedCornerShape(2.dp))
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Categorias",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = AiText
+                )
+            }
+            
+            // Seletor de modo (Restaurantes / Produtos)
+            Row(
                 modifier = Modifier
-                    .width(3.dp)
-                    .height(16.dp)
-                    .background(AiPrimary, RoundedCornerShape(2.dp))
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Categorias",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = AiText
-            )
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(AiCard.copy(alpha = 0.5f))
+                    .padding(2.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                ModeToggleItem(
+                    text = "Restaurantes",
+                    isSelected = !isProductMode,
+                    onClick = { onModeChange(false) }
+                )
+                ModeToggleItem(
+                    text = "Produtos",
+                    isSelected = isProductMode,
+                    onClick = { onModeChange(true) }
+                )
+            }
         }
 
         // Linha decorativa
@@ -233,6 +281,29 @@ private fun CategoryCarousel(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ModeToggleItem(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (isSelected) AiPrimary else Color.Transparent)
+            .clickable { onClick() }
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            color = if (isSelected) Color.Black else AiTextMuted,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
