@@ -415,37 +415,44 @@ private fun HomeRestaurantList(
         }
 
         // ── Todos os outros restaurantes ─────────────────────────────────
-        item {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
-            ) {
-                Box(modifier = Modifier.width(3.dp).height(16.dp).background(AiPrimary, RoundedCornerShape(2.dp)))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    "Todos os restaurantes",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = AiText
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("(${otherRestaurants.size})", fontSize = 11.sp, color = AiTextMuted)
-            }
-        }
-        item {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(1),
-                horizontalArrangement = Arrangement.spacedBy(0.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 4000.dp)
-            ) {
-                items(otherRestaurants) { restaurant ->
-                    RestaurantGridItem(
-                        restaurant = restaurant,
-                        onClick = { onRestaurantClick(restaurant) }
+        if (otherRestaurants.isNotEmpty()) {
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .height(16.dp)
+                            .background(AiPrimary, RoundedCornerShape(2.dp))
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Todos os restaurantes",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = AiText
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("(${otherRestaurants.size})", fontSize = 11.sp, color = AiTextMuted)
+                }
+            }
+            item {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(1),
+                    horizontalArrangement = Arrangement.spacedBy(0.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 4000.dp)
+                ) {
+                    items(otherRestaurants) { restaurant ->
+                        RestaurantGridItem(
+                            restaurant = restaurant,
+                            onClick = { onRestaurantClick(restaurant) }
+                        )
+                    }
                 }
             }
         }
