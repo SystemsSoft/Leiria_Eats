@@ -24,8 +24,8 @@ class AndroidTextToSpeechService(private val context: Context) : TextToSpeechSer
 
                 // Configure animated and spontaneous female voice
                 tts?.apply {
-                    setPitch(1.15f) // Slightly higher pitch for more animated feminine voice (default is 1.0)
-                    setSpeechRate(1.1f) // Slightly faster for spontaneous feel (default is 1.0)
+                    setPitch(1.22f) // Higher pitch for energetic/commercial voice
+                    setSpeechRate(1.18f) // Faster rate for enthusiasm
                 }
 
                 pendingText?.let { speak(it) }

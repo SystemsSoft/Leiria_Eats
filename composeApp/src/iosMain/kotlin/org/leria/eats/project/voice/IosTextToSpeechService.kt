@@ -24,8 +24,8 @@ class IosTextToSpeechService : TextToSpeechService {
         utterance.voice = AVSpeechSynthesisVoice.voiceWithLanguage("pt-PT")
             ?: AVSpeechSynthesisVoice.voiceWithLanguage("pt-BR")
 
-        utterance.rate = 0.55f
-        utterance.pitchMultiplier = 1.15f
+        utterance.rate = 0.58f
+        utterance.pitchMultiplier = 1.22f
         utterance.volume = 1.0f
 
         synthesizer.speakUtterance(utterance)
