@@ -110,11 +110,22 @@ fun RestaurantDetailScreen(
         )
     }
 
-    val categories = listOf("Todos") + restaurant.products.map { it.category }.distinct().sorted()
-    val filteredProducts = if (selectedCategory == null || selectedCategory == "Todos") {
-        restaurant.products
-    } else {
-        restaurant.products.filter { it.category == selectedCategory }
+    val categories = remember(restaurant.products) {
+        listOf("Todos") + restaurant.products
+            .flatMap { it.category.split(",").map { s -> s.trim() } }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+    }
+
+    val filteredProducts = remember(restaurant.products, selectedCategory) {
+        if (selectedCategory == null || selectedCategory == "Todos") {
+            restaurant.products
+        } else {
+            restaurant.products.filter { product ->
+                product.category.split(",").any { it.trim().equals(selectedCategory, ignoreCase = true) }
+            }
+        }
     }
 
     Box(
@@ -198,7 +209,7 @@ fun RestaurantDetailScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp)
             ) {
                 items(categories) { category ->
-                    val isSelected = (selectedCategory == category) || (selectedCategory == null && category == "Todos")
+                    val isSelected = (selectedCategory?.equals(category, ignoreCase = true) == true) || (selectedCategory == null && category == "Todos")
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))

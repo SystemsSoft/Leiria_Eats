@@ -81,6 +81,8 @@ fun HomeScreen(
         animationSpec = infiniteRepeatable(tween(2200, easing = EaseInOutSine), RepeatMode.Reverse)
     )
 
+    var isProductCategoryMode by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -112,8 +114,6 @@ fun HomeScreen(
                     onClearChat = onClearSearch
                 )
 
-                var isProductCategoryMode by remember { mutableStateOf(false) }
-
                 val categories = remember(uiState.allRestaurants, isProductCategoryMode) {
                     if (isProductCategoryMode) {
                         uiState.allRestaurants
@@ -140,11 +140,13 @@ fun HomeScreen(
                     } else {
                         if (isProductCategoryMode) {
                             uiState.allRestaurants.filter { rest ->
-                                rest.products.any { it.category.contains(selected, ignoreCase = true) }
+                                rest.products.any { product ->
+                                    product.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
+                                }
                             }
                         } else {
                             uiState.allRestaurants.filter {
-                                it.category.contains(selected, ignoreCase = true)
+                                it.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
                             }
                         }
                     }
@@ -202,7 +204,9 @@ private fun CategoryCarousel(
         // Cabeçalho da seção com seletor de modo
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 4.dp, bottom = 10.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, bottom = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -273,9 +277,9 @@ private fun CategoryCarousel(
             items(categories) { category ->
                 CategoryCard(
                     category = category,
-                    isSelected = category == selectedCategory,
+                    isSelected = category.equals(selectedCategory, ignoreCase = true),
                     onClick = {
-                        if (selectedCategory == category) onCategorySelect(null)
+                        if (selectedCategory?.equals(category, ignoreCase = true) == true) onCategorySelect(null)
                         else onCategorySelect(category)
                     }
                 )
