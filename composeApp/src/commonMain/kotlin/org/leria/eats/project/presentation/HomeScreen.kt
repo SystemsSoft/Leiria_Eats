@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -111,6 +112,26 @@ fun HomeScreen(
                     onClearChat = onClearSearch
                 )
 
+                val categories = remember(uiState.allRestaurants) {
+                    uiState.allRestaurants
+                        .map { it.category }
+                        .flatMap { it.split(",").map { s -> s.trim() } }
+                        .filter { it.isNotBlank() }
+                        .distinct()
+                        .sorted()
+                }
+
+                val filteredRestaurants = remember(uiState.allRestaurants, uiState.selectedCategory) {
+                    val selected = uiState.selectedCategory
+                    if (selected == null) {
+                        uiState.allRestaurants
+                    } else {
+                        uiState.allRestaurants.filter {
+                            it.category.contains(selected, ignoreCase = true)
+                        }
+                    }
+                }
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -121,14 +142,114 @@ fun HomeScreen(
                     when {
                         uiState.isLoading && uiState.allRestaurants.isEmpty() ->
                             AiThinkingIndicator(modifier = Modifier.align(Alignment.Center))
-                        else -> HomeRestaurantList(
-                            restaurants = uiState.allRestaurants,
-                            onRestaurantClick = onRestaurantClick
-                        )
+                        else -> {
+                            HomeRestaurantList(
+                                restaurants = filteredRestaurants,
+                                onRestaurantClick = onRestaurantClick
+                            )
+                        }
                     }
+                }
+
+                // ── CARROSSEL DE CATEGORIAS (Inferior) ──────────────────────
+                if (categories.isNotEmpty()) {
+                    CategoryCarousel(
+                        categories = categories,
+                        selectedCategory = uiState.selectedCategory,
+                        onCategorySelect = onCategorySelect
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CategoryCarousel(
+    categories: List<String>,
+    selectedCategory: String?,
+    onCategorySelect: (String?) -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = AiSurface,
+        shadowElevation = 8.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp)
+        ) {
+            Text(
+                text = "Categorias",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = AiText,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
+            )
+            
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                item {
+                    CategoryCard(
+                        category = "Tudo",
+                        isSelected = selectedCategory == null,
+                        onClick = { onCategorySelect(null) }
+                    )
+                }
+                
+                items(categories) { category ->
+                    CategoryCard(
+                        category = category,
+                        isSelected = category == selectedCategory,
+                        onClick = {
+                            if (selectedCategory == category) onCategorySelect(null)
+                            else onCategorySelect(category)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryCard(
+    category: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (isSelected) 
+                    Brush.horizontalGradient(listOf(AiPrimary, KomaOrangeEnd))
+                else 
+                    Brush.linearGradient(listOf(AiCard, AiCard))
+            )
+            .border(
+                width = 1.dp,
+                brush = if (isSelected) 
+                    Brush.horizontalGradient(listOf(AiPrimary, KomaOrangeEnd))
+                else 
+                    SolidColor(AiPrimary.copy(alpha = 0.2f)),
+                shape = RoundedCornerShape(12.dp)
+            )
+            .clickable { onClick() }
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = category,
+            color = if (isSelected) Color.Black else AiText,
+            fontSize = 11.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+        )
     }
 }
 
