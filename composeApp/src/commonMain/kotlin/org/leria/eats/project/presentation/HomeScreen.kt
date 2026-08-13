@@ -558,7 +558,7 @@ private fun SmartRestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(16f / 9f)
+                .aspectRatio(2.8f / 1f)
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
         ) {
             KamelImage(
@@ -626,7 +626,7 @@ private fun SmartRestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -683,11 +683,11 @@ fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
             .clickable(enabled = restaurant.isClosed != true) { onClick() }
             .then(if (restaurant.isClosed == true) Modifier.alpha(0.55f) else Modifier)
     ) {
-        // ── Imagem landscape 16:9 ──────────────────────────────────────
+        // ── Imagem landscape
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(16f / 9f)
+                .aspectRatio(3.2f / 1f)
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
         ) {
             KamelImage(
@@ -742,7 +742,7 @@ fun RestaurantGridItem(restaurant: Restaurant, onClick: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp)
+                .padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
             Text(
                 text = restaurant.name,
