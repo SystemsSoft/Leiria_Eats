@@ -1,6 +1,7 @@
 package org.leria.eats.project.presentation
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -172,10 +173,11 @@ private fun CategoryCarousel(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.Transparent)
-
-            .padding(start = 20.dp, end = 20.dp),
-        shadowElevation = 4.dp
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        color = AiCard,
+        shape = RoundedCornerShape(20.dp),
+        shadowElevation = 4.dp,
+        border = BorderStroke(1.dp, AiPrimary.copy(alpha = 0.15f))
     ) {
         Column(
             modifier = Modifier
