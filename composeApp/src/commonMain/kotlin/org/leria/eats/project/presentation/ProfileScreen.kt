@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -259,7 +260,7 @@ fun ProfileScreen(
                             .border(2.dp, PDeepBg, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Edit, contentDescription = null, tint = KomaGoldOnDark, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Default.PhotoCamera, contentDescription = null, tint = KomaGoldOnDark, modifier = Modifier.size(14.dp))
                     }
                 }
 
