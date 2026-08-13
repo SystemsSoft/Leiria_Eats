@@ -67,6 +67,7 @@ fun AiSearchScreen(
     onClearSearch: () -> Unit,
     onSearchTypeSelected: (showRestaurants: Boolean) -> Unit,
     onDismissSearchTypeSheet: () -> Unit,
+    onIntroClick: () -> Unit = {}
 ) {
     // Estado para controlar o produto selecionado
     var selectedProduct by remember { mutableStateOf<Product?>(null) }
@@ -115,6 +116,19 @@ fun AiSearchScreen(
                 onProductClick = { product -> selectedProduct = product },
                 modifier = Modifier.fillMaxSize()
             )
+
+            // Boas-vindas centralizado se não houver mensagens
+            if (uiState.chatMessages.isEmpty() && !uiState.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AiWelcomeButton(
+                        onClick = onIntroClick,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    )
+                }
+            }
         }
     }
 
@@ -312,8 +326,7 @@ private fun ChatMessagesView(
 ) {
     LazyColumn(
         modifier = modifier
-            .fillMaxSize()
-            .background(AiDeepBg),
+            .fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -1660,6 +1673,85 @@ private fun ProductDetailBottomSheet(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+// ─── Botão de Boas-vindas (Centralizado) ──────────────────────────────────────
+@Composable
+private fun AiWelcomeButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "welcome")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .background(
+                Brush.radialGradient(
+                    listOf(AiPrimary.copy(alpha = 0.2f), Color.Transparent)
+                ),
+                RoundedCornerShape(24.dp)
+            )
+            .clip(RoundedCornerShape(24.dp))
+            .background(
+                Brush.horizontalGradient(listOf(AiPrimary, KomaOrangeEnd))
+            )
+            .clickable(onClick = onClick)
+            .padding(1.5.dp) // Efeito de borda
+            .clip(RoundedCornerShape(23.dp))
+            .background(AiCard)
+            .padding(horizontal = 20.dp, vertical = 14.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(
+                        Brush.radialGradient(listOf(AiPrimary.copy(alpha = 0.2f), Color.Transparent)),
+                        CircleShape
+                    )
+                    .border(1.dp, AiPrimary.copy(alpha = 0.4f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = AiPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Column {
+                Text(
+                    text = "Primeira vez aqui?",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AiPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Clique para me conhecer! ✨",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = AiText,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
     }
 }
 

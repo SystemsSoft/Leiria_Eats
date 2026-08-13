@@ -373,7 +373,7 @@ class SearchViewModel(
         }
     }
 
-    private fun addAiMessage(
+    fun addAiMessage(
         text: String,
         restaurants: List<Restaurant> = emptyList(),
         products: List<Product> = emptyList()
