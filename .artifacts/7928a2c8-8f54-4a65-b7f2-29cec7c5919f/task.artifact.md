@@ -1,0 +1,6 @@
+- [x] Update `UserProfile` in `Models.kt` to include `photoUrl`
+- [x] Update `ProfileRepository.kt` to persist `photoUrl`
+- [x] Update `SearchViewModel.kt` to handle `photoUrl`
+- [x] Update `ProfileScreen.kt` to display and select photo
+- [x] Update `MainScreenWithAI.kt` to wire up the new field
+- [ ] Verify functionality

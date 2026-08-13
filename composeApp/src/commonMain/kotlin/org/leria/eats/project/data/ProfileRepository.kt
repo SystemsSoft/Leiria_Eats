@@ -16,6 +16,7 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
     private val NAME_KEY = stringPreferencesKey("user_name")
     private val EMAIL_KEY = stringPreferencesKey("user_email")
     private val PHONE_KEY = stringPreferencesKey("user_phone")
+    private val PHOTO_URL_KEY = stringPreferencesKey("user_photo_url")
     private val ADDRESSES_KEY = stringPreferencesKey("user_addresses")
     private val FAVORITE_ORDERS_KEY = stringSetPreferencesKey("favorite_orders")
     private val FAVORITE_ORDER_NICKNAMES_KEY = stringPreferencesKey("favorite_order_nicknames")
@@ -45,6 +46,7 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
             name = preferences[NAME_KEY] ?: "",
             email = preferences[EMAIL_KEY] ?: "",
             phone = preferences[PHONE_KEY] ?: "",
+            photoUrl = preferences[PHOTO_URL_KEY],
             addresses = addresses,
             savedPaymentMethods = paymentMethods,
             allergies = preferences[ALLERGIES_KEY] ?: "",
@@ -58,6 +60,7 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
         email: String,
         phone: String,
         addresses: List<Address>,
+        photoUrl: String? = null,
         allergies: String = "",
         lifestyles: String = ""
     ) {
@@ -67,6 +70,7 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
             preferences[NAME_KEY] = name
             preferences[EMAIL_KEY] = email
             preferences[PHONE_KEY] = phone
+            preferences[PHOTO_URL_KEY] = photoUrl ?: ""
             preferences[ADDRESSES_KEY] = addressesJson
             preferences[ALLERGIES_KEY] = allergies
             preferences[LIFESTYLES_KEY] = lifestyles

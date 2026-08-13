@@ -12,6 +12,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         ActivityHolder.activity = this
         initAndroidDataStore(applicationContext)
+        org.leria.eats.project.data.setApplicationContext(applicationContext)
 
         setContent {
             App()

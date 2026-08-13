@@ -218,6 +218,7 @@ data class UserProfile(
     val name: String = "",
     val email: String = "",
     val phone: String = "",
+    val photoUrl: String? = null,
     val addresses: List<Address> = emptyList(),
     @SerialName("saved_payment_methods")
     val savedPaymentMethods: List<SavedPaymentMethod> = emptyList(),

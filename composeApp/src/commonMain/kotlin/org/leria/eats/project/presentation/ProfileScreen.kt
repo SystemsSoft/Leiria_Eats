@@ -27,13 +27,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
+import io.github.vinceglb.filekit.core.PickerMode
+import io.github.vinceglb.filekit.core.PickerType
+import io.kamel.image.KamelImage
+import io.kamel.image.asyncPainterResource
+import kotlinx.coroutines.launch
 import org.leria.eats.project.data.Address
 import org.leria.eats.project.data.UserProfile
+import org.leria.eats.project.data.saveImageLocally
 import org.leria.eats.project.theme.*
 
 // ─── Função auxiliar para limpar texto para TTS ──────────────────────────────
@@ -67,7 +75,7 @@ private val PMuted   = KomaTextSec
 @Composable
 fun ProfileScreen(
     userProfile: UserProfile,
-    onSave: (String, String, String, List<Address>, String, String) -> Unit,
+    onSave: (String, String, String, List<Address>, String?, String, String) -> Unit,
     onGetLocation: ((String, Double?, Double?) -> Unit) -> Unit,
     onGetAddressFromMap: (Double, Double) -> String?,
     isMuted: Boolean = false
@@ -75,6 +83,7 @@ fun ProfileScreen(
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var photoUrl by remember { mutableStateOf<String?>(null) }
     var allergies by remember { mutableStateOf("") }
     var lifestyles by remember { mutableStateOf("") }
     var addresses by remember { mutableStateOf<List<Address>>(emptyList()) }
@@ -82,13 +91,31 @@ fun ProfileScreen(
     var showAddAddressDialog by remember { mutableStateOf(false) }
     var addressToEdit by remember { mutableStateOf<Address?>(null) }
 
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(userProfile) {
         if (userProfile.name.isNotEmpty()) name = userProfile.name
         if (userProfile.email.isNotEmpty()) email = userProfile.email
         if (userProfile.phone.isNotEmpty()) phone = userProfile.phone
+        photoUrl = userProfile.photoUrl
         allergies = userProfile.allergies
         lifestyles = userProfile.lifestyles
         if (userProfile.addresses.isNotEmpty()) addresses = userProfile.addresses
+    }
+
+    val launcher = rememberFilePickerLauncher(
+        type = PickerType.Image,
+        mode = PickerMode.Single,
+        title = "Selecionar Foto de Perfil"
+    ) { platformFile ->
+        if (platformFile != null) {
+            scope.launch {
+                val savedPath = saveImageLocally(platformFile)
+                if (savedPath.isNotEmpty()) {
+                    photoUrl = savedPath
+                }
+            }
+        }
     }
 
     var pendingMapCoords by remember { mutableStateOf<Pair<Double, Double>?>(null) }
@@ -175,16 +202,64 @@ fun ProfileScreen(
                             2.dp,
                             Brush.linearGradient(listOf(PGold, PGreen)),
                             CircleShape
-                        ),
+                        )
+                        .clickable { launcher.launch() },
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
                             .size(82.dp)
+                            .clip(CircleShape)
                             .background(PCard, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Person, contentDescription = null, tint = PMuted, modifier = Modifier.size(40.dp))
+                        if (!photoUrl.isNullOrEmpty()) {
+                            val resourceData = org.leria.eats.project.data.mapPathToImageSource(photoUrl!!)
+                            
+                            KamelImage(
+                                resource = asyncPainterResource(data = resourceData),
+                                contentDescription = "Foto de Perfil",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                                onLoading = { progress ->
+                                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        CircularProgressIndicator(
+                                            progress = { progress },
+                                            color = PGold,
+                                            modifier = Modifier.size(24.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                    }
+                                },
+                                onFailure = {
+                                    Icon(
+                                        Icons.Default.Person,
+                                        contentDescription = null,
+                                        tint = PMuted,
+                                        modifier = Modifier.size(40.dp)
+                                    )
+                                }
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                tint = PMuted,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        }
+                    }
+
+                    // Botão de editar (overlay)
+                    Box(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .align(Alignment.BottomEnd)
+                            .background(PGold, CircleShape)
+                            .border(2.dp, PDeepBg, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = null, tint = KomaGoldOnDark, modifier = Modifier.size(14.dp))
                     }
                 }
 
@@ -307,7 +382,7 @@ fun ProfileScreen(
                 .height(54.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(Brush.horizontalGradient(listOf(PGold, KomaOrangeEnd)))
-                .clickable { onSave(name, email, phone, addresses, allergies, lifestyles) },
+                .clickable { onSave(name, email, phone, addresses, photoUrl, allergies, lifestyles) },
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {

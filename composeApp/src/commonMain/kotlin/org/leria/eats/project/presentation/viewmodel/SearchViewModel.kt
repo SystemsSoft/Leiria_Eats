@@ -256,11 +256,11 @@ class SearchViewModel(
         }
     }
 
-    fun updateUserProfile(name: String, email: String, phone: String, addresses: List<Address>, allergies: String = "", lifestyles: String = "") {
+    fun updateUserProfile(name: String, email: String, phone: String, addresses: List<Address>, photoUrl: String? = null, allergies: String = "", lifestyles: String = "") {
         viewModelScope.launch {
             val currentId = _uiState.value.userProfile.id
             val newId = if (currentId.isBlank()) "U-${(10000..99999).random()}" else currentId
-            profileRepository.saveProfile(newId, name, email, phone, addresses, allergies, lifestyles)
+            profileRepository.saveProfile(newId, name, email, phone, addresses, photoUrl, allergies, lifestyles)
         }
     }
 
