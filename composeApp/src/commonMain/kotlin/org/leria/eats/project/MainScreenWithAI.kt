@@ -577,15 +577,19 @@ fun MainScreenWithAI(
                                             
                                             Veja como é fácil pedir comigo:
                                             
-                                            🧠 Eu entendo o seu jeito de falar. Você não precisa buscar pelo nome exato do prato. Pode me dizer coisas como: "Quero uma pizza para 3 pessoas", "Me mostre opções vegetarianas" ou "Estou com vontade de comer um doce sem lactose". Eu vasculho os restaurantes cadastrados no meu banco de dados e te respondo em segundos, como um garçom de verdade, a melhor opção pra você. Fique à vontade para pedir o que gosta e pedir sugestões!
+                                            🧠 Eu entendo o seu jeito de falar. Você não precisa buscar pelo nome 
+                                            exato do prato. Pode me dizer coisas como: "Quero uma pizza para 3 pessoas",
+                                             "Me mostre opções vegetarianas" ou "Estou com vontade de comer um doce sem lactose". Eu vasculho os restaurantes cadastrados no meu banco de dados e 
+                                             te respondo em segundos, como um garçom de verdade, a melhor opção pra você. 
+                                            Fique à vontade para pedir o que gosta e pedir sugestões!
                                             
-                                            🍟 Bateu a dúvida entre a pizza de um lugar e a sobremesa de outro? Sem problemas! Aqui você pode misturar pratos de até 3 restaurantes diferentes no mesmo carrinho e pagar tudo de uma vez só.
-                                            
-                                            ⭐  Gostou muito de uma combinação que montamos? Você pode salvar esse pedido nos Favoritos e, da próxima vez, é só me avisar que eu refaço o mesmo pedido, sem você precisar digitar tudo de novo. Finalizando o pedido basta adicioná-lo aos favoritos e colocar um apelido, esse apelido que vou usar pra saber qual pedido vc quer repetir.
-                                            
-                                            🎁  Quer uma opção deliciosa, barata e sustentável? Você pode agendar o resgate de uma "Caixa Surpresa" com sushis e pratos frescos que sobraram da produção do dia nos restaurantes. Você salva comida de alta qualidade que seria desperdiçada e ainda garante um super desconto! Basta me dizer "caixa surpresas" e eu te respondo com os restaurantes para você agendar a entrega ou recolha.
-                                            
-                                            E aí, o que você está com vontade de comer hoje?
+                                            Se quiser me conhecer mais,diga ou digite favorito para entender como repetir um pedido favorito.
+                                            Diga ou digite Caixa surpresa,para entender como funciona o agendamento de caixa surpresa em restaurantes disponíveis.
+                                            E diga ou digite múltiplos pedidos para entender como adicionar vários restaurantes a um único pedido e realizar um único pagameto.
+                                        
+                                            No entanto se a fome está batendo já podemos começar.
+                                       
+                                            Me diga, o que você está com vontade de comer hoje?
                                         """.trimIndent()
                                         
                                         viewModel.addAiMessage(introText)
