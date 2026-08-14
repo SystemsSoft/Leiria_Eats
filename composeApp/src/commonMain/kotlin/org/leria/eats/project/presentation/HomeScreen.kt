@@ -1,5 +1,6 @@
 package org.leria.eats.project.presentation
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -16,9 +17,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddShoppingCart
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -75,12 +74,6 @@ fun HomeScreen(
     onSearchTypeSelected: (showRestaurants: Boolean) -> Unit,
     onDismissSearchTypeSheet: () -> Unit
 ) {
-    // Pulsing glow animation
-    val glowAlpha by rememberInfiniteTransition(label = "glow").animateFloat(
-        initialValue = 0.15f, targetValue = 0.55f, label = "glowAlpha",
-        animationSpec = infiniteRepeatable(tween(2200, easing = EaseInOutSine), RepeatMode.Reverse)
-    )
-
     var isProductCategoryMode by remember { mutableStateOf(false) }
 
     Box(
@@ -102,111 +95,124 @@ fun HomeScreen(
                 onViewCart = onViewCart
             )
         } else {
-            // ── HOME: logo + lista completa de restaurantes ───────────────
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                AiTopBar(
-                    glowAlpha = glowAlpha,
-                    isListening = isListening,
-                    showClearButton = false,
-                    onClearChat = onClearSearch
-                )
+            // ── HOME: logo + listas + categorias (Scaffold com Bottom Sheet) ──
+            val scaffoldState = rememberBottomSheetScaffoldState()
+            
+            val categories = remember(uiState.allRestaurants, isProductCategoryMode) {
+                if (isProductCategoryMode) {
+                    uiState.allRestaurants
+                        .flatMap { it.products }
+                        .map { it.category }
+                        .flatMap { it.split(",").map { s -> s.trim() } }
+                        .filter { it.isNotBlank() }
+                        .distinct()
+                        .sorted()
+                } else {
+                    uiState.allRestaurants
+                        .map { it.category }
+                        .flatMap { it.split(",").map { s -> s.trim() } }
+                        .filter { it.isNotBlank() }
+                        .distinct()
+                        .sorted()
+                }
+            }
 
-                val categories = remember(uiState.allRestaurants, isProductCategoryMode) {
+            val filteredRestaurants = remember(uiState.allRestaurants, uiState.selectedCategory, isProductCategoryMode) {
+                val selected = uiState.selectedCategory
+                if (selected == null) {
+                    uiState.allRestaurants
+                } else {
                     if (isProductCategoryMode) {
-                        uiState.allRestaurants
-                            .flatMap { it.products }
-                            .map { it.category }
-                            .flatMap { it.split(",").map { s -> s.trim() } }
-                            .filter { it.isNotBlank() }
-                            .distinct()
-                            .sorted()
+                        uiState.allRestaurants.filter { rest ->
+                            rest.products.any { product ->
+                                product.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
+                            }
+                        }
                     } else {
-                        uiState.allRestaurants
-                            .map { it.category }
-                            .flatMap { it.split(",").map { s -> s.trim() } }
-                            .filter { it.isNotBlank() }
-                            .distinct()
-                            .sorted()
+                        uiState.allRestaurants.filter {
+                            it.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
+                        }
                     }
                 }
+            }
 
-                val filteredRestaurants = remember(uiState.allRestaurants, uiState.selectedCategory, isProductCategoryMode) {
+            val filteredProducts = remember(uiState.allRestaurants, uiState.selectedCategory, isProductCategoryMode) {
+                if (!isProductCategoryMode) emptyList()
+                else {
                     val selected = uiState.selectedCategory
+                    val allProds = uiState.allRestaurants.flatMap { r -> r.products.map { p -> p to r } }
                     if (selected == null) {
-                        uiState.allRestaurants
+                        allProds
                     } else {
-                        if (isProductCategoryMode) {
-                            uiState.allRestaurants.filter { rest ->
-                                rest.products.any { product ->
-                                    product.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
-                                }
-                            }
-                        } else {
-                            uiState.allRestaurants.filter {
-                                it.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
-                            }
+                        allProds.filter { (p, _) ->
+                            p.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
                         }
                     }
                 }
+            }
 
-                val filteredProducts = remember(uiState.allRestaurants, uiState.selectedCategory, isProductCategoryMode) {
-                    if (!isProductCategoryMode) emptyList()
-                    else {
-                        val selected = uiState.selectedCategory
-                        val allProds = uiState.allRestaurants.flatMap { r -> r.products.map { p -> p to r } }
-                        if (selected == null) {
-                            allProds
-                        } else {
-                            allProds.filter { (p, _) ->
-                                p.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
-                            }
-                        }
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 10.dp, end = 10.dp)
-                        .clip(RoundedCornerShape(topStart = 48.dp, topEnd = 24.dp))
-                ) {
-                    when {
-                        uiState.isLoading && uiState.allRestaurants.isEmpty() ->
-                            AiThinkingIndicator(modifier = Modifier.align(Alignment.Center))
-                        isProductCategoryMode -> {
-                            HomeProductList(
-                                products = filteredProducts,
-                                onProductClick = { product, restaurant ->
-                                    val catToSelect = uiState.selectedCategory ?: product.category.split(",").firstOrNull()?.trim()
-                                    onCategorySelect(catToSelect)
-                                    onRestaurantClick(restaurant)
-                                }
-                            )
-                        }
-                        else -> {
-                            HomeRestaurantList(
-                                restaurants = filteredRestaurants,
-                                onRestaurantClick = onRestaurantClick
-                            )
-                        }
-                    }
-                }
-
-                // ── CARROSSEL DE CATEGORIAS (Inferior) ──────────────────────
-                if (categories.isNotEmpty() || uiState.selectedCategory != null) {
-                    CategoryCarousel(
+            BottomSheetScaffold(
+                scaffoldState = scaffoldState,
+                sheetPeekHeight = 150.dp,
+                sheetContainerColor = AiSurface,
+                sheetContentColor = AiText,
+                sheetDragHandle = {
+                    BottomSheetDefaults.DragHandle(color = AiPrimary.copy(alpha = 0.3f))
+                },
+                sheetShape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                sheetContent = {
+                    ExpandableCategorySheet(
                         categories = categories,
                         selectedCategory = uiState.selectedCategory,
                         isProductMode = isProductCategoryMode,
                         onModeChange = { 
                             isProductCategoryMode = it
-                            onCategorySelect(null) // Reset selection when mode changes
+                            onCategorySelect(null) 
                         },
-                        onCategorySelect = onCategorySelect
+                        onCategorySelect = onCategorySelect,
+                        isExpanded = scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded
                     )
+                },
+                containerColor = AiDeepBg
+            ) { padding ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = padding.calculateBottomPadding()),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    AiTopBar(
+                        showClearButton = false,
+                        onClearChat = onClearSearch
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 10.dp)
+                            .clip(RoundedCornerShape(topStart = 48.dp, topEnd = 24.dp))
+                    ) {
+                        when {
+                            uiState.isLoading && uiState.allRestaurants.isEmpty() ->
+                                AiThinkingIndicator(modifier = Modifier.align(Alignment.Center))
+                            isProductCategoryMode -> {
+                                HomeProductList(
+                                    products = filteredProducts,
+                                    onProductClick = { product, restaurant ->
+                                        val catToSelect = uiState.selectedCategory ?: product.category.split(",").firstOrNull()?.trim()
+                                        onCategorySelect(catToSelect)
+                                        onRestaurantClick(restaurant)
+                                    }
+                                )
+                            }
+                            else -> {
+                                HomeRestaurantList(
+                                    restaurants = filteredRestaurants,
+                                    onRestaurantClick = onRestaurantClick
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -214,17 +220,19 @@ fun HomeScreen(
 }
 
 @Composable
-private fun CategoryCarousel(
+private fun ExpandableCategorySheet(
     categories: List<String>,
     selectedCategory: String?,
     isProductMode: Boolean,
     onModeChange: (Boolean) -> Unit,
-    onCategorySelect: (String?) -> Unit
+    onCategorySelect: (String?) -> Unit,
+    isExpanded: Boolean
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 24.dp)
     ) {
         // Cabeçalho da seção com seletor de modo
         Row(
@@ -283,31 +291,57 @@ private fun CategoryCarousel(
                 )
         )
         
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            item {
-                CategoryCard(
-                    category = "Tudo",
-                    isSelected = selectedCategory == null,
-                    onClick = { onCategorySelect(null) }
-                )
+        if (isExpanded) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxWidth().heightIn(max = 600.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item {
+                    CategoryCard(
+                        category = "Tudo",
+                        isSelected = selectedCategory == null,
+                        onClick = { onCategorySelect(null) }
+                    )
+                }
+                items(categories) { category ->
+                    CategoryCard(
+                        category = category,
+                        isSelected = category.equals(selectedCategory, ignoreCase = true),
+                        onClick = {
+                            if (selectedCategory?.equals(category, ignoreCase = true) == true) onCategorySelect(null)
+                            else onCategorySelect(category)
+                        }
+                    )
+                }
             }
-            
-            items(categories) { category ->
-                CategoryCard(
-                    category = category,
-                    isSelected = category.equals(selectedCategory, ignoreCase = true),
-                    onClick = {
-                        if (selectedCategory?.equals(category, ignoreCase = true) == true) onCategorySelect(null)
-                        else onCategorySelect(category)
-                    }
-                )
+        } else {
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                item {
+                    CategoryCard(
+                        category = "Tudo",
+                        isSelected = selectedCategory == null,
+                        onClick = { onCategorySelect(null) }
+                    )
+                }
+                items(categories) { category ->
+                    CategoryCard(
+                        category = category,
+                        isSelected = category.equals(selectedCategory, ignoreCase = true),
+                        onClick = {
+                            if (selectedCategory?.equals(category, ignoreCase = true) == true) onCategorySelect(null)
+                            else onCategorySelect(category)
+                        }
+                    )
+                }
             }
         }
     }
@@ -344,6 +378,7 @@ private fun CategoryCard(
 ) {
     Box(
         modifier = Modifier
+            .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(
                 if (isSelected) 
@@ -360,7 +395,7 @@ private fun CategoryCard(
                 shape = RoundedCornerShape(12.dp)
             )
             .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -376,8 +411,6 @@ private fun CategoryCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AiTopBar(
-    glowAlpha: Float,
-    isListening: Boolean,
     showClearButton: Boolean,
     onClearChat: () -> Unit
 ) {
@@ -385,29 +418,15 @@ private fun AiTopBar(
         navigationIcon = {
             Box(
                 modifier = Modifier
-                    .padding(bottom = 14.dp)
-                    .size(180.dp),
-                contentAlignment = Alignment.Center
+                    .padding(start = 12.dp)
+                    .height(30.dp),
+                contentAlignment = Alignment.CenterStart
             ) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            Brush.radialGradient(
-                                listOf(
-                                    AiPrimary.copy(alpha = if (isListening) glowAlpha * 0.7f else glowAlpha * 0.15f),
-                                    Color.Transparent
-                                ),
-                                radius = 200f
-                            )
-                        )
-                )
                 Image(
                     painter = painterResource(Res.drawable.logo),
                     contentDescription = "Koma",
-                    modifier = Modifier.size(180.dp),
-                    contentScale = ContentScale.Fit,
-                    alignment = Alignment.Center
+                    modifier = Modifier.fillMaxHeight(),
+                    contentScale = ContentScale.Fit
                 )
             }
         },
