@@ -1153,6 +1153,8 @@ private fun AiSemanticInputBar(
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .padding(bottom = 8.dp, top = 4.dp, start = 8.dp, end = 8.dp)
+            .imePadding()
+            .navigationBarsPadding()
     ) {
         // Feedback visual Gemini-style quando ouvindo
         AnimatedVisibility(
