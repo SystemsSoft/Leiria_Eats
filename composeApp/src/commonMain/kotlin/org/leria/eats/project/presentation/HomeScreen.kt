@@ -418,8 +418,8 @@ private fun AiTopBar(
         navigationIcon = {
             Box(
                 modifier = Modifier
-                    .padding(start = 12.dp)
-                    .height(30.dp),
+                    .padding(bottom = 14.dp)
+                    .size(180.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Image(
