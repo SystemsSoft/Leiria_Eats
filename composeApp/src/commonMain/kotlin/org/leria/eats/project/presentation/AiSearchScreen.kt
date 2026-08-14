@@ -1209,46 +1209,6 @@ private fun ProductDetailBottomSheet(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-
-        // Botão adicionar ao carrinho
-        Button(
-            onClick = onAddToCart,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-            contentPadding = PaddingValues(0.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.horizontalGradient(listOf(AiSecondary, KomaGreenDark)),
-                        RoundedCornerShape(16.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = null,
-                        tint = Color.White
-                    )
-                    Text(
-                        "Adicionar ao Carrinho",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = Color.White
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
