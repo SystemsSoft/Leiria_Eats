@@ -649,24 +649,6 @@ private fun ProductChatCard(
                     fontWeight = FontWeight.Bold
                 )
             }
-
-            // Botão adicionar
-            IconButton(
-                onClick = onAddToCart,
-                modifier = Modifier
-                    .size(36.dp)
-                    .background(
-                        Brush.linearGradient(listOf(AiSecondary, KomaGreenDark)),
-                        CircleShape
-                    )
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Adicionar ao carrinho",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
         }
     }
 }
