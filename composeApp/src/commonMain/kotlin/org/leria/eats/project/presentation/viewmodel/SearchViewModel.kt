@@ -622,60 +622,69 @@ class SearchViewModel(
 
     /**
      * Processa a confirmação do pedido pela IA.
-     * Agrupa produtos do carrinho por restaurante e inicia o checkout.
+     * Sincroniza os produtos da IA com o carrinho e valida o restaurante.
      */
     private suspend fun handleOrderConfirmation(chatResponse: ChatResponse) {
-        val currentState = _uiState.value
-
-        // Adiciona mensagem da IA confirmando o pedido
-        val confirmationMessage = chatResponse.response ?: "Perfeito! Vou finalizar o seu pedido."
-        addAiMessage(text = confirmationMessage)
-
-        // Verifica se há produtos no carrinho
-        if (chatResponse.products.isEmpty()) {
-            val errorMsg = "Não há produtos no carrinho para finalizar o pedido."
+        val aiProducts = chatResponse.products
+        
+        if (aiProducts.isEmpty()) {
+            val errorMsg = "Não encontrei os produtos para finalizar o pedido. Pode repetir o que deseja?"
             addAiMessage(text = errorMsg)
             _uiState.update { it.copy(isLoading = false, error = errorMsg) }
             return
         }
 
-        // Verifica se todos os produtos são do mesmo restaurante
-        val restaurantIds = currentState.cartItems.mapNotNull { it.restaurant_id }.distinct()
+        // 1. Identifica o restaurante (assume-se que a IA validou que é um único restaurante)
+        val restaurantId = aiProducts.first().restaurant_id
+        
+        // 2. Busca dados completos do restaurante na API para garantir metadados (nome, imagem, categoria)
+        // Isso é crucial para o sucesso do fluxo de Checkout posterior
+        try {
+            val company = apiClient.getCompanyById(restaurantId)
+            if (company == null) {
+                val errorMsg = "Desculpe, não consegui validar os dados do restaurante agora."
+                addAiMessage(text = errorMsg)
+                _uiState.update { it.copy(isLoading = false, error = errorMsg) }
+                return
+            }
 
-        if (restaurantIds.isEmpty()) {
-            val errorMsg = "Erro: Não foi possível identificar o restaurante dos produtos."
-            addAiMessage(text = errorMsg)
-            _uiState.update { it.copy(isLoading = false, error = errorMsg) }
-            return
-        }
-
-        if (restaurantIds.size > 1) {
-            // Múltiplos restaurantes - avisa o usuário
-            val warningMsg = "Os produtos no carrinho são de ${restaurantIds.size} restaurantes diferentes. Por favor, finalize um pedido por vez."
-            addAiMessage(text = warningMsg)
-            _uiState.update { it.copy(isLoading = false) }
-            // Navega para o carrinho para o usuário ver e escolher
-            onTabSelected(MainTab.CART)
-            return
-        }
-
-        // Um único restaurante - perfeito!
-        val restaurantId = restaurantIds.first()
-
-        // Atualiza o estado e navega para a tela de checkout (CART)
-        _uiState.update {
-            it.copy(
-                isLoading = false,
-                cartRestaurantId = restaurantId,
-                currentTab = MainTab.CART
+            val restaurant = Restaurant(
+                id = company.id,
+                name = company.name,
+                category = company.category,
+                image_url = company.imageUrl,
+                products = company.products
             )
+
+            // 3. Adiciona os produtos da IA ao carrinho local
+            addProductsToCart(aiProducts)
+
+            // 4. Adiciona mensagem da IA confirmando o pedido
+            val confirmationMessage = chatResponse.response ?: "Perfeito! Tudo pronto com o seu pedido de ${restaurant.name}."
+            addAiMessage(text = confirmationMessage)
+
+            // 5. Atualiza o estado com o restaurante selecionado e navega para o Checkout
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    selectedRestaurant = restaurant,
+                    cartRestaurantId = restaurant.id,
+                    currentTab = MainTab.CART
+                )
+            }
+
+            // Pequeno delay para o utilizador ler a última mensagem antes do checkout subir
+            delay(500)
+
+            // 6. Inicia o fluxo de checkout (seleção de endereço/pagamento)
+            checkout()
+
+        } catch (e: Exception) {
+            val errorMsg = "Ocorreu um erro ao processar a finalização: ${e.message}"
+            addAiMessage(text = errorMsg)
+            _uiState.update { it.copy(isLoading = false, error = errorMsg) }
+            e.printStackTrace()
         }
-
-        // Adiciona pequeno delay para dar feedback visual
-        delay(300)
-
-        // Inicia o checkout automaticamente
-        checkout()
     }
 
     fun onSearchTypeSelected(showRestaurants: Boolean) {
