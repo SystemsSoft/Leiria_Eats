@@ -152,6 +152,21 @@ fun HomeScreen(
                     }
                 }
 
+                val filteredProducts = remember(uiState.allRestaurants, uiState.selectedCategory, isProductCategoryMode) {
+                    if (!isProductCategoryMode) emptyList()
+                    else {
+                        val selected = uiState.selectedCategory
+                        val allProds = uiState.allRestaurants.flatMap { r -> r.products.map { p -> p to r } }
+                        if (selected == null) {
+                            allProds
+                        } else {
+                            allProds.filter { (p, _) ->
+                                p.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
+                            }
+                        }
+                    }
+                }
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -161,6 +176,16 @@ fun HomeScreen(
                     when {
                         uiState.isLoading && uiState.allRestaurants.isEmpty() ->
                             AiThinkingIndicator(modifier = Modifier.align(Alignment.Center))
+                        isProductCategoryMode -> {
+                            HomeProductList(
+                                products = filteredProducts,
+                                onProductClick = { product, restaurant ->
+                                    val catToSelect = uiState.selectedCategory ?: product.category.split(",").firstOrNull()?.trim()
+                                    onCategorySelect(catToSelect)
+                                    onRestaurantClick(restaurant)
+                                }
+                            )
+                        }
                         else -> {
                             HomeRestaurantList(
                                 restaurants = filteredRestaurants,
@@ -745,7 +770,116 @@ private fun SmartRestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
     }
 }
 
+// ─── Home: lista de produtos ──────────────────────────────────────────────────
+@Composable
+private fun HomeProductList(
+    products: List<Pair<Product, Restaurant>>,
+    onProductClick: (Product, Restaurant) -> Unit
+) {
+    if (products.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("🍔", fontSize = 40.sp)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    "Nenhum produto encontrado...",
+                    color = AiTextMuted,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+        return
+    }
 
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(products) { (product, restaurant) ->
+            HomeProductItem(
+                product = product,
+                restaurant = restaurant,
+                onClick = { onProductClick(product, restaurant) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeProductItem(
+    product: Product,
+    restaurant: Restaurant,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(AiCard)
+            .clickable { onClick() }
+            .padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Imagem do produto
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(AiSurface)
+        ) {
+            KamelImage(
+                resource = asyncPainterResource(data = product.image_url ?: ""),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                onLoading = {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = AiPrimary)
+                    }
+                },
+                onFailure = { Box(Modifier.fillMaxSize().background(AiSurface)) }
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // Informações
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = product.name,
+                fontWeight = FontWeight.Bold,
+                color = AiText,
+                fontSize = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = "de ${restaurant.name}",
+                color = AiTextMuted,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = formatCurrency(product.price),
+                color = AiSecondary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
+        }
+
+        // Ícone de seta para indicar que abre o restaurante
+        Icon(
+            imageVector = Icons.Default.AutoAwesome,
+            contentDescription = null,
+            tint = AiPrimary.copy(alpha = 0.6f),
+            modifier = Modifier.size(16.dp)
+        )
+    }
+}
 
 // ─── Restaurant Grid Item — padrão Glovo / Bolt Food ─────────────────────────
 @Composable
