@@ -678,6 +678,9 @@ class SearchViewModel(
 
             // 6. Inicia o fluxo de checkout (seleção de endereço/pagamento)
             checkout()
+            
+            // 7. Limpa a conversa no chat (DataStore e UI) para começar do zero no próximo pedido
+            clearSearch()
 
         } catch (e: Exception) {
             val errorMsg = "Ocorreu um erro ao processar a finalização: ${e.message}"
