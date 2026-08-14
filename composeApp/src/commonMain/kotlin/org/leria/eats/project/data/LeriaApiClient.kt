@@ -2,6 +2,7 @@ package org.leria.eats.project.data
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.post
@@ -31,6 +32,11 @@ class LeriaApiClient {
                 isLenient = true
                 ignoreUnknownKeys = true
             })
+        }
+        install(HttpTimeout) {
+            requestTimeoutMillis = 120_000 // 2 minutos
+            connectTimeoutMillis = 30_000  // 30 segundos
+            socketTimeoutMillis = 120_000  // 2 minutos
         }
     }
 
