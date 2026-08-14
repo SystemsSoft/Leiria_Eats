@@ -1,5 +1,6 @@
 package org.leria.eats.project.presentation
 
+import kotlinx.serialization.Serializable
 import org.leria.eats.project.data.Address
 import org.leria.eats.project.data.Order
 import org.leria.eats.project.data.Product
@@ -15,11 +16,13 @@ enum class MainTab {
     FAVORITES
 }
 
+@Serializable
 enum class ChatMessageType {
     USER,
     AI
 }
 
+@Serializable
 data class ChatMessage(
     val id: String,
     val type: ChatMessageType,

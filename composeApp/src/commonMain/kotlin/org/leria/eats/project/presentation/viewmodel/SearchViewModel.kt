@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.leria.eats.project.data.Address
+import org.leria.eats.project.data.ChatRepository
 import org.leria.eats.project.data.ChatResponse
 import org.leria.eats.project.data.DeliveryFeeRequest
 import org.leria.eats.project.data.DeliveryFeeResponse
@@ -31,6 +32,7 @@ import org.leria.eats.project.presentation.SearchUiState
 class SearchViewModel(
     private val apiClient: LeriaApiClient,
     private val profileRepository: ProfileRepository,
+    private val chatRepository: ChatRepository,
 ) : ViewModel() {
 
     /** Gera um código de pedido numérico único com 9 dígitos */
@@ -107,6 +109,29 @@ class SearchViewModel(
         observeOrderItemRatings()
         observeOrderProductIds()
         observeOrderRestaurantIds()
+        observeChatMessages()
+    }
+
+
+    private fun observeChatMessages() {
+        viewModelScope.launch {
+            chatRepository.chatMessagesFlow.collect { messages ->
+                if (messages.isNotEmpty()) {
+                    _uiState.update { it.copy(chatMessages = messages) }
+                } else {
+                    // Se não houver mensagens salvas, mostra a saudação inicial
+                    val greeting = buildGreeting(_uiState.value.userProfile.name)
+                    if (greeting.isNotBlank()) {
+                        val initialMessage = ChatMessage(
+                            id = "initial",
+                            type = ChatMessageType.AI,
+                            text = greeting
+                        )
+                        _uiState.update { it.copy(chatMessages = listOf(initialMessage)) }
+                    }
+                }
+            }
+        }
     }
 
 
@@ -343,6 +368,9 @@ class SearchViewModel(
     }
 
     fun clearSearch() {
+        viewModelScope.launch {
+            chatRepository.clearChat()
+        }
         val greeting = buildGreeting(_uiState.value.userProfile.name)
         _uiState.update {
             it.copy(
@@ -351,13 +379,15 @@ class SearchViewModel(
                 aiReply = greeting,
                 textInput = "",
                 error = null,
-                chatMessages = listOf(
-                    ChatMessage(
-                        id = "initial",
-                        type = ChatMessageType.AI,
-                        text = greeting
+                chatMessages = if (greeting.isNotBlank()) {
+                    listOf(
+                        ChatMessage(
+                            id = "initial",
+                            type = ChatMessageType.AI,
+                            text = greeting
+                        )
                     )
-                )
+                } else emptyList()
             )
         }
     }
@@ -369,8 +399,10 @@ class SearchViewModel(
             text = text
         )
         _uiState.update {
-            it.copy(chatMessages = it.chatMessages + message)
+            val updatedMessages = (it.chatMessages + message).takeLast(20)
+            it.copy(chatMessages = updatedMessages)
         }
+        saveChatMessages()
     }
 
     fun addAiMessage(
@@ -386,7 +418,15 @@ class SearchViewModel(
             products = products
         )
         _uiState.update {
-            it.copy(chatMessages = it.chatMessages + message)
+            val updatedMessages = (it.chatMessages + message).takeLast(20)
+            it.copy(chatMessages = updatedMessages)
+        }
+        saveChatMessages()
+    }
+
+    private fun saveChatMessages() {
+        viewModelScope.launch {
+            chatRepository.saveChatMessages(_uiState.value.chatMessages)
         }
     }
 

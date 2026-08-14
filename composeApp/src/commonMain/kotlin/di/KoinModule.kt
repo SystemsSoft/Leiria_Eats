@@ -6,6 +6,7 @@ import org.koin.core.context.startKoin
 import org.koin.core.module.Module
 import org.koin.dsl.KoinAppDeclaration
 import org.koin.dsl.module
+import org.leria.eats.project.data.ChatRepository
 import org.leria.eats.project.data.LeriaApiClient
 import org.leria.eats.project.data.ProfileRepository
 import org.leria.eats.project.data.getDataStore
@@ -19,8 +20,10 @@ val sharedModule = module {
     single { getDataStore() }
 
     single { ProfileRepository(get()) }
+    
+    single { ChatRepository(get()) }
 
-    viewModel { SearchViewModel(get(), get()) }
+    viewModel { SearchViewModel(get(), get(), get()) }
 
 }
 
