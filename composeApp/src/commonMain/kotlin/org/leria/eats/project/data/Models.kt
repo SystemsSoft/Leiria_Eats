@@ -82,7 +82,9 @@ data class CompanyResponse(
     @SerialName("image_url")
     val imageUrl: String,
     val products: List<Product> = emptyList(),
-    val plan: String
+    val plan: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 

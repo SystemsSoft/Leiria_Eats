@@ -167,7 +167,9 @@ class LeriaApiClient {
                         category = company.category,
                         image_url = company.imageUrl,
                         products = company.products,
-                        plan = company.plan
+                        plan = company.plan,
+                        latitude = company.latitude,
+                        longitude = company.longitude
                     )
                 }
             } else {

@@ -310,7 +310,9 @@ class SearchViewModel(
                     name = company.name,
                     category = company.category,
                     image_url = company.imageUrl,
-                    products = company.products
+                    products = company.products,
+                    latitude = company.latitude,
+                    longitude = company.longitude
                 ) else restaurant
                 _uiState.update { it.copy(selectedRestaurant = resolvedRestaurant, selectedCategory = null, isLoading = false) }
             }
@@ -331,7 +333,9 @@ class SearchViewModel(
                     name = company.name,
                     category = company.category,
                     image_url = company.imageUrl,
-                    products = company.products
+                    products = company.products,
+                    latitude = company.latitude,
+                    longitude = company.longitude
                 ) else restaurant
 
                 _uiState.update {
@@ -732,7 +736,9 @@ class SearchViewModel(
                 name = company.name,
                 category = company.category,
                 image_url = company.imageUrl,
-                products = company.products
+                products = company.products,
+                latitude = company.latitude,
+                longitude = company.longitude
             )
 
             _uiState.update { state ->
@@ -1061,7 +1067,9 @@ class SearchViewModel(
                             name = company.name,
                             category = company.category,
                             image_url = company.imageUrl,
-                            products = company.products
+                            products = company.products,
+                            latitude = company.latitude,
+                            longitude = company.longitude
                         )
                     }
                 }
