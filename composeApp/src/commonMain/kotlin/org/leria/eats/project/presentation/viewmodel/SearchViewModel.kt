@@ -719,8 +719,8 @@ class SearchViewModel(
             }
             currentState.copy(
                 cartItems = updatedCart,
-                cartRestaurantId = product.restaurant_id, // Mantido para compatibilidade, mas agora o sistema suporta múltiplos
-                isAiCartFlow = false // Força fluxo normal se adicionado manualmente
+                cartRestaurantId = product.restaurant_id,
+                isAiCartFlow = false
             )
         }
         fetchCompanyById(product.restaurant_id)
