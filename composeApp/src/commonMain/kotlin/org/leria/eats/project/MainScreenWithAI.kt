@@ -597,43 +597,83 @@ fun MainScreenWithAI(
                                 )
                             }
                             MainTab.CART -> {
-                                CartScreen(
-                                    // ...existing code...
-                                    cartItems = uiState.cartItems,
-                                    restaurantSelected = uiState.selectedRestaurant,
-                                    onAddItem = { product -> viewModel.addToCart(product) },
-                                    onRemoveItem = { product -> viewModel.removeFromCart(product) },
-                                    onCheckout = { address, deliveryFee, serviceFee, deliveryType ->
-                                        viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType)
-                                    },
-                                    userAddresses = uiState.userProfile.addresses,
-                                    onGetAddressFromMap = { lat, long ->
-                                        locationService.getAddressFromCoordinates(lat, long)
-                                    },
-                                    onGetDeliveryFee = { custLat, custLon, restLat, restLon, restId ->
-                                        viewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restId)
-                                    },
-                                    onGoToRestaurant = { restaurant ->
-                                        viewModel.selectRestaurant(restaurant)
-                                        viewModel.onTabSelected(MainTab.HOME)
-                                    },
-                                    cartAiMessage = uiState.cartAiMessage,
-                                    cartAiMessageSpoken = uiState.cartAiMessageSpoken,
-                                    onDismissAiMessage = { viewModel.clearCartAiMessage() },
-                                    onSuggestAnotherRestaurant = {
-                                        viewModel.suggestAnotherRestaurant()
-                                    },
-                                    onAddMoreFromSame = {
-                                        viewModel.clearCartAiMessage()
-                                        uiState.selectedRestaurant?.let { r ->
-                                            viewModel.selectRestaurant(r)
-                                        }
-                                        viewModel.onTabSelected(MainTab.HOME)
-                                    },
-                                    onMarkAiMessageAsSpoken = { viewModel.markCartAiMessageAsSpoken() },
-                                    isMuted = isMuted,
-                                    onGoToHome = { viewModel.onTabSelected(MainTab.HOME) }
-                                )
+                                val uniqueRestaurantsInCart = uiState.cartItems.map { it.restaurant_id }.distinct().size
+                                if (uiState.isAiCartFlow || uniqueRestaurantsInCart > 1 || uiState.cartRestaurants.size > 1) {
+                                    AiCartScreen(
+                                        cartItems = uiState.cartItems,
+                                        cartRestaurants = uiState.cartRestaurants,
+                                        onAddItem = { product -> viewModel.addToCart(product) },
+                                        onRemoveItem = { product -> viewModel.removeFromCart(product) },
+                                        onCheckout = { address, deliveryFee, serviceFee, deliveryType ->
+                                            viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType)
+                                        },
+                                        userAddresses = uiState.userProfile.addresses,
+                                        onGetAddressFromMap = { lat, long ->
+                                            locationService.getAddressFromCoordinates(lat, long)
+                                        },
+                                        onGetDeliveryFee = { custLat, custLon, restLat, restLon, restId ->
+                                            viewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restId)
+                                        },
+                                        onGoToRestaurant = { restaurant ->
+                                            viewModel.selectRestaurant(restaurant)
+                                            viewModel.onTabSelected(MainTab.HOME)
+                                        },
+                                        cartAiMessage = uiState.cartAiMessage,
+                                        cartAiMessageSpoken = uiState.cartAiMessageSpoken,
+                                        onDismissAiMessage = { viewModel.clearCartAiMessage() },
+                                        onSuggestAnotherRestaurant = {
+                                            viewModel.suggestAnotherRestaurant()
+                                        },
+                                        onMarkAiMessageAsSpoken = { viewModel.markCartAiMessageAsSpoken() },
+                                        onClearCart = {
+                                            viewModel.clearSelectionAndCart()
+                                            viewModel.onTabSelected(MainTab.AI)
+                                        },
+                                        isMuted = isMuted,
+                                        onGoToHome = { viewModel.onTabSelected(MainTab.HOME) }
+                                    )
+                                } else {
+                                    CartScreen(
+                                        cartItems = uiState.cartItems,
+                                        restaurantSelected = uiState.selectedRestaurant,
+                                        onAddItem = { product -> viewModel.addToCart(product) },
+                                        onRemoveItem = { product -> viewModel.removeFromCart(product) },
+                                        onCheckout = { address, deliveryFee, serviceFee, deliveryType ->
+                                            viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType)
+                                        },
+                                        userAddresses = uiState.userProfile.addresses,
+                                        onGetAddressFromMap = { lat, long ->
+                                            locationService.getAddressFromCoordinates(lat, long)
+                                        },
+                                        onGetDeliveryFee = { custLat, custLon, restLat, restLon, restId ->
+                                            viewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restId)
+                                        },
+                                        onGoToRestaurant = { restaurant ->
+                                            viewModel.selectRestaurant(restaurant)
+                                            viewModel.onTabSelected(MainTab.HOME)
+                                        },
+                                        cartAiMessage = uiState.cartAiMessage,
+                                        cartAiMessageSpoken = uiState.cartAiMessageSpoken,
+                                        onDismissAiMessage = { viewModel.clearCartAiMessage() },
+                                        onSuggestAnotherRestaurant = {
+                                            viewModel.suggestAnotherRestaurant()
+                                        },
+                                        onAddMoreFromSame = {
+                                            viewModel.clearCartAiMessage()
+                                            uiState.selectedRestaurant?.let { r ->
+                                                viewModel.selectRestaurant(r)
+                                            }
+                                            viewModel.onTabSelected(MainTab.HOME)
+                                        },
+                                        onMarkAiMessageAsSpoken = { viewModel.markCartAiMessageAsSpoken() },
+                                        onClearCart = {
+                                            viewModel.clearSelectionAndCart()
+                                            viewModel.onTabSelected(MainTab.AI)
+                                        },
+                                        isMuted = isMuted,
+                                        onGoToHome = { viewModel.onTabSelected(MainTab.HOME) }
+                                    )
+                                }
                             }
 
                             MainTab.ORDERS -> {

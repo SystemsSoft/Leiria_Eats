@@ -46,6 +46,7 @@ data class SearchUiState(
     val selectedOrder: Order? = null,
     val cartRestaurantId: Int? = null,
     val cartItems: List<Product> = emptyList(),
+    val cartRestaurants: List<Restaurant> = emptyList(), // Metadados dos restaurantes no carrinho
     val currentTab: MainTab = MainTab.AI,
     val orderHistory: List<Order> = emptyList(),
     val userProfile: UserProfile = UserProfile(),
@@ -56,6 +57,7 @@ data class SearchUiState(
     val cartMessage: String? = null,
     val cartAiMessage: String? = null,
     val cartAiMessageSpoken: Boolean = false, // Track if AI message has been spoken
+    val isAiCartFlow: Boolean = false, // Indica se o carrinho atual veio de um fluxo da IA
     val lastSearchQuery: String = "",
     val isSuggestionMode: Boolean = false,
     val showSearchTypeSheet: Boolean = false,

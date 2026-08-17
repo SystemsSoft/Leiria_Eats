@@ -56,16 +56,15 @@ data class Restaurant(
 // DEPOIS: ChatResponse com IA Generativa
 @Serializable
 data class ChatResponse(
-    val response: String? = null,           // MUDOU: reply → response
-    val intent: String? = null,             // MANTIDO
-    val restaurantResults: List<Restaurant> = emptyList(),  // Temporário
-    val productResults: List<Product> = emptyList(),        // Temporário
-    val products: List<Product> = emptyList(),  // NOVO: padrão da IA
+    val response: String? = null,
+    val intent: String? = null,
+    val restaurantResults: List<Restaurant> = emptyList(),
+    val productResults: List<Product> = emptyList(),
+    val products: List<Product> = emptyList(),
     @SerialName("order_confirmed")
-    val orderConfirmed: Boolean = false     // NOVO: indica que o pedido está pronto para checkout
+    val orderConfirmed: Boolean = false
 )
 
-// Mantido para compatibilidade com código legado
 @Deprecated("Use ChatResponse instead", ReplaceWith("ChatResponse(response = reply, products = productResults)"))
 @Serializable
 data class SearchResponse(

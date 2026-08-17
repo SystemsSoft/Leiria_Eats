@@ -362,7 +362,9 @@ class SearchViewModel(
                 selectedRestaurant = null,
                 selectedCategory = null,
                 cartItems = emptyList(),
-                cartRestaurantId = null
+                cartRestaurantId = null,
+                cartRestaurants = emptyList(),
+                isAiCartFlow = false
             )
         }
     }
@@ -634,60 +636,24 @@ class SearchViewModel(
             return
         }
 
-        // 1. Identifica o restaurante (assume-se que a IA validou que é um único restaurante)
-        val restaurantId = aiProducts.first().restaurant_id
-        
-        // 2. Busca dados completos do restaurante na API para garantir metadados (nome, imagem, categoria)
-        // Isso é crucial para o sucesso do fluxo de Checkout posterior
-        try {
-            val company = apiClient.getCompanyById(restaurantId)
-            if (company == null) {
-                val errorMsg = "Desculpe, não consegui validar os dados do restaurante agora."
-                addAiMessage(text = errorMsg)
-                _uiState.update { it.copy(isLoading = false, error = errorMsg) }
-                return
-            }
+        addProductsToCart(aiProducts)
 
-            val restaurant = Restaurant(
-                id = company.id,
-                name = company.name,
-                category = company.category,
-                image_url = company.imageUrl,
-                products = company.products
+        val confirmationMessage = chatResponse.response ?: "Perfeito! Tudo pronto com o seu pedido."
+        addAiMessage(text = confirmationMessage)
+
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                currentTab = MainTab.CART,
+                isAiCartFlow = true
             )
-
-            // 3. Adiciona os produtos da IA ao carrinho local
-            addProductsToCart(aiProducts)
-
-            // 4. Adiciona mensagem da IA confirmando o pedido
-            val confirmationMessage = chatResponse.response ?: "Perfeito! Tudo pronto com o seu pedido de ${restaurant.name}."
-            addAiMessage(text = confirmationMessage)
-
-            // 5. Atualiza o estado com o restaurante selecionado e navega para o Checkout
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    selectedRestaurant = restaurant,
-                    cartRestaurantId = restaurant.id,
-                    currentTab = MainTab.CART
-                )
-            }
-
-            // Pequeno delay para o utilizador ler a última mensagem antes do checkout subir
-            delay(500)
-
-            // 6. Inicia o fluxo de checkout (seleção de endereço/pagamento)
-            checkout()
-            
-            // 7. Limpa a conversa no chat (DataStore e UI) para começar do zero no próximo pedido
-            clearSearch()
-
-        } catch (e: Exception) {
-            val errorMsg = "Ocorreu um erro ao processar a finalização: ${e.message}"
-            addAiMessage(text = errorMsg)
-            _uiState.update { it.copy(isLoading = false, error = errorMsg) }
-            e.printStackTrace()
         }
+
+        delay(500)
+
+        checkout()
+        
+        clearSearch()
     }
 
     fun onSearchTypeSelected(showRestaurants: Boolean) {
@@ -738,23 +704,20 @@ class SearchViewModel(
 
     fun addToCart(product: Product) {
         _uiState.update { currentState ->
-            if (currentState.cartRestaurantId != null && currentState.cartRestaurantId != product.restaurant_id) {
-                currentState.copy(cartError = "Não pode adicionar produtos de restaurantes diferentes.")
-            } else {
-                val existing = currentState.cartItems.find { it.id == product.id }
-                val updatedCart = if (existing != null) {
-                    currentState.cartItems.map {
-                        if (it.id == product.id) it.copy(quantity = it.quantity + product.quantity)
-                        else it
-                    }
-                } else {
-                    currentState.cartItems + product
+            val existing = currentState.cartItems.find { it.id == product.id }
+            val updatedCart = if (existing != null) {
+                currentState.cartItems.map {
+                    if (it.id == product.id) it.copy(quantity = it.quantity + product.quantity)
+                    else it
                 }
-                currentState.copy(
-                    cartItems = updatedCart,
-                    cartRestaurantId = product.restaurant_id
-                )
+            } else {
+                currentState.cartItems + product
             }
+            currentState.copy(
+                cartItems = updatedCart,
+                cartRestaurantId = product.restaurant_id, // Mantido para compatibilidade, mas agora o sistema suporta múltiplos
+                isAiCartFlow = false // Força fluxo normal se adicionado manualmente
+            )
         }
         fetchCompanyById(product.restaurant_id)
     }
@@ -763,25 +726,31 @@ class SearchViewModel(
         viewModelScope.launch {
             val company = apiClient.getCompanyById(id)
             if (company == null) return@launch
-            _uiState.update {
-                val shouldUpdateRestaurant =
-                    it.selectedRestaurant == null ||
-                    it.selectedRestaurant.id != company.id ||
-                    it.selectedRestaurant.products.isEmpty()
+            
+            val restaurantMetadata = Restaurant(
+                id = company.id,
+                name = company.name,
+                category = company.category,
+                image_url = company.imageUrl,
+                products = company.products
+            )
 
-                if (shouldUpdateRestaurant) {
-                    it.copy(
-                        selectedRestaurant = Restaurant(
-                            id = company.id,
-                            name = company.name,
-                            category = company.category,
-                            image_url = company.imageUrl,
-                            products = company.products
-                        )
-                    )
+            _uiState.update { state ->
+                val updatedCartRestaurants = if (state.cartRestaurants.none { it.id == id }) {
+                    state.cartRestaurants + restaurantMetadata
                 } else {
-                    it.copy()
+                    state.cartRestaurants.map { if (it.id == id) restaurantMetadata else it }
                 }
+
+                val shouldUpdateRestaurant =
+                    state.selectedRestaurant == null ||
+                    state.selectedRestaurant?.id == company.id ||
+                    state.selectedRestaurant?.products?.isEmpty() == true
+
+                state.copy(
+                    cartRestaurants = updatedCartRestaurants,
+                    selectedRestaurant = if (shouldUpdateRestaurant) restaurantMetadata else state.selectedRestaurant
+                )
             }
         }
     }
@@ -858,13 +827,37 @@ class SearchViewModel(
             val updatedCart = currentState.cartItems
                 .map { if (it.id == product.id) it.copy(quantity = it.quantity - 1) else it }
                 .filter { it.quantity > 0 }
-            val newRestaurantId = if (updatedCart.isEmpty()) null else currentState.cartRestaurantId
-            currentState.copy(cartItems = updatedCart, cartRestaurantId = newRestaurantId)
+            
+            // Atualiza a lista de metadados se um restaurante não tiver mais produtos
+            val remainingRestaurantIds = updatedCart.map { it.restaurant_id }.toSet()
+            val updatedCartRestaurants = currentState.cartRestaurants.filter { it.id in remainingRestaurantIds }
+            
+            val newRestaurantId = if (updatedCart.isEmpty()) null else {
+                // Se o restaurante removido era o "principal", escolhe o próximo disponível
+                if (product.restaurant_id == currentState.cartRestaurantId && product.restaurant_id !in remainingRestaurantIds) {
+                    remainingRestaurantIds.firstOrNull()
+                } else {
+                    currentState.cartRestaurantId
+                }
+            }
+            
+            currentState.copy(
+                cartItems = updatedCart, 
+                cartRestaurantId = newRestaurantId,
+                cartRestaurants = updatedCartRestaurants
+            )
         }
     }
 
     fun clearCart() {
-        _uiState.update { it.copy(cartItems = emptyList(), cartRestaurantId = null) }
+        _uiState.update { 
+            it.copy(
+                cartItems = emptyList(), 
+                cartRestaurantId = null,
+                cartRestaurants = emptyList(),
+                isAiCartFlow = false
+            ) 
+        }
     }
 
     fun onTabSelected(tab: MainTab) {
@@ -1034,10 +1027,10 @@ class SearchViewModel(
         }
 
         val currentState = _uiState.value
-        val restaurantId = currentState.cartRestaurantId
+        val itemsByRestaurant = currentState.cartItems.groupBy { it.restaurant_id }
 
-        if (restaurantId == null) {
-            _uiState.update { it.copy(isLoading = false, error = "Erro: ID do restaurante não encontrado.") }
+        if (itemsByRestaurant.isEmpty()) {
+            _uiState.update { it.copy(isLoading = false, error = "Sua sacola está vazia.") }
             return
         }
 
@@ -1047,137 +1040,140 @@ class SearchViewModel(
             return
         }
 
-        if (currentState.cartItems.isEmpty()) {
-            _uiState.update { it.copy(isLoading = false) }
-            return
-        }
-
         viewModelScope.launch {
-            // Procura o restaurante nos resultados ou no selectedRestaurant
-            var restaurant = uiState.value.restaurantResults.find { it.id == restaurantId }
-                ?: currentState.selectedRestaurant?.takeIf { it.id == restaurantId }
+            var firstStripeUrl: String? = null
+            var successCount = 0
+            var anyFailure = false
+            val totalRestaurants = itemsByRestaurant.size
+            
+            // Taxas distribuídas (simplificação para múltiplos pedidos)
+            val serviceFeePerOrder = serviceFee / totalRestaurants
+            val deliveryFeePerOrder = deliveryFee / totalRestaurants
 
-            if (restaurant == null) {
-                // Último recurso: ir buscar à API
-                val company = apiClient.getCompanyById(restaurantId)
-                if (company != null) {
-                    restaurant = Restaurant(
-                        id = company.id,
-                        name = company.name,
-                        category = company.category,
-                        image_url = company.imageUrl,
-                        products = company.products
+            for ((restaurantId, products) in itemsByRestaurant) {
+                // 1. Obter metadados do restaurante
+                var restaurant = currentState.cartRestaurants.find { it.id == restaurantId }
+                if (restaurant == null) {
+                    val company = apiClient.getCompanyById(restaurantId)
+                    if (company != null) {
+                        restaurant = Restaurant(
+                            id = company.id,
+                            name = company.name,
+                            category = company.category,
+                            image_url = company.imageUrl,
+                            products = company.products
+                        )
+                    }
+                }
+
+                if (restaurant == null) {
+                    anyFailure = true
+                    continue
+                }
+
+                // 2. Preparar itens do pedido
+                val orderItems = products.map { product ->
+                    OrderItemRequest(
+                        product_id = product.id,
+                        quantity = product.quantity,
+                        observation = null,
+                        product_name = product.name,
+                        price = product.price,
+                        image_url = product.image_url,
+                        description = product.description
                     )
-                    _uiState.update { it.copy(selectedRestaurant = restaurant) }
                 }
-            }
 
-            if (restaurant == null) {
-                _uiState.update { it.copy(isLoading = false, error = "Erro: Restaurante não encontrado.") }
-                return@launch
-            }
+                val trackingCode = generateTrackingCode()
+                val baseTime = products.maxOfOrNull { p ->
+                    p.preparationTime.filter { it.isDigit() || it == '.' }.toDoubleOrNull()?.toInt() ?: 0
+                } ?: 0
 
-            val orderItems = currentState.cartItems.map { product ->
-                OrderItemRequest(
-                    product_id = product.id,
-                    quantity = product.quantity,
-                    observation = null,
-                    product_name = product.name,
-                    price = product.price,
-                    image_url = product.image_url,
-                    description = product.description
+                // 3. Criar request
+                val request = OrderRequest(
+                    user_id = currentState.userProfile.id,
+                    user_name = currentState.userProfile.name,
+                    user_address = selectedAddress.address,
+                    user_phone = currentState.userProfile.phone,
+                    restaurant_id = restaurant.id,
+                    restaurant_name = restaurant.name,
+                    restaurant_image_url = restaurant.image_url,
+                    restaurant_category = restaurant.category,
+                    items = orderItems,
+                    save_payment_method = savePaymentMethod,
+                    search_query = currentState.lastSearchQuery,
+                    tracking_code = trackingCode,
+                    deliveryType = deliveryType,
+                    baseTime = baseTime,
+                    deliveryLatitude = selectedAddress.latitude,
+                    deliveryLongitude = selectedAddress.longitude,
+                    deliveryFee = deliveryFeePerOrder,
+                    serviceFee = serviceFeePerOrder
                 )
+
+                // 4. Iniciar checkout
+                try {
+                    val sessionResponse = apiClient.initiateCheckout(request)
+                    if (sessionResponse != null) {
+                        if (sessionResponse.auto_paid) {
+                            successCount++
+                            // Guardar mapeamentos
+                            val orderId = sessionResponse.order_id
+                            if (orderId != null) {
+                                profileRepository.saveOrderSearchQuery(orderId.toString(), currentState.lastSearchQuery)
+                                val productIdMap = products.map { it.name to it.id }
+                                profileRepository.saveOrderProductIds(orderId.toString(), productIdMap)
+                                profileRepository.saveOrderRestaurantId(orderId.toString(), restaurant.id)
+                            }
+                        } else if (firstStripeUrl == null) {
+                            firstStripeUrl = sessionResponse.url
+                        }
+                    } else {
+                        anyFailure = true
+                    }
+                } catch (e: Exception) {
+                    anyFailure = true
+                    e.printStackTrace()
+                }
             }
 
-            val trackingCode = generateTrackingCode()
-
-            // Calculates the base time: highest preparation time among the cart products
-            val baseTime = currentState.cartItems.maxOfOrNull { product ->
-                product.preparationTime
-                    .filter { it.isDigit() || it == '.' }
-                    .toDoubleOrNull()?.toInt() ?: 0
-            } ?: 0
-
-            val request = OrderRequest(
-                user_id = currentState.userProfile.id,
-                user_name = currentState.userProfile.name,
-                user_address = selectedAddress.address,
-                user_phone = currentState.userProfile.phone,
-                restaurant_id = restaurant.id,
-                restaurant_name = restaurant.name,
-                restaurant_image_url = restaurant.image_url,
-                restaurant_category = restaurant.category,
-                items = orderItems,
-                save_payment_method = savePaymentMethod,
-                search_query = currentState.lastSearchQuery,
-                tracking_code = trackingCode,
-                deliveryType = deliveryType,
-                baseTime = baseTime,
-                deliveryLatitude = selectedAddress.latitude,
-                deliveryLongitude = selectedAddress.longitude,
-                deliveryFee = deliveryFee,
-                serviceFee = serviceFee
-            )
-
-            val sessionResponse = apiClient.initiateCheckout(request)
-
-            if (sessionResponse == null) {
-                _uiState.update { it.copy(isLoading = false, error = "Erro ao iniciar pagamento.") }
-                return@launch
-            }
-
-            // Handle auto_paid scenario (payment method already saved)
-            if (sessionResponse.auto_paid) {
-                // Save search query locally before clearing state
-                val orderId = sessionResponse.order_id
-                if (orderId != null && currentState.lastSearchQuery.isNotBlank()) {
-                    profileRepository.saveOrderSearchQuery(orderId.toString(), currentState.lastSearchQuery)
-                }
-                // Guardar mapeamento productName -> productId para avaliações futuras
-                if (orderId != null) {
-                    val productIdMap = currentState.cartItems.map { it.name to it.id }
-                    profileRepository.saveOrderProductIds(orderId.toString(), productIdMap)
-                    profileRepository.saveOrderRestaurantId(orderId.toString(), restaurant.id)
-                }
-                // Go DIRECTLY to Orders screen - don't wait for confirmation
-                // Status will update in real-time on the Orders screen
+            // 5. Finalizar estado
+            if (successCount > 0 || firstStripeUrl != null) {
                 val greeting = buildGreeting(currentState.userProfile.name)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        isProcessingAutoPayment = false, // No overlay
-                        cartItems = emptyList(), // Clear cart immediately
+                        isProcessingAutoPayment = false,
+                        cartItems = emptyList(),
                         cartRestaurantId = null,
-                        selectedRestaurant = null, // Clear selected restaurant
-                        cartAiMessage = null, // Clear AI chat bubble
-                        restaurantResults = emptyList(), // Clear restaurant search results
-                        productResults = emptyList(), // Clear product search results
-                        textInput = "", // Clear search input
-                        lastSearchQuery = "", // Clear last search query
-                        aiReply = greeting, // Reset to greeting
-                        isSuggestionMode = false, // Reset suggestion mode
-                        selectedCategory = null, // Clear selected category
-                        showSearchTypeSheet = false, // Clear search type sheet
-                        pendingRestaurantResults = emptyList(), // Clear pending restaurants
-                        pendingProductResults = emptyList(), // Clear pending products
-                        currentTab = MainTab.ORDERS, // Go to Orders NOW!
-                        error = null,
+                        cartRestaurants = emptyList(),
+                        selectedRestaurant = null,
+                        cartAiMessage = null,
+                        restaurantResults = emptyList(),
+                        productResults = emptyList(),
+                        textInput = "",
+                        lastSearchQuery = "",
+                        aiReply = greeting,
+                        isSuggestionMode = false,
+                        selectedCategory = null,
+                        showSearchTypeSheet = false,
+                        pendingRestaurantResults = emptyList(),
+                        pendingProductResults = emptyList(),
+                        currentTab = if (firstStripeUrl != null) currentState.currentTab else MainTab.ORDERS,
+                        checkoutUrl = firstStripeUrl,
+                        error = if (anyFailure) "Alguns pedidos falharam ao ser processados." else null,
                         pendingSavePaymentMethod = false,
-                        orderJustPlaced = true // Trigger voice feedback
+                        orderJustPlaced = successCount > 0,
+                        isAiCartFlow = false
                     )
                 }
-
-                // Refresh orders immediately to show the new order (status: Pendente)
-                refreshOrders()
-
-                // Start background polling to update order status in real-time
-                // User will see status change from "Pendente" to "Em Preparo" automatically
-                startBackgroundPolling(currentState.userProfile.id)
-            } else {
-                // Traditional checkout flow - redirect to Stripe Checkout URL
-                _uiState.update {
-                    it.copy(isLoading = false, checkoutUrl = sessionResponse.url)
+                
+                if (successCount > 0) {
+                    refreshOrders()
+                    startBackgroundPolling(currentState.userProfile.id)
                 }
+            } else {
+                _uiState.update { it.copy(isLoading = false, error = "Erro ao processar seus pedidos. Tente novamente.") }
             }
         }
     }
@@ -1411,22 +1407,34 @@ class SearchViewModel(
         if (products.isEmpty()) return
 
         _uiState.update { currentState ->
-            val cartMap = currentState.cartItems.associateBy { it.id }.toMutableMap()
+            val cartItems = currentState.cartItems.toMutableList()
+            
             for (product in products) {
-                val existing = cartMap[product.id]
-                if (existing != null) {
-                    cartMap[product.id] = existing.copy(quantity = existing.quantity + product.quantity)
+                // Tenta encontrar um item existente (mesmo ID ou mesmo Nome + Restaurante)
+                val existingIndex = cartItems.indexOfFirst { 
+                    (it.id != 0 && it.id == product.id) || 
+                    (it.name == product.name && it.restaurant_id == product.restaurant_id)
+                }
+
+                if (existingIndex != -1) {
+                    val existing = cartItems[existingIndex]
+                    cartItems[existingIndex] = existing.copy(quantity = existing.quantity + product.quantity)
                 } else {
-                    cartMap[product.id] = product.copy(quantity = product.quantity)
+                    cartItems.add(product)
                 }
             }
+
             currentState.copy(
-                cartItems = cartMap.values.toList(),
-                cartRestaurantId = products.firstOrNull()?.restaurant_id ?: currentState.cartRestaurantId
+                cartItems = cartItems,
+                cartRestaurantId = products.firstOrNull()?.restaurant_id ?: currentState.cartRestaurantId,
+                isAiCartFlow = true 
             )
         }
 
-        // AI product-only flows bypass addToCart(), so ensure restaurant metadata is also loaded.
-        fetchCompanyById(products.first().restaurant_id)
+        // Busca metadados para todos os restaurantes únicos na lista de produtos
+        val uniqueRestaurantIds = products.map { it.restaurant_id }.distinct()
+        uniqueRestaurantIds.forEach { id ->
+            fetchCompanyById(id)
+        }
     }
 }

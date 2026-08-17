@@ -90,6 +90,7 @@ fun CartScreen(
     onSuggestAnotherRestaurant: () -> Unit = {},
     onAddMoreFromSame: () -> Unit = {},
     onMarkAiMessageAsSpoken: () -> Unit = {},
+    onClearCart: () -> Unit = {},
     isMuted: Boolean = false,
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, Int) -> DeliveryFeeResponse?)? = null,
     onGoToHome: (() -> Unit)? = null
@@ -97,6 +98,45 @@ fun CartScreen(
     val total = cartItems.sumOf { it.price * it.quantity }
     var showServiceFeeSheet by remember { mutableStateOf(false) }
     var expandedProduct by remember { mutableStateOf<Product?>(null) }
+    var showUndoConfirmDialog by remember { mutableStateOf(false) }
+
+    if (showUndoConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showUndoConfirmDialog = false },
+            containerColor = CartCard,
+            titleContentColor = CartText,
+            textContentColor = CartMuted,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("⚠️", fontSize = 20.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Desfazer pedido?", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Text("Se voltar agora, os itens adicionados pela IA serão removidos da sua sacola. Deseja continuar?")
+            },
+            confirmButton = {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(KomaSoftRed)
+                        .clickable {
+                            showUndoConfirmDialog = false
+                            onClearCart()
+                        }
+                        .padding(horizontal = 18.dp, vertical = 9.dp)
+                ) {
+                    Text("Sim, desfazer", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUndoConfirmDialog = false }) {
+                    Text("Cancelar", color = CartMuted)
+                }
+            }
+        )
+    }
 
     if (showServiceFeeSheet) {
         ServiceFeeBottomSheet(
@@ -148,6 +188,24 @@ fun CartScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(bottom = 20.dp)
             ) {
+                if (cartAiMessage != null) {
+                    IconButton(
+                        onClick = { showUndoConfirmDialog = true },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(CartCard, CircleShape)
+                            .border(1.dp, CartMuted.copy(alpha = 0.2f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar",
+                            tint = CartText,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+
                 Box(
                     modifier = Modifier
                         .size(40.dp)
