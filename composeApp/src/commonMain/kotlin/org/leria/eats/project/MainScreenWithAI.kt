@@ -689,8 +689,8 @@ fun MainScreenWithAI(
                                     isFiltered = uiState.isFilterEnabled,
                                     onFilterToggle = { viewModel.toggleFilter() },
                                     orderItemRatings = uiState.orderItemRatings,
-                                    onRateItem = { orderId, productId, restaurantGid, productName, rating ->
-                                        viewModel.rateOrderItem(orderId, productId, restaurantGid, productName, rating)
+                                    onRateItem = { orderId, productGid, restaurantGid, productName, rating ->
+                                        viewModel.rateOrderItem(orderId, productGid, restaurantGid, productName, rating)
                                     },
                                     onMarkDelivered = { orderId -> viewModel.markOrderAsDelivered(orderId) }
                                 )

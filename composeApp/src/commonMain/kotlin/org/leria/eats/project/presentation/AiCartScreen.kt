@@ -248,7 +248,7 @@ fun AiCartScreen(
                         }
                         
                         // Itens deste restaurante
-                        items(products, key = { it.id.toString() + "_" + it.name + "_" + restaurantGid }) { product ->
+                        items(products, key = { it.gid + "_" + it.name + "_" + restaurantGid }) { product ->
                             CartItemRow(
                                 product = product,
                                 onRemove = { onRemoveItem(product) },

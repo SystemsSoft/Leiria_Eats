@@ -107,7 +107,7 @@ class SearchViewModel(
         observeFavoriteOrderNicknames()
         observeOrderSearchQueries()
         observeOrderItemRatings()
-        observeOrderProductIds()
+        observeOrderProductGids()
         observeOrderRestaurantGids()
         observeChatMessages()
     }
@@ -190,10 +190,10 @@ class SearchViewModel(
         }
     }
 
-    private fun observeOrderProductIds() {
+    private fun observeOrderProductGids() {
         viewModelScope.launch {
-            profileRepository.orderProductIdsFlow.collect { productIds ->
-                _uiState.update { it.copy(orderProductIds = productIds) }
+            profileRepository.orderProductGidsFlow.collect { productGids ->
+                _uiState.update { it.copy(orderProductGids = productGids) }
             }
         }
     }
@@ -206,21 +206,21 @@ class SearchViewModel(
         }
     }
 
-    fun rateOrderItem(orderId: String, productId: Int, restaurantGid: String, productName: String, rating: Int) {
+    fun rateOrderItem(orderId: String, productGid: String, restaurantGid: String, productName: String, rating: Int) {
         viewModelScope.launch {
             // Guarda localmente para atualizar a UI imediatamente
             profileRepository.saveOrderItemRating(orderId, productName, rating)
 
-            // Resolve productId — usa o local se a API devolveu 0
-            val resolvedProductId = if (productId != 0) productId
-                else _uiState.value.orderProductIds["$orderId::$productName"] ?: 0
+            // Resolve productGid — usa o local se a API devolveu vazio
+            val resolvedProductGid = if (productGid.isNotBlank()) productGid
+                else _uiState.value.orderProductGids["$orderId::$productName"] ?: ""
 
             // Resolve restaurantGid — usa o local se a API devolveu vazio
             val resolvedRestaurantGid = if (restaurantGid.isNotBlank()) restaurantGid
                 else _uiState.value.orderRestaurantGids[orderId] ?: ""
 
-            if (resolvedProductId == 0) {
-                println("⚠️ productId não encontrado para: orderId=$orderId, productName=$productName")
+            if (resolvedProductGid.isBlank()) {
+                println("⚠️ productGid não encontrado para: orderId=$orderId, productName=$productName")
                 return@launch
             }
 
@@ -232,13 +232,13 @@ class SearchViewModel(
             val request = RatingRequest(
                 orderId = orderId,
                 restaurantGid = resolvedRestaurantGid,
-                ratings = listOf(RatingItemRequest(productId = resolvedProductId, rating = rating))
+                ratings = listOf(RatingItemRequest(productGid = resolvedProductGid, rating = rating))
             )
             val response = apiClient.submitRatings(request)
             if (response == null || !response.success) {
-                println("⚠️ Falha ao enviar avaliação: orderId=$orderId, productId=$resolvedProductId, restaurantGid=$resolvedRestaurantGid")
+                println("⚠️ Falha ao enviar avaliação: orderId=$orderId, productGid=$resolvedProductGid, restaurantGid=$resolvedRestaurantGid")
             } else {
-                println("✅ Avaliação enviada: orderId=$orderId, productId=$resolvedProductId, restaurantGid=$resolvedRestaurantGid, rating=$rating")
+                println("✅ Avaliação enviada: orderId=$orderId, productGid=$resolvedProductGid, restaurantGid=$resolvedRestaurantGid, rating=$rating")
             }
         }
     }
@@ -708,10 +708,10 @@ class SearchViewModel(
 
     fun addToCart(product: Product) {
         _uiState.update { currentState ->
-            val existing = currentState.cartItems.find { it.id == product.id }
+            val existing = currentState.cartItems.find { it.gid == product.gid }
             val updatedCart = if (existing != null) {
                 currentState.cartItems.map {
-                    if (it.id == product.id) it.copy(quantity = it.quantity + product.quantity)
+                    if (it.gid == product.gid) it.copy(quantity = it.quantity + product.quantity)
                     else it
                 }
             } else {
@@ -831,11 +831,11 @@ class SearchViewModel(
     fun removeFromCart(product: Product) {
         _uiState.update { currentState ->
             val updatedCart = currentState.cartItems
-                .map { if (it.id == product.id) it.copy(quantity = it.quantity - 1) else it }
+                .map { if (it.gid == product.gid) it.copy(quantity = it.quantity - 1) else it }
                 .filter { it.quantity > 0 }
             
             // Atualiza a lista de metadados se um restaurante não tiver mais produtos
-            val remainingRestaurantGids = updatedCart.map { it.restaurant_gid }.toSet()
+            val remainingRestaurantGids = updatedCart.mapNotNull { it.restaurant_gid }.toSet()
             val updatedCartRestaurants = currentState.cartRestaurants.filter { it.gid in remainingRestaurantGids }
             
             val newRestaurantGid = if (updatedCart.isEmpty()) null else {
@@ -1086,7 +1086,7 @@ class SearchViewModel(
                 // 2. Preparar itens do pedido
                 val orderItems = products.map { product ->
                     OrderItemRequest(
-                        product_id = product.id,
+                        product_gid = product.gid,
                         quantity = product.quantity,
                         observation = null,
                         product_name = product.name,
@@ -1133,8 +1133,8 @@ class SearchViewModel(
                             val orderId = sessionResponse.order_id
                             if (orderId != null) {
                                 profileRepository.saveOrderSearchQuery(orderId.toString(), currentState.lastSearchQuery)
-                                val productIdMap = products.map { it.name to it.id }
-                                profileRepository.saveOrderProductIds(orderId.toString(), productIdMap)
+                                val productGidMap = products.map { it.name to it.gid }
+                                profileRepository.saveOrderProductGids(orderId.toString(), productGidMap)
                                 profileRepository.saveOrderRestaurantGid(orderId.toString(), restaurant.gid)
                             }
                         } else if (firstStripeUrl == null) {
@@ -1205,11 +1205,11 @@ class SearchViewModel(
                 }
             }
 
-            // Guardar mapeamento productName -> productId para avaliações futuras
+            // Guardar mapeamento productName -> productGid para avaliações futuras
             if (!orderId.isNullOrBlank() && cartItems.isNotEmpty()) {
                 viewModelScope.launch {
-                    val productIdMap = cartItems.map { it.name to it.id }
-                    profileRepository.saveOrderProductIds(orderId, productIdMap)
+                    val productGidMap = cartItems.map { it.name to it.gid }
+                    profileRepository.saveOrderProductGids(orderId, productGidMap)
                     val restaurantGid = _uiState.value.cartRestaurantGid
                     if (restaurantGid != null) {
                         profileRepository.saveOrderRestaurantGid(orderId, restaurantGid)
@@ -1422,9 +1422,9 @@ class SearchViewModel(
             val cartItems = currentState.cartItems.toMutableList()
             
             for (product in products) {
-                // Tenta encontrar um item existente (mesmo ID ou mesmo Nome + Restaurante)
+                // Tenta encontrar um item existente (mesmo GID ou mesmo Nome + Restaurante)
                 val existingIndex = cartItems.indexOfFirst { 
-                    (it.id != 0 && it.id == product.id) || 
+                    (it.gid.isNotBlank() && it.gid == product.gid) || 
                     (it.name == product.name && it.restaurant_gid == product.restaurant_gid)
                 }
 

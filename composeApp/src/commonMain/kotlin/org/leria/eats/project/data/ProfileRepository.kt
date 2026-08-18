@@ -23,7 +23,7 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
     private val ORDER_SEARCH_QUERIES_KEY = stringPreferencesKey("order_search_queries")
     private val PAYMENT_METHODS_KEY = stringPreferencesKey("saved_payment_methods")
     private val ORDER_ITEM_RATINGS_KEY = stringPreferencesKey("order_item_ratings")
-    private val ORDER_PRODUCT_IDS_KEY = stringPreferencesKey("order_product_ids")
+    private val ORDER_PRODUCT_GIDS_KEY = stringPreferencesKey("order_product_gids") // MUDOU: de order_product_ids para order_product_gids
     private val ORDER_RESTAURANT_GIDS_KEY = stringPreferencesKey("order_restaurant_gids") // MUDOU: de order_restaurant_ids para order_restaurant_gids
     private val ALLERGIES_KEY = stringPreferencesKey("user_allergies")
     private val LIFESTYLES_KEY = stringPreferencesKey("user_lifestyles")
@@ -159,27 +159,27 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
-    // ─── Product IDs — key = "orderId::productName", value = productId ────────
-    val orderProductIdsFlow: Flow<Map<String, Int>> = dataStore.data.map { preferences ->
-        val json = preferences[ORDER_PRODUCT_IDS_KEY] ?: "{}"
+    // ─── Product GIDs — key = "orderId::productName", value = productGid ────────
+    val orderProductGidsFlow: Flow<Map<String, String>> = dataStore.data.map { preferences ->
+        val json = preferences[ORDER_PRODUCT_GIDS_KEY] ?: "{}"
         try {
-            Json.decodeFromString<Map<String, String>>(json).mapValues { it.value.toInt() }
+            Json.decodeFromString<Map<String, String>>(json)
         } catch (e: Exception) {
             emptyMap()
         }
     }
 
-    suspend fun saveOrderProductIds(orderId: String, items: List<Pair<String, Int>>) {
+    suspend fun saveOrderProductGids(orderId: String, items: List<Pair<String, String>>) {
         dataStore.edit { preferences ->
             val current = try {
-                Json.decodeFromString<Map<String, String>>(preferences[ORDER_PRODUCT_IDS_KEY] ?: "{}")
+                Json.decodeFromString<Map<String, String>>(preferences[ORDER_PRODUCT_GIDS_KEY] ?: "{}")
             } catch (e: Exception) {
                 emptyMap()
             }
-            val newEntries = items.associate { (productName, productId) ->
-                "$orderId::$productName" to productId.toString()
+            val newEntries = items.associate { (productName, productGid) ->
+                "$orderId::$productName" to productGid
             }
-            preferences[ORDER_PRODUCT_IDS_KEY] = Json.encodeToString(current + newEntries)
+            preferences[ORDER_PRODUCT_GIDS_KEY] = Json.encodeToString(current + newEntries)
         }
     }
 

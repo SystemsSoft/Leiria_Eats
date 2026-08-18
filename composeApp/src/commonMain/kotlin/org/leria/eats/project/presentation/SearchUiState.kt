@@ -81,8 +81,8 @@ data class SearchUiState(
     val orderSearchQueries: Map<String, String> = emptyMap(),
     // key = "orderId::productName", value = 1..5
     val orderItemRatings: Map<String, Int> = emptyMap(),
-    // key = "orderId::productName", value = productId
-    val orderProductIds: Map<String, Int> = emptyMap(),
+    // key = "orderId::productName", value = productGid
+    val orderProductGids: Map<String, String> = emptyMap(),
     // key = orderId, value = restaurantGid
     val orderRestaurantGids: Map<String, String> = emptyMap(),
     // Lista de mensagens de chat da IA

@@ -53,7 +53,7 @@ fun OrdersScreen(
     isFiltered: Boolean,
     onFilterToggle: () -> Unit,
     orderItemRatings: Map<String, Int> = emptyMap(),
-    onRateItem: (orderId: String, productId: Int, restaurantGid: String, productName: String, rating: Int) -> Unit = { _, _, _, _, _ -> },
+    onRateItem: (orderId: String, productGid: String, restaurantGid: String, productName: String, rating: Int) -> Unit = { _, _, _, _, _ -> },
     onMarkDelivered: (orderId: String) -> Unit = {}
 ) {
     Box(
@@ -189,7 +189,7 @@ fun OrderDetailView(
     order: Order,
     onBack: () -> Unit,
     orderItemRatings: Map<String, Int> = emptyMap(),
-    onRateItem: (orderId: String, productId: Int, restaurantGid: String, productName: String, rating: Int) -> Unit = { _, _, _, _, _ -> },
+    onRateItem: (orderId: String, productGid: String, restaurantGid: String, productName: String, rating: Int) -> Unit = { _, _, _, _, _ -> },
     onMarkDelivered: (orderId: String) -> Unit = {}
 ) {
     val displayStatus = getDisplayStatus(order)
@@ -343,7 +343,7 @@ fun OrderDetailView(
                                 OrderItemRatingRow(
                                     currentRating = savedRating,
                                     onRatingSelected = { stars ->
-                                        onRateItem(order.id, item.productId, order.restaurantGid, item.product_name, stars)
+                                        onRateItem(order.id, item.productGid, order.restaurantGid, item.product_name, stars)
                                     }
                                 )
                             }

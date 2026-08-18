@@ -24,7 +24,7 @@ data class SearchRequest(
 
 @Serializable
 data class Product(
-    val id: Int = 0,
+    val gid: String = "", // MUDOU: id: Int -> gid: String
     val name: String = "",
     val description: String = "",
     val price: Double = 0.0,
@@ -124,7 +124,7 @@ data class OrderRequest(
 
 @Serializable
 data class OrderItemRequest(
-    val product_id: Int,
+    val product_gid: String, // MUDOU: product_id: Int -> product_gid: String
     val quantity: Int,
     val observation: String? = null,
     @SerialName("product_name")
@@ -144,8 +144,8 @@ data class OrderItem(
     val price: Double = 0.0,
     val quantity: Int = 0,
     val observation: String? = null,
-    @SerialName("product_id")
-    val productId: Int = 0
+    @SerialName("product_gid")
+    val productGid: String = "" // MUDOU: productId: Int -> productGid: String
 )
 
 @Serializable
@@ -179,8 +179,8 @@ data class SavedPaymentMethodsResponse(
 
 @Serializable
 data class RatingItemRequest(
-    @SerialName("product_id")
-    val productId: Int,
+    @SerialName("product_gid")
+    val productGid: String, // MUDOU: productId: Int -> productGid: String
     val rating: Int
 )
 

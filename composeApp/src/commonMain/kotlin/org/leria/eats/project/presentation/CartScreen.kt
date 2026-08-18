@@ -154,7 +154,7 @@ fun CartScreen(
     }
 
     expandedProduct?.let { product ->
-        val quantity = cartItems.find { it.id == product.id }?.quantity ?: 0
+        val quantity = cartItems.find { it.gid == product.gid }?.quantity ?: 0
         CartExpandedProductDetailsModal(
             product = product,
             quantity = quantity,

@@ -257,7 +257,7 @@ fun RestaurantDetailScreen(
                 }
 
                 items(filteredProducts) { product ->
-                    val qty = cartItems.find { it.id == product.id }?.quantity ?: 0
+                    val qty = cartItems.find { it.gid == product.gid }?.quantity ?: 0
                     ProductItemWithCounter(
                         product = product,
                         quantity = qty,
