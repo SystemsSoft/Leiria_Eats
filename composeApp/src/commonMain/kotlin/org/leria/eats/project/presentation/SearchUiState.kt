@@ -44,7 +44,7 @@ data class SearchUiState(
     var restaurant: Restaurant? = null,
     val selectedCategory: String? = null,
     val selectedOrder: Order? = null,
-    val cartRestaurantId: Int? = null,
+    val cartRestaurantGid: String? = null,
     val cartItems: List<Product> = emptyList(),
     val cartRestaurants: List<Restaurant> = emptyList(), // Metadados dos restaurantes no carrinho
     val currentTab: MainTab = MainTab.AI,
@@ -83,8 +83,8 @@ data class SearchUiState(
     val orderItemRatings: Map<String, Int> = emptyMap(),
     // key = "orderId::productName", value = productId
     val orderProductIds: Map<String, Int> = emptyMap(),
-    // key = orderId, value = restaurantId
-    val orderRestaurantIds: Map<String, Int> = emptyMap(),
+    // key = orderId, value = restaurantGid
+    val orderRestaurantGids: Map<String, String> = emptyMap(),
     // Lista de mensagens de chat da IA
     val chatMessages: List<ChatMessage> = emptyList()
 ) {

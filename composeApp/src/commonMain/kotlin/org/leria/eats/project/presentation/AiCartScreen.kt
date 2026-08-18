@@ -59,16 +59,16 @@ fun AiCartScreen(
     onMarkAiMessageAsSpoken: () -> Unit = {},
     onClearCart: () -> Unit = {},
     isMuted: Boolean = false,
-    onGetDeliveryFee: (suspend (Double, Double, Double, Double, Int) -> DeliveryFeeResponse?)? = null,
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
     onGoToHome: (() -> Unit)? = null
 ) {
     val total = cartItems.sumOf { it.price * it.quantity }
     var showServiceFeeSheet by remember { mutableStateOf(false) }
     var showUndoConfirmDialog by remember { mutableStateOf(false) }
     
-    // Group items by restaurant_id
+    // Group items by restaurant_gid
     val groupedItems = remember(cartItems) {
-        cartItems.groupBy { it.restaurant_id }
+        cartItems.groupBy { it.restaurant_gid }
     }
 
     if (showUndoConfirmDialog) {
@@ -112,8 +112,8 @@ fun AiCartScreen(
     if (showServiceFeeSheet) {
         // Multi-restaurant service fee: for simplicity we use the first restaurant to check delivery area
         // but the service fee is 5% of the TOTAL.
-        val firstRestaurantId = cartItems.firstOrNull()?.restaurant_id
-        val representativeRestaurant = cartRestaurants.find { it.id == firstRestaurantId }
+        val firstRestaurantGid = cartItems.firstOrNull()?.restaurant_gid
+        val representativeRestaurant = cartRestaurants.find { it.gid == firstRestaurantGid }
         
         ServiceFeeBottomSheet(
             cartTotal = total,
@@ -239,16 +239,16 @@ fun AiCartScreen(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    groupedItems.forEach { (restaurantId, products) ->
-                        val restaurant = cartRestaurants.find { it.id == restaurantId }
+                    groupedItems.forEach { (restaurantGid, products) ->
+                        val restaurant = cartRestaurants.find { it.gid == restaurantGid }
                         
                         // Header do Restaurante
-                        item(key = "header_$restaurantId") {
-                            AiCartRestaurantHeader(restaurant, restaurantId, products.sumOf { it.price * it.quantity })
+                        item(key = "header_$restaurantGid") {
+                            AiCartRestaurantHeader(restaurant, restaurantGid, products.sumOf { it.price * it.quantity })
                         }
                         
                         // Itens deste restaurante
-                        items(products, key = { it.id.toString() + "_" + it.name + "_" + restaurantId }) { product ->
+                        items(products, key = { it.id.toString() + "_" + it.name + "_" + restaurantGid }) { product ->
                             CartItemRow(
                                 product = product,
                                 onRemove = { onRemoveItem(product) },
@@ -315,7 +315,7 @@ fun AiCartScreen(
 }
 
 @Composable
-fun AiCartRestaurantHeader(restaurant: Restaurant?, restaurantId: Int, subtotal: Double) {
+fun AiCartRestaurantHeader(restaurant: Restaurant?, restaurantGid: String?, subtotal: Double) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -360,7 +360,7 @@ fun AiCartRestaurantHeader(restaurant: Restaurant?, restaurantId: Int, subtotal:
             Icon(Icons.Default.Store, contentDescription = null, tint = CartMuted, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.width(10.dp))
             Text(
-                "Loja #$restaurantId", 
+                if (restaurantGid != null) "Loja #$restaurantGid" else "Loja Desconhecida", 
                 color = CartText, 
                 fontWeight = FontWeight.ExtraBold, 
                 fontSize = 16.sp,

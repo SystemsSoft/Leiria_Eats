@@ -24,7 +24,7 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
     private val PAYMENT_METHODS_KEY = stringPreferencesKey("saved_payment_methods")
     private val ORDER_ITEM_RATINGS_KEY = stringPreferencesKey("order_item_ratings")
     private val ORDER_PRODUCT_IDS_KEY = stringPreferencesKey("order_product_ids")
-    private val ORDER_RESTAURANT_IDS_KEY = stringPreferencesKey("order_restaurant_ids")
+    private val ORDER_RESTAURANT_GIDS_KEY = stringPreferencesKey("order_restaurant_gids") // MUDOU: de order_restaurant_ids para order_restaurant_gids
     private val ALLERGIES_KEY = stringPreferencesKey("user_allergies")
     private val LIFESTYLES_KEY = stringPreferencesKey("user_lifestyles")
 
@@ -183,24 +183,24 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
-    // ─── Restaurant IDs — key = orderId, value = restaurantId ────────────────
-    val orderRestaurantIdsFlow: Flow<Map<String, Int>> = dataStore.data.map { preferences ->
-        val json = preferences[ORDER_RESTAURANT_IDS_KEY] ?: "{}"
+    // ─── Restaurant GIDs — key = orderId, value = restaurantGid ────────────────
+    val orderRestaurantGidsFlow: Flow<Map<String, String>> = dataStore.data.map { preferences ->
+        val json = preferences[ORDER_RESTAURANT_GIDS_KEY] ?: "{}"
         try {
-            Json.decodeFromString<Map<String, String>>(json).mapValues { it.value.toInt() }
+            Json.decodeFromString<Map<String, String>>(json)
         } catch (e: Exception) {
             emptyMap()
         }
     }
 
-    suspend fun saveOrderRestaurantId(orderId: String, restaurantId: Int) {
+    suspend fun saveOrderRestaurantGid(orderId: String, restaurantGid: String) {
         dataStore.edit { preferences ->
             val current = try {
-                Json.decodeFromString<Map<String, String>>(preferences[ORDER_RESTAURANT_IDS_KEY] ?: "{}")
+                Json.decodeFromString<Map<String, String>>(preferences[ORDER_RESTAURANT_GIDS_KEY] ?: "{}")
             } catch (e: Exception) {
                 emptyMap()
             }
-            preferences[ORDER_RESTAURANT_IDS_KEY] = Json.encodeToString(current + (orderId to restaurantId.toString()))
+            preferences[ORDER_RESTAURANT_GIDS_KEY] = Json.encodeToString(current + (orderId to restaurantGid))
         }
     }
 }

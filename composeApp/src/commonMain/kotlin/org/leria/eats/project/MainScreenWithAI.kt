@@ -597,7 +597,7 @@ fun MainScreenWithAI(
                                 )
                             }
                             MainTab.CART -> {
-                                val uniqueRestaurantsInCart = uiState.cartItems.map { it.restaurant_id }.distinct().size
+                                val uniqueRestaurantsInCart = uiState.cartItems.map { it.restaurant_gid }.distinct().size
                                 if (uiState.isAiCartFlow || uniqueRestaurantsInCart > 1 || uiState.cartRestaurants.size > 1) {
                                     AiCartScreen(
                                         cartItems = uiState.cartItems,
@@ -611,8 +611,8 @@ fun MainScreenWithAI(
                                         onGetAddressFromMap = { lat, long ->
                                             locationService.getAddressFromCoordinates(lat, long)
                                         },
-                                        onGetDeliveryFee = { custLat, custLon, restLat, restLon, restId ->
-                                            viewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restId)
+                                        onGetDeliveryFee = { custLat, custLon, restLat, restLon, restGid ->
+                                            viewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restGid)
                                         },
                                         onGoToRestaurant = { restaurant ->
                                             viewModel.selectRestaurant(restaurant)
@@ -645,8 +645,8 @@ fun MainScreenWithAI(
                                         onGetAddressFromMap = { lat, long ->
                                             locationService.getAddressFromCoordinates(lat, long)
                                         },
-                                        onGetDeliveryFee = { custLat, custLon, restLat, restLon, restId ->
-                                            viewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restId)
+                                        onGetDeliveryFee = { custLat, custLon, restLat, restLon, restGid ->
+                                            viewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restGid)
                                         },
                                         onGoToRestaurant = { restaurant ->
                                             viewModel.selectRestaurant(restaurant)
@@ -689,8 +689,8 @@ fun MainScreenWithAI(
                                     isFiltered = uiState.isFilterEnabled,
                                     onFilterToggle = { viewModel.toggleFilter() },
                                     orderItemRatings = uiState.orderItemRatings,
-                                    onRateItem = { orderId, productId, restaurantId, productName, rating ->
-                                        viewModel.rateOrderItem(orderId, productId, restaurantId, productName, rating)
+                                    onRateItem = { orderId, productId, restaurantGid, productName, rating ->
+                                        viewModel.rateOrderItem(orderId, productId, restaurantGid, productName, rating)
                                     },
                                     onMarkDelivered = { orderId -> viewModel.markOrderAsDelivered(orderId) }
                                 )

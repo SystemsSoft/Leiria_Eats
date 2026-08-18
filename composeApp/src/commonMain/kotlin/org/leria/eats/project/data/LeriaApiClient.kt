@@ -62,12 +62,12 @@ class LeriaApiClient {
     }
 
     // NOVO: Endpoint com IA Generativa
-    suspend fun sendChatMessage(text: String, restaurantId: Int? = null): ChatResponse {
+    suspend fun sendChatMessage(text: String, restaurantGid: String? = null): ChatResponse {
         val response = client.post("$baseUrl/chat/sales") {
             contentType(ContentType.Application.Json)
             setBody(ChatRequest(
                 message = text,
-                restaurantId = restaurantId,
+                restaurantGid = restaurantGid,
                 sessionId = getOrCreateSessionId()
             ))
         }
@@ -136,9 +136,9 @@ class LeriaApiClient {
         }
     }
 
-    suspend fun getCompanyById(idCompany: Int): CompanyResponse? {
+    suspend fun getCompanyByGid(gidCompany: String): CompanyResponse? {
         return try {
-            val response = client.get("$baseUrl/companies/$idCompany")
+            val response = client.get("$baseUrl/companies/$gidCompany")
 
             if (response.status.value == 200) {
                 response.body()
@@ -162,7 +162,7 @@ class LeriaApiClient {
                 val companies: List<CompanyResponse> = response.body()
                 companies.map { company ->
                     Restaurant(
-                        id = company.id,
+                        gid = company.gid,
                         name = company.name,
                         category = company.category,
                         image_url = company.imageUrl,

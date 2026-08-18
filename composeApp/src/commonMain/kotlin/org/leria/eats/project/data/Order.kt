@@ -9,8 +9,8 @@ data class Order(
     val items: List<OrderItem> = emptyList(),
     val total: Double,
     val status: String = "Em preparo",
-    @SerialName("restaurant_id")
-    val restaurantId: Int = 0,
+    @SerialName("restaurant_gid")
+    val restaurantGid: String = "", // MUDOU: restaurantId: Int -> restaurantGid: String
     @SerialName("restaurant_name")
     val restaurantName: String = "",
     @SerialName("restaurant_category")

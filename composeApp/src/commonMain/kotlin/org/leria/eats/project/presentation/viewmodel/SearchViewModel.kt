@@ -108,7 +108,7 @@ class SearchViewModel(
         observeOrderSearchQueries()
         observeOrderItemRatings()
         observeOrderProductIds()
-        observeOrderRestaurantIds()
+        observeOrderRestaurantGids()
         observeChatMessages()
     }
 
@@ -198,15 +198,15 @@ class SearchViewModel(
         }
     }
 
-    private fun observeOrderRestaurantIds() {
+    private fun observeOrderRestaurantGids() {
         viewModelScope.launch {
-            profileRepository.orderRestaurantIdsFlow.collect { restaurantIds ->
-                _uiState.update { it.copy(orderRestaurantIds = restaurantIds) }
+            profileRepository.orderRestaurantGidsFlow.collect { restaurantGids ->
+                _uiState.update { it.copy(orderRestaurantGids = restaurantGids) }
             }
         }
     }
 
-    fun rateOrderItem(orderId: String, productId: Int, restaurantId: Int, productName: String, rating: Int) {
+    fun rateOrderItem(orderId: String, productId: Int, restaurantGid: String, productName: String, rating: Int) {
         viewModelScope.launch {
             // Guarda localmente para atualizar a UI imediatamente
             profileRepository.saveOrderItemRating(orderId, productName, rating)
@@ -215,30 +215,30 @@ class SearchViewModel(
             val resolvedProductId = if (productId != 0) productId
                 else _uiState.value.orderProductIds["$orderId::$productName"] ?: 0
 
-            // Resolve restaurantId — usa o local se a API devolveu 0
-            val resolvedRestaurantId = if (restaurantId != 0) restaurantId
-                else _uiState.value.orderRestaurantIds[orderId] ?: 0
+            // Resolve restaurantGid — usa o local se a API devolveu vazio
+            val resolvedRestaurantGid = if (restaurantGid.isNotBlank()) restaurantGid
+                else _uiState.value.orderRestaurantGids[orderId] ?: ""
 
             if (resolvedProductId == 0) {
                 println("⚠️ productId não encontrado para: orderId=$orderId, productName=$productName")
                 return@launch
             }
 
-            if (resolvedRestaurantId == 0) {
-                println("⚠️ restaurantId não encontrado para: orderId=$orderId")
+            if (resolvedRestaurantGid.isBlank()) {
+                println("⚠️ restaurantGid não encontrado para: orderId=$orderId")
                 return@launch
             }
 
             val request = RatingRequest(
                 orderId = orderId,
-                restaurantId = resolvedRestaurantId,
+                restaurantGid = resolvedRestaurantGid,
                 ratings = listOf(RatingItemRequest(productId = resolvedProductId, rating = rating))
             )
             val response = apiClient.submitRatings(request)
             if (response == null || !response.success) {
-                println("⚠️ Falha ao enviar avaliação: orderId=$orderId, productId=$resolvedProductId, restaurantId=$resolvedRestaurantId")
+                println("⚠️ Falha ao enviar avaliação: orderId=$orderId, productId=$resolvedProductId, restaurantGid=$resolvedRestaurantGid")
             } else {
-                println("✅ Avaliação enviada: orderId=$orderId, productId=$resolvedProductId, restaurantId=$resolvedRestaurantId, rating=$rating")
+                println("✅ Avaliação enviada: orderId=$orderId, productId=$resolvedProductId, restaurantGid=$resolvedRestaurantGid, rating=$rating")
             }
         }
     }
@@ -304,9 +304,9 @@ class SearchViewModel(
             // Se o restaurante não tem produtos carregados, buscar pela API
             _uiState.update { it.copy(isLoading = true) }
             viewModelScope.launch {
-                val company = apiClient.getCompanyById(restaurant.id)
+                val company = apiClient.getCompanyByGid(restaurant.gid)
                 val resolvedRestaurant = if (company != null) Restaurant(
-                    id = company.id,
+                    gid = company.gid,
                     name = company.name,
                     category = company.category,
                     image_url = company.imageUrl,
@@ -327,9 +327,9 @@ class SearchViewModel(
             // Modo sugestão: abrir cardápio do restaurante selecionado
             _uiState.update { it.copy(isLoading = true, isSuggestionMode = false) }
             viewModelScope.launch {
-                val company = apiClient.getCompanyById(restaurant.id)
+                val company = apiClient.getCompanyByGid(restaurant.gid)
                 val resolvedRestaurant = if (company != null) Restaurant(
-                    id = company.id,
+                    gid = company.gid,
                     name = company.name,
                     category = company.category,
                     image_url = company.imageUrl,
@@ -366,7 +366,7 @@ class SearchViewModel(
                 selectedRestaurant = null,
                 selectedCategory = null,
                 cartItems = emptyList(),
-                cartRestaurantId = null,
+                cartRestaurantGid = null,
                 cartRestaurants = emptyList(),
                 isAiCartFlow = false
             )
@@ -719,20 +719,20 @@ class SearchViewModel(
             }
             currentState.copy(
                 cartItems = updatedCart,
-                cartRestaurantId = product.restaurant_id,
+                cartRestaurantGid = product.restaurant_gid,
                 isAiCartFlow = false
             )
         }
-        fetchCompanyById(product.restaurant_id)
+        product.restaurant_gid?.let { fetchCompanyByGid(it) }
     }
 
-    private fun fetchCompanyById(id: Int) {
+    private fun fetchCompanyByGid(gid: String) {
         viewModelScope.launch {
-            val company = apiClient.getCompanyById(id)
+            val company = apiClient.getCompanyByGid(gid)
             if (company == null) return@launch
             
             val restaurantMetadata = Restaurant(
-                id = company.id,
+                gid = company.gid,
                 name = company.name,
                 category = company.category,
                 image_url = company.imageUrl,
@@ -742,15 +742,15 @@ class SearchViewModel(
             )
 
             _uiState.update { state ->
-                val updatedCartRestaurants = if (state.cartRestaurants.none { it.id == id }) {
+                val updatedCartRestaurants = if (state.cartRestaurants.none { it.gid == gid }) {
                     state.cartRestaurants + restaurantMetadata
                 } else {
-                    state.cartRestaurants.map { if (it.id == id) restaurantMetadata else it }
+                    state.cartRestaurants.map { if (it.gid == gid) restaurantMetadata else it }
                 }
 
                 val shouldUpdateRestaurant =
                     state.selectedRestaurant == null ||
-                    state.selectedRestaurant?.id == company.id ||
+                    state.selectedRestaurant?.gid == company.gid ||
                     state.selectedRestaurant?.products?.isEmpty() == true
 
                 state.copy(
@@ -800,7 +800,7 @@ class SearchViewModel(
                 error = null,
                 cartAiMessage = null,
                 cartItems = emptyList(),
-                cartRestaurantId = null,
+                cartRestaurantGid = null,
                 selectedRestaurant = null,
                 selectedCategory = null,
                 isSuggestionMode = true,
@@ -835,21 +835,21 @@ class SearchViewModel(
                 .filter { it.quantity > 0 }
             
             // Atualiza a lista de metadados se um restaurante não tiver mais produtos
-            val remainingRestaurantIds = updatedCart.map { it.restaurant_id }.toSet()
-            val updatedCartRestaurants = currentState.cartRestaurants.filter { it.id in remainingRestaurantIds }
+            val remainingRestaurantGids = updatedCart.map { it.restaurant_gid }.toSet()
+            val updatedCartRestaurants = currentState.cartRestaurants.filter { it.gid in remainingRestaurantGids }
             
-            val newRestaurantId = if (updatedCart.isEmpty()) null else {
+            val newRestaurantGid = if (updatedCart.isEmpty()) null else {
                 // Se o restaurante removido era o "principal", escolhe o próximo disponível
-                if (product.restaurant_id == currentState.cartRestaurantId && product.restaurant_id !in remainingRestaurantIds) {
-                    remainingRestaurantIds.firstOrNull()
+                if (product.restaurant_gid == currentState.cartRestaurantGid && product.restaurant_gid !in remainingRestaurantGids) {
+                    remainingRestaurantGids.firstOrNull()
                 } else {
-                    currentState.cartRestaurantId
+                    currentState.cartRestaurantGid
                 }
             }
             
             currentState.copy(
                 cartItems = updatedCart, 
-                cartRestaurantId = newRestaurantId,
+                cartRestaurantGid = newRestaurantGid,
                 cartRestaurants = updatedCartRestaurants
             )
         }
@@ -859,7 +859,7 @@ class SearchViewModel(
         _uiState.update { 
             it.copy(
                 cartItems = emptyList(), 
-                cartRestaurantId = null,
+                cartRestaurantGid = null,
                 cartRestaurants = emptyList(),
                 isAiCartFlow = false
             ) 
@@ -893,7 +893,7 @@ class SearchViewModel(
         customerLon: Double,
         restaurantLat: Double,
         restaurantLon: Double,
-        restaurantId: Int
+        restaurantGid: String
     ): DeliveryFeeResponse {
         return apiClient.getDeliveryFee(
             DeliveryFeeRequest(
@@ -901,7 +901,7 @@ class SearchViewModel(
                 customer_longitude = customerLon,
                 restaurant_latitude = restaurantLat,
                 restaurant_longitude = restaurantLon,
-                restaurant_id = restaurantId
+                restaurant_gid = restaurantGid
             )
         )
     }
@@ -1033,9 +1033,9 @@ class SearchViewModel(
         }
 
         val currentState = _uiState.value
-        val itemsByRestaurant = currentState.cartItems.groupBy { it.restaurant_id }
+        val itemsByRestaurantGid = currentState.cartItems.groupBy { it.restaurant_gid }
 
-        if (itemsByRestaurant.isEmpty()) {
+        if (itemsByRestaurantGid.isEmpty()) {
             _uiState.update { it.copy(isLoading = false, error = "Sua sacola está vazia.") }
             return
         }
@@ -1050,20 +1050,24 @@ class SearchViewModel(
             var firstStripeUrl: String? = null
             var successCount = 0
             var anyFailure = false
-            val totalRestaurants = itemsByRestaurant.size
+            val totalRestaurants = itemsByRestaurantGid.size
             
             // Taxas distribuídas (simplificação para múltiplos pedidos)
             val serviceFeePerOrder = serviceFee / totalRestaurants
             val deliveryFeePerOrder = deliveryFee / totalRestaurants
 
-            for ((restaurantId, products) in itemsByRestaurant) {
+            for ((restaurantGid, products) in itemsByRestaurantGid) {
+                if (restaurantGid == null) {
+                    anyFailure = true
+                    continue
+                }
                 // 1. Obter metadados do restaurante
-                var restaurant = currentState.cartRestaurants.find { it.id == restaurantId }
+                var restaurant = currentState.cartRestaurants.find { it.gid == restaurantGid }
                 if (restaurant == null) {
-                    val company = apiClient.getCompanyById(restaurantId)
+                    val company = apiClient.getCompanyByGid(restaurantGid)
                     if (company != null) {
                         restaurant = Restaurant(
-                            id = company.id,
+                            gid = company.gid,
                             name = company.name,
                             category = company.category,
                             image_url = company.imageUrl,
@@ -1103,7 +1107,7 @@ class SearchViewModel(
                     user_name = currentState.userProfile.name,
                     user_address = selectedAddress.address,
                     user_phone = currentState.userProfile.phone,
-                    restaurant_id = restaurant.id,
+                    restaurant_gid = restaurant.gid,
                     restaurant_name = restaurant.name,
                     restaurant_image_url = restaurant.image_url,
                     restaurant_category = restaurant.category,
@@ -1131,7 +1135,7 @@ class SearchViewModel(
                                 profileRepository.saveOrderSearchQuery(orderId.toString(), currentState.lastSearchQuery)
                                 val productIdMap = products.map { it.name to it.id }
                                 profileRepository.saveOrderProductIds(orderId.toString(), productIdMap)
-                                profileRepository.saveOrderRestaurantId(orderId.toString(), restaurant.id)
+                                profileRepository.saveOrderRestaurantGid(orderId.toString(), restaurant.gid)
                             }
                         } else if (firstStripeUrl == null) {
                             firstStripeUrl = sessionResponse.url
@@ -1153,7 +1157,7 @@ class SearchViewModel(
                         isLoading = false,
                         isProcessingAutoPayment = false,
                         cartItems = emptyList(),
-                        cartRestaurantId = null,
+                        cartRestaurantGid = null,
                         cartRestaurants = emptyList(),
                         selectedRestaurant = null,
                         cartAiMessage = null,
@@ -1206,9 +1210,9 @@ class SearchViewModel(
                 viewModelScope.launch {
                     val productIdMap = cartItems.map { it.name to it.id }
                     profileRepository.saveOrderProductIds(orderId, productIdMap)
-                    val restaurantId = _uiState.value.cartRestaurantId
-                    if (restaurantId != null) {
-                        profileRepository.saveOrderRestaurantId(orderId, restaurantId)
+                    val restaurantGid = _uiState.value.cartRestaurantGid
+                    if (restaurantGid != null) {
+                        profileRepository.saveOrderRestaurantGid(orderId, restaurantGid)
                     }
                 }
             }
@@ -1218,7 +1222,7 @@ class SearchViewModel(
                     isLoading = false,
                     checkoutUrl = null,
                     cartItems = emptyList(),
-                    cartRestaurantId = null,
+                    cartRestaurantGid = null,
                     selectedRestaurant = null, // Clear selected restaurant
                     cartAiMessage = null, // Clear AI chat bubble
                     restaurantResults = emptyList(), // Clear restaurant search results
@@ -1303,7 +1307,7 @@ class SearchViewModel(
                                         autoPaymentOrderId = null,
                                         autoPaymentIntentId = null,
                                         cartItems = emptyList(),
-                                        cartRestaurantId = null,
+                                        cartRestaurantGid = null,
                                         currentTab = MainTab.ORDERS,
                                         error = null,
                                         pendingSavePaymentMethod = false
@@ -1421,7 +1425,7 @@ class SearchViewModel(
                 // Tenta encontrar um item existente (mesmo ID ou mesmo Nome + Restaurante)
                 val existingIndex = cartItems.indexOfFirst { 
                     (it.id != 0 && it.id == product.id) || 
-                    (it.name == product.name && it.restaurant_id == product.restaurant_id)
+                    (it.name == product.name && it.restaurant_gid == product.restaurant_gid)
                 }
 
                 if (existingIndex != -1) {
@@ -1434,15 +1438,15 @@ class SearchViewModel(
 
             currentState.copy(
                 cartItems = cartItems,
-                cartRestaurantId = products.firstOrNull()?.restaurant_id ?: currentState.cartRestaurantId,
+                cartRestaurantGid = products.firstOrNull()?.restaurant_gid ?: currentState.cartRestaurantGid,
                 isAiCartFlow = true 
             )
         }
 
         // Busca metadados para todos os restaurantes únicos na lista de produtos
-        val uniqueRestaurantIds = products.map { it.restaurant_id }.distinct()
-        uniqueRestaurantIds.forEach { id ->
-            fetchCompanyById(id)
+        val uniqueRestaurantGids = products.mapNotNull { it.restaurant_gid }.distinct()
+        uniqueRestaurantGids.forEach { gid ->
+            fetchCompanyByGid(gid)
         }
     }
 }
