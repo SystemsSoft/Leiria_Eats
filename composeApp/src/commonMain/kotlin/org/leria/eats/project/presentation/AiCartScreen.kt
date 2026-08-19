@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,13 +18,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.withContext
 import org.leria.eats.project.data.Address
 import org.leria.eats.project.data.DeliveryFeeResponse
 import org.leria.eats.project.data.Product
@@ -110,16 +117,11 @@ fun AiCartScreen(
     }
 
     if (showServiceFeeSheet) {
-        // Multi-restaurant service fee: for simplicity we use the first restaurant to check delivery area
-        // but the service fee is 5% of the TOTAL.
-        val firstRestaurantGid = cartItems.firstOrNull()?.restaurant_gid
-        val representativeRestaurant = cartRestaurants.find { it.gid == firstRestaurantGid }
-        
-        ServiceFeeBottomSheet(
+        AiServiceFeeBottomSheet(
             cartTotal = total,
             userAddresses = userAddresses,
             onGetAddressFromMap = onGetAddressFromMap,
-            restaurant = representativeRestaurant,
+            restaurants = cartRestaurants,
             onGetDeliveryFee = onGetDeliveryFee,
             onDismiss = { showServiceFeeSheet = false },
             onConfirm = { address, deliveryFee, serviceFee, deliveryType ->
@@ -371,6 +373,416 @@ fun AiCartRestaurantHeader(restaurant: Restaurant?, restaurantGid: String?, subt
         Column(horizontalAlignment = Alignment.End) {
             Text("Subtotal", color = CartMuted, fontSize = 10.sp)
             Text(formatCurrency(subtotal), color = CartPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        }
+    }
+}
+
+// ─── AI Service Fee Bottom Sheet ──────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AiServiceFeeBottomSheet(
+    cartTotal: Double,
+    userAddresses: List<Address>,
+    onGetAddressFromMap: (Double, Double) -> String?,
+    onDismiss: () -> Unit,
+    onConfirm: (Address, Double, Double, String) -> Unit,
+    restaurants: List<Restaurant>,
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null
+) {
+    val serviceFee = (cartTotal * 0.05).coerceIn(0.49, 1.99)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var selectedAddress by remember { mutableStateOf(userAddresses.firstOrNull()) }
+    var showAddressPicker by remember { mutableStateOf(false) }
+    var showMapDialog by remember { mutableStateOf(false) }
+    var selectedDeliveryType by remember { mutableStateOf("delivery") }
+    val isPickup = selectedDeliveryType == "pickup"
+
+    // Pending map coordinates waiting for geocoding
+    var pendingMapCoords by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var isResolvingAddress by remember { mutableStateOf(false) }
+
+    // Resolve address from coordinates
+    LaunchedEffect(pendingMapCoords) {
+        val coords = pendingMapCoords ?: return@LaunchedEffect
+        isResolvingAddress = true
+        val addressStr: String? = withContext(Dispatchers.Default) {
+            onGetAddressFromMap(coords.first, coords.second)
+        }
+        if (addressStr != null) {
+            selectedAddress = Address(
+                name = "Localização personalizada",
+                address = addressStr,
+                latitude = coords.first,
+                longitude = coords.second
+            )
+        }
+        isResolvingAddress = false
+        pendingMapCoords = null
+    }
+
+    // Delivery fees state: map of restaurant gid to its fee details
+    var deliveryFeesMap by remember { mutableStateOf<Map<String, DeliveryFeeResponse>>(emptyMap()) }
+    var feesLoading by remember { mutableStateOf(false) }
+    var feesError by remember { mutableStateOf<String?>(null) }
+
+    val totalDeliveryFee = if (isPickup) 0.0 else deliveryFeesMap.values.sumOf { it.delivery_fee }
+    val grandTotal = cartTotal + serviceFee + totalDeliveryFee
+
+    // Fetch all delivery fees whenever selected address changes
+    LaunchedEffect(selectedAddress) {
+        val addr = selectedAddress
+        if (addr?.latitude != null && addr.longitude != null && onGetDeliveryFee != null && !isPickup) {
+            feesLoading = true
+            feesError = null
+            try {
+                val results = restaurants.filter { it.latitude != null && it.longitude != null }.map { restaurant ->
+                    async {
+                        val feeRes = onGetDeliveryFee(
+                            addr.latitude, addr.longitude,
+                            restaurant.latitude!!, restaurant.longitude!!,
+                            restaurant.gid
+                        )
+                        restaurant.gid to feeRes
+                    }
+                }.awaitAll()
+
+                val newFees = results.mapNotNull { (gid, feeRes) -> 
+                    feeRes?.let { gid to it } 
+                }.toMap()
+
+                deliveryFeesMap = newFees
+                if (newFees.size < restaurants.size) {
+                    feesError = "Alguns restaurantes não entregam nesta área."
+                }
+            } catch (e: Exception) {
+                feesError = e.message ?: "Erro ao calcular taxas de entrega."
+            }
+            feesLoading = false
+        }
+    }
+
+    if (showMapDialog) {
+        MapDialog(
+            onDismiss = { showMapDialog = false },
+            onLocationSelected = { lat, long ->
+                pendingMapCoords = Pair(lat, long)
+                showMapDialog = false
+                showAddressPicker = false
+            }
+        )
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = CartCard,
+        contentColor = CartText
+    ) {
+        if (!showAddressPicker) {
+            // ── Summary Page ──────────────────────────────────────────────────
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 48.dp, top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(CartPrimary.copy(alpha = 0.15f), CircleShape)
+                        .border(1.dp, CartPrimary.copy(alpha = 0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "🧾", fontSize = 30.sp)
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Text(
+                    text = "Resumo dos pedidos IA",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = CartText
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "Pedidos de múltiplos restaurantes serão processados individualmente.",
+                    fontSize = 13.sp,
+                    color = CartMuted,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 19.sp
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // ── Delivery type selector ────────────────────────────────────
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Entrega
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (!isPickup)
+                                    Brush.verticalGradient(listOf(CartPrimary.copy(alpha = 0.22f), CartPrimary.copy(alpha = 0.08f)))
+                                else
+                                    Brush.verticalGradient(listOf(CartSurface, CartSurface))
+                            )
+                            .border(
+                                1.dp,
+                                if (!isPickup) CartPrimary.copy(alpha = 0.65f) else CartMuted.copy(alpha = 0.2f),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .clickable { selectedDeliveryType = "delivery" }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.DirectionsBike,
+                                contentDescription = null,
+                                tint = if (!isPickup) CartPrimary else CartMuted,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text(
+                                "Entrega",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (!isPickup) CartPrimary else CartMuted
+                            )
+                        }
+                    }
+                    // Recolha
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isPickup)
+                                    Brush.verticalGradient(listOf(CartSecondary.copy(alpha = 0.22f), CartSecondary.copy(alpha = 0.08f)))
+                                else
+                                    Brush.verticalGradient(listOf(CartSurface, CartSurface))
+                            )
+                            .border(
+                                1.dp,
+                                if (isPickup) CartSecondary.copy(alpha = 0.65f) else CartMuted.copy(alpha = 0.2f),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .clickable { selectedDeliveryType = "pickup" }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.StoreMallDirectory,
+                                contentDescription = null,
+                                tint = if (isPickup) CartSecondary else CartMuted,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text(
+                                "Recolha",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isPickup) CartSecondary else CartMuted
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // ── Delivery address ──────────────────────
+                if (!isPickup) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Endereço de entrega",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = CartMuted
+                        )
+                        Text(
+                            text = "Alterar",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = CartPrimary,
+                            modifier = Modifier.clickable { showAddressPicker = true }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(CartSurface)
+                            .border(1.dp, CartPrimary.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                            .clickable { if (!isResolvingAddress) showAddressPicker = true }
+                            .padding(14.dp)
+                    ) {
+                        if (isResolvingAddress) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = CartPrimary)
+                        } else if (selectedAddress != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.LocationOn, null, tint = CartPrimary, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(selectedAddress!!.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = CartText)
+                                    Text(selectedAddress!!.address, fontSize = 12.sp, color = CartMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // ── Detailed Delivery Fees by Restaurant ─────────────────────
+                if (!isPickup && restaurants.isNotEmpty()) {
+                    Text(
+                        text = "Taxas de entrega por loja",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CartMuted,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    )
+                    
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(CartSurface)
+                            .border(1.dp, CartPrimary.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                            .padding(16.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            restaurants.forEach { restaurant ->
+                                val feeRes = deliveryFeesMap[restaurant.gid]
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(restaurant.name, fontSize = 13.sp, color = CartText, modifier = Modifier.weight(1f))
+                                    if (feesLoading) {
+                                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = CartPrimary)
+                                    } else if (feeRes != null) {
+                                        Text(formatCurrency(feeRes.delivery_fee), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = CartPrimary)
+                                    } else {
+                                        Text("—", fontSize = 13.sp, color = CartMuted)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
+
+                // ── Breakdown card ────────────────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(CartSurface)
+                        .border(1.dp, CartPrimary.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Subtotal produtos", fontSize = 14.sp, color = CartMuted)
+                            Text(formatCurrency(cartTotal), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = CartText)
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Taxa de serviço", fontSize = 14.sp, color = CartMuted)
+                            Text(formatCurrency(serviceFee), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = CartPrimary)
+                        }
+                        if (!isPickup) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Total entrega", fontSize = 14.sp, color = CartMuted)
+                                Text(formatCurrency(totalDeliveryFee), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = CartPrimary)
+                            }
+                        }
+                        HorizontalDivider(color = CartPrimary.copy(alpha = 0.12f))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Total", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = CartText)
+                            Text(formatCurrency(grandTotal), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = CartSecondary)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                // ── Confirm button ────────────────────────────────────────────
+                val canConfirm = selectedAddress != null && !feesLoading && (isPickup || deliveryFeesMap.size == restaurants.size)
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (canConfirm) Brush.horizontalGradient(listOf(CartPrimary, KomaOrangeEnd)) else SolidColor(CartMuted.copy(alpha = 0.3f)))
+                        .then(if (canConfirm) Modifier.clickable { 
+                            onConfirm(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType) 
+                        } else Modifier),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Confirmar todos os pedidos", color = if (canConfirm) Color.White else CartText, fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .border(1.dp, CartMuted.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+                        .clickable { onDismiss() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Cancelar", color = CartMuted)
+                }
+            }
+        } else {
+            // ── Address Picker Page (Simplificada) ───────────────────────────
+            Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
+                Text("Escolher endereço", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = CartText)
+                Spacer(modifier = Modifier.height(16.dp))
+                userAddresses.forEach { addr ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(CartSurface)
+                            .border(1.dp, CartPrimary.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                            .clickable { selectedAddress = addr; showAddressPicker = false }
+                            .padding(16.dp)
+                    ) {
+                        Text(addr.name, fontWeight = FontWeight.Bold, color = CartText)
+                    }
+                }
+                Button(onClick = { showAddressPicker = false }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Voltar")
+                }
+            }
         }
     }
 }
