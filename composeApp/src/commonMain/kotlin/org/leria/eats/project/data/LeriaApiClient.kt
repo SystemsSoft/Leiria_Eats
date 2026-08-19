@@ -42,6 +42,7 @@ class LeriaApiClient {
 
     private val baseUrl = "https://api.leiriaeats.com"
     private val urlLocal = "http://192.168.29.31:8000"
+    private val urlprod = "https://api.leiriaeats.com"
 
     // Session ID para contexto conversacional com IA
     private var sessionId: String? = null
