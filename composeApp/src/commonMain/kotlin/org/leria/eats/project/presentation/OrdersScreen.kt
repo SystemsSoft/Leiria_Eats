@@ -194,8 +194,51 @@ fun OrderDetailView(
     onMarkDelivered: (orderId: String) -> Unit = {}
 ) {
     val displayStatus = getDisplayStatus(order.status, order.deliveryType)
-    val isDelivered = order.status == "Entregue"
+    var showExpandedQr by remember { mutableStateOf(false) }
     
+    // ── Expanded QR Dialog ──────────────────────────────────────────────────
+    if (showExpandedQr) {
+        AlertDialog(
+            onDismissRequest = { showExpandedQr = false },
+            containerColor = OCard,
+            confirmButton = {
+                TextButton(onClick = { showExpandedQr = false }) {
+                    Text("Fechar", color = OGold, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "Apresente este código ao estafeta",
+                        color = OText,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(240.dp)
+                            .background(Color.White, RoundedCornerShape(12.dp))
+                            .padding(12.dp)
+                    ) {
+                        QRCodeView(data = order.trackingCode, size = 216)
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        order.trackingCode,
+                        color = OGold,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 2.sp
+                    )
+                }
+            }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp)
@@ -251,16 +294,48 @@ fun OrderDetailView(
 
                     if (order.trackingCode.isNotBlank()) {
                         Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(OGold.copy(alpha = 0.05f))
+                                .border(1.dp, OGold.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                .clickable { showExpandedQr = true }
+                                .padding(12.dp)
                         ) {
-                            Column {
-                                Text("Código para o estafeta", color = OMuted, fontSize = 11.sp)
-                                Text(order.trackingCode, color = OGold, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("Código para o estafeta", color = OMuted, fontSize = 11.sp)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Icon(
+                                            Icons.Default.ZoomIn,
+                                            contentDescription = null,
+                                            tint = OGold.copy(alpha = 0.6f),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    Text(order.trackingCode, color = OGold, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                                }
+                                Box(contentAlignment = Alignment.BottomEnd) {
+                                    QRCodeView(data = order.trackingCode, size = 70)
+                                    // Pequeno marcador de expansão
+                                    Box(
+                                        modifier = Modifier
+                                            .offset(x = 4.dp, y = 4.dp)
+                                            .size(20.dp)
+                                            .background(OGold, CircleShape)
+                                            .border(2.dp, OCard, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.Fullscreen, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                    }
+                                }
                             }
-                            QRCodeView(data = order.trackingCode, size = 80)
                         }
                     }
 
