@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.leria.eats.project.data.Order
@@ -52,8 +53,9 @@ fun FavoritesScreen(
             },
             text = {
                 Column {
+                    val restaurantLabel = editingOrder!!.subOrders.firstOrNull()?.restaurantName ?: "Restaurante"
                     Text(
-                        "Dê um apelido ao pedido de ${editingOrder!!.restaurantName} para o identificar facilmente.",
+                        "Dê um apelido ao pedido de $restaurantLabel para o identificar facilmente.",
                         fontSize = 12.sp,
                         color = FMuted,
                         modifier = Modifier.padding(bottom = 12.dp)
@@ -76,7 +78,7 @@ fun FavoritesScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    editingOrder?.let { order -> onSetNickname(order.id, nicknameInput.trim()) }
+                    editingOrder?.let { order -> onSetNickname(order.gid, nicknameInput.trim()) }
                     editingOrder = null
                 }) {
                     Text("Guardar", color = FGold, fontWeight = FontWeight.Bold)
@@ -238,9 +240,11 @@ private fun FavoriteOrderCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(order.restaurantName, color = FText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(order.restaurantCategory, color = FMuted, fontSize = 11.sp)
-                    Text(order.deliveryAddress, color = FMuted.copy(alpha = 0.6f), fontSize = 10.sp, maxLines = 1)
+                    val restaurantName = order.subOrders.joinToString(", ") { it.restaurantName }
+                    val restaurantCategory = order.subOrders.firstOrNull()?.restaurantCategory ?: ""
+                    Text(restaurantName, color = FText, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(restaurantCategory, color = FMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(order.deliveryAddress, color = FMuted.copy(alpha = 0.6f), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 // Edit/add nickname button (only shown when no nickname yet)
@@ -272,8 +276,10 @@ private fun FavoriteOrderCard(
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
-            val summary = order.items.joinToString(" · ") { "${it.quantity}x ${it.product_name}" }
-            Text(text = summary, color = FMuted, fontSize = 12.sp, maxLines = 1)
+            val summary = order.subOrders.joinToString(" · ") { sub ->
+                sub.items.joinToString(" · ") { "${it.quantity}x ${it.product_name}" }
+            }
+            Text(text = summary, color = FMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             HorizontalDivider(color = FGold.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),

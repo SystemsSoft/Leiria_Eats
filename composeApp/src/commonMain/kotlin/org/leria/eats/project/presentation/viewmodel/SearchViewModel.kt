@@ -147,7 +147,7 @@ class SearchViewModel(
             favoriteOrderIdsFlow.collect { favoriteIds ->
                 _uiState.update { currentState ->
                     val updatedOrders = currentState.orderHistory.map { order ->
-                        order.copy(isFavorite = favoriteIds.contains(order.id))
+                        order.copy(isFavorite = favoriteIds.contains(order.gid))
                     }
                     currentState.copy(orderHistory = updatedOrders)
                 }
@@ -159,9 +159,9 @@ class SearchViewModel(
         viewModelScope.launch {
             val currentFavorites = favoriteOrderIdsFlow.first()
             val newFavorites = if (order.isFavorite) {
-                currentFavorites - order.id
+                currentFavorites - order.gid
             } else {
-                currentFavorites + order.id
+                currentFavorites + order.gid
             }
             profileRepository.saveFavoriteOrderIds(newFavorites)
         }
@@ -272,13 +272,13 @@ class SearchViewModel(
             val updatedOrders = apiClient.getCustomerOrders(userId)
             val favoriteIds = favoriteOrderIdsFlow.first()
             val ordersWithFavorites = updatedOrders.map { order ->
-                order.copy(isFavorite = favoriteIds.contains(order.id))
+                order.copy(isFavorite = favoriteIds.contains(order.gid))
             }
             _uiState.update { it.copy(orderHistory = ordersWithFavorites) }
 
-            val selectedId = _uiState.value.selectedOrder?.id
-            if (selectedId != null) {
-                val updatedSelected = ordersWithFavorites.find { it.id == selectedId }
+            val selectedGid = _uiState.value.selectedOrder?.gid
+            if (selectedGid != null) {
+                val updatedSelected = ordersWithFavorites.find { it.gid == selectedGid }
                 if (updatedSelected != null) {
                     _uiState.update { it.copy(selectedOrder = updatedSelected) }
                 }
@@ -480,7 +480,7 @@ class SearchViewModel(
             }
 
             val favoriteOrder = _uiState.value.favoriteOrders
-                .firstOrNull { it.id == matchedOrderId }
+                .firstOrNull { it.gid == matchedOrderId }
 
             if (favoriteOrder == null) {
                 return
@@ -489,7 +489,7 @@ class SearchViewModel(
             resolvedQuery = favoriteOrder.searchQuery
             // Determine the display name: nickname if set, otherwise restaurant name
             val displayName = nicknames[matchedOrderId]?.takeIf { it.isNotBlank() }
-                ?: favoriteOrder.restaurantName
+                ?: (favoriteOrder.subOrders.firstOrNull()?.restaurantName ?: "")
             fetchSearch(resolvedQuery, favoriteName = displayName)
             return
         }
@@ -1324,7 +1324,7 @@ class SearchViewModel(
                 try {
                     // Fetch latest orders to check if payment was confirmed
                     val updatedOrders = apiClient.getCustomerOrders(userId)
-                    val order = updatedOrders.find { it.id == orderId.toString() }
+                    val order = updatedOrders.find { it.id == orderId }
 
                     if (order != null) {
                         val successStatuses = listOf("Em Preparo", "Confirmado", "Pago", "estafeta chegou ao seu endereco", "Entregue")

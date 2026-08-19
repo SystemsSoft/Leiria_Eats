@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
 import org.leria.eats.project.data.Order
+import org.leria.eats.project.data.SubOrder
 import org.leria.eats.project.presentation.components.QRCodeView
 import org.leria.eats.project.presentation.util.formatCurrency
 import org.leria.eats.project.theme.*
@@ -192,9 +193,13 @@ fun OrderDetailView(
     onRateItem: (orderId: String, productGid: String, restaurantGid: String, productName: String, rating: Int) -> Unit = { _, _, _, _, _ -> },
     onMarkDelivered: (orderId: String) -> Unit = {}
 ) {
-    val displayStatus = getDisplayStatus(order)
+    val displayStatus = getDisplayStatus(order.status, order.deliveryType)
     val isDelivered = order.status == "Entregue"
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 24.dp)
+    ) {
         item {
             // ── Back header ───────────────────────────────────────────────
             Row(
@@ -216,17 +221,13 @@ fun OrderDetailView(
                 Text("Detalhes do Pedido", style = MaterialTheme.typography.titleLarge, color = OText, fontWeight = FontWeight.Bold)
             }
 
-            // ── Order card ────────────────────────────────────────────────
+            // ── Master Order info card ─────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(18.dp))
                     .background(OCard)
-                    .border(
-                        1.dp,
-                        Brush.horizontalGradient(listOf(OGold.copy(alpha = 0.4f), OGreen.copy(alpha = 0.3f))),
-                        RoundedCornerShape(18.dp)
-                    )
+                    .border(1.dp, OGold.copy(alpha = 0.2f), RoundedCornerShape(18.dp))
                     .padding(18.dp)
             ) {
                 Column {
@@ -235,7 +236,7 @@ fun OrderDetailView(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("ID: ${order.id}", color = OGold, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("ID: ${order.gid}", color = OMuted, fontSize = 12.sp)
                         val statusColor = getStatusColor(displayStatus)
                         Box(
                             modifier = Modifier
@@ -249,194 +250,183 @@ fun OrderDetailView(
                     }
 
                     if (order.trackingCode.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                "Nº do Pedido",
-                                color = OMuted,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(OGold.copy(alpha = 0.12f))
-                                    .border(1.dp, OGold.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    order.trackingCode,
-                                    color = OGold,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                            Column {
+                                Text("Código para o estafeta", color = OMuted, fontSize = 11.sp)
+                                Text(order.trackingCode, color = OGold, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
                             }
-                        }
-
-                        // ── QR Code do pedido ─────────────────────────────────────
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            QRCodeView(
-                                data = order.trackingCode,
-                                size = 180,
-                                label = "🔖 Código QR do Pedido"
-                            )
+                            QRCodeView(data = order.trackingCode, size = 80)
                         }
                     }
 
                     HorizontalDivider(color = OGold.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 14.dp))
 
-                    Text("Itens do Pedido", color = OText, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(bottom = 10.dp))
-
-                    order.items.forEach { item ->
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(58.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(OSurface)
-                                ) {
-                                    KamelImage(
-                                        asyncPainterResource(item.imageUrl),
-                                        contentDescription = item.product_name,
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(item.product_name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = OText, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(item.description, fontSize = 11.sp, color = OMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(formatCurrency(item.price), fontWeight = FontWeight.Bold, color = OGreen, fontSize = 12.sp)
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(OGold.copy(alpha = 0.15f))
-                                        .border(1.dp, OGold.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                ) {
-                                    Text("x${item.quantity}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = OGold)
-                                }
-                            }
-
-                            // ── Avaliação por produto (só quando Entregue) ──────
-                            if (isDelivered) {
-                                val ratingKey = "${order.id}::${item.product_name}"
-                                val savedRating = orderItemRatings[ratingKey]
-                                Spacer(modifier = Modifier.height(8.dp))
-                                OrderItemRatingRow(
-                                    currentRating = savedRating,
-                                    onRatingSelected = { stars ->
-                                        onRateItem(order.id, item.productGid, order.restaurantGid, item.product_name, stars)
-                                    }
-                                )
-                            }
-                        }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.LocationOn, null, tint = OGold, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(order.deliveryAddress, color = OText, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            Text("Lojas e Itens", color = OText, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(bottom = 12.dp))
+        }
 
-                    HorizontalDivider(color = OGold.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 14.dp))
+        // ── Sub-orders (one per restaurant) ──────────────────────────────────
+        items(order.subOrders) { subOrder ->
+            SubOrderCard(
+                subOrder = subOrder,
+                masterOrderId = order.gid,
+                orderItemRatings = orderItemRatings,
+                onRateItem = onRateItem
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
-                    // ── Subtotal dos itens ──────────────────────────────────
-                    val itemsSubtotal = order.items.sumOf { it.price * it.quantity }
-                    val grandTotal = itemsSubtotal + order.deliveryFee + order.serviceFee
+        item {
+            // ── Final Summary ───────────────────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(OCard.copy(alpha = 0.6f))
+                    .padding(18.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SummaryRow("Subtotal dos produtos", formatCurrency(order.subOrders.sumOf { it.total }))
+                    SummaryRow("Total de entrega", formatCurrency(order.totalDeliveryFee))
+                    SummaryRow("Taxa de serviço Koma", formatCurrency(order.totalServiceFee))
+                    
+                    HorizontalDivider(color = OGold.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
+                    
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Subtotal", color = OMuted, fontSize = 14.sp)
-                        Text(formatCurrency(itemsSubtotal), color = OText, fontSize = 14.sp)
-                    }
-
-                    // ── Taxa de entrega ─────────────────────────────────────
-                    if (order.deliveryFee > 0.0) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Taxa de entrega", color = OMuted, fontSize = 14.sp)
-                            Text(formatCurrency(order.deliveryFee), color = OText, fontSize = 14.sp)
-                        }
-                    }
-
-                    // ── Taxa de serviço ─────────────────────────────────────
-                    if (order.serviceFee > 0.0) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Taxa de serviço", color = OMuted, fontSize = 14.sp)
-                            Text(formatCurrency(order.serviceFee), color = OText, fontSize = 14.sp)
-                        }
-                    }
-
-                    HorizontalDivider(color = OGold.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 10.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Total", color = OText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text(formatCurrency(grandTotal), color = OGold, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    }
-
-                    // ── "Entregue" button — shown only when out for delivery ──
-                    if (order.status == "estafeta chegou ao seu endereco") {
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(54.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(
-                                    Brush.horizontalGradient(
-                                        listOf(OGreen, KomaStatusEntrega)
-                                    )
-                                )
-                                .clickable { onMarkDelivered(order.id) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = KomaGoldOnDark,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Confirmar Entrega",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = KomaGoldOnDark
-                                )
-                            }
-                        }
+                        Text("Total Pago", color = OText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(formatCurrency(order.total), color = OGold, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SubOrderCard(
+    subOrder: SubOrder,
+    masterOrderId: String,
+    orderItemRatings: Map<String, Int>,
+    onRateItem: (orderId: String, productGid: String, restaurantGid: String, productName: String, rating: Int) -> Unit
+) {
+    val subStatus = getDisplayStatus(subOrder.status, null)
+    val statusColor = getStatusColor(subStatus)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(OCard)
+            .border(1.dp, OGold.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(OSurface)
+                ) {
+                    KamelImage(
+                        asyncPainterResource(subOrder.restaurantImageUrl ?: ""),
+                        contentDescription = subOrder.restaurantName,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(subOrder.restaurantName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = OText)
+                    Text(subOrder.restaurantCategory, fontSize = 11.sp, color = OMuted)
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(statusColor.copy(alpha = 0.1f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(subStatus, color = statusColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            subOrder.items.forEach { item ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("x${item.quantity}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = OGold, modifier = Modifier.width(24.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(item.product_name, fontSize = 13.sp, color = OText, fontWeight = FontWeight.Medium)
+                        if (item.observation?.isNotBlank() == true) {
+                            Text("Obs: ${item.observation}", fontSize = 11.sp, color = OAmber)
+                        }
+                    }
+                    Text(formatCurrency(item.price * item.quantity), fontSize = 13.sp, color = OGreen)
+                }
+                
+                // Rating for each item if delivered
+                if (subOrder.status == "Entregue") {
+                    val ratingKey = "$masterOrderId::${item.product_name}"
+                    val savedRating = orderItemRatings[ratingKey]
+                    OrderItemRatingRow(
+                        currentRating = savedRating,
+                        onRatingSelected = { stars ->
+                            onRateItem(masterOrderId, item.productGid, subOrder.restaurantGid, item.product_name, stars)
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+            
+            if (subOrder.driverName != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(OGreen.copy(alpha = 0.05f))
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.DeliveryDining, null, tint = OGreen, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Estafeta: ${subOrder.driverName}", fontSize = 12.sp, color = OGreen, fontWeight = FontWeight.Medium)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, color = OMuted, fontSize = 13.sp)
+        Text(value, color = OText, fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -446,7 +436,7 @@ fun OrderItemCard(
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit
 ) {
-    val displayStatus = getDisplayStatus(order)
+    val displayStatus = getDisplayStatus(order.status, order.deliveryType)
     val statusColor = getStatusColor(displayStatus)
     val statusIcon = getStatusIcon(displayStatus)
 
@@ -464,6 +454,7 @@ fun OrderItemCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Image from the first restaurant
                 Box(
                     modifier = Modifier
                         .size(58.dp)
@@ -471,16 +462,17 @@ fun OrderItemCard(
                         .background(OSurface)
                 ) {
                     KamelImage(
-                        asyncPainterResource(order.restaurantImageUrl),
-                        contentDescription = order.restaurantName,
+                        asyncPainterResource(order.subOrders.firstOrNull()?.restaurantImageUrl ?: ""),
+                        contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(order.restaurantName, color = OText, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(order.restaurantCategory, color = OMuted, fontSize = 11.sp, maxLines = 1)
+                    val restaurantNames = order.subOrders.joinToString(", ") { it.restaurantName }
+                    Text(restaurantNames, color = OText, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("${order.subOrders.size} restaurante(s)", color = OMuted, fontSize = 11.sp)
                     Text(order.deliveryAddress, color = OMuted.copy(alpha = 0.6f), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Box(
@@ -503,8 +495,8 @@ fun OrderItemCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            val summary = order.items.joinToString(" · ") { "${it.quantity}× ${it.product_name}" }
-            Text(text = summary, color = OMuted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val totalItems = order.subOrders.sumOf { it.items.sumOf { item -> item.quantity } }
+            Text(text = "$totalItems itens no pedido", color = OMuted, fontSize = 12.sp)
 
             HorizontalDivider(color = OGold.copy(alpha = 0.08f), modifier = Modifier.padding(vertical = 10.dp))
 
@@ -525,7 +517,7 @@ fun OrderItemCard(
                     Spacer(modifier = Modifier.width(5.dp))
                     Text(displayStatus, color = statusColor, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 }
-                Text(formatCurrency(order.total + order.deliveryFee + order.serviceFee), color = OGold, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(formatCurrency(order.total), color = OGold, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
         }
     }
@@ -625,6 +617,6 @@ private fun getStatusIcon(status: String): ImageVector {
 
 /** Returns the status label to show in the UI.
  *  For pickup orders, "Entregue" is displayed as "Pronto para Recolha". */
-private fun getDisplayStatus(order: Order): String =
-    if (order.deliveryType == "pickup" && order.status == "Entregue") "Pronto para Recolha"
-    else order.status
+private fun getDisplayStatus(status: String, deliveryType: String?): String =
+    if (deliveryType == "pickup" && status == "Entregue") "Pronto para Recolha"
+    else status

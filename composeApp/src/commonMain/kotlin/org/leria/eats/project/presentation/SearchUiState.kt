@@ -93,8 +93,8 @@ data class SearchUiState(
     val favoriteOrders: List<Order> get() = orderHistory
         .filter { it.isFavorite }
         .map { order ->
-            val nick = favoriteOrderNicknames[order.id]
-            val query = orderSearchQueries[order.id]
+            val nick = favoriteOrderNicknames[order.gid]
+            val query = orderSearchQueries[order.gid]
             order.copy(
                 nickname = if (!nick.isNullOrBlank()) nick else order.nickname,
                 searchQuery = if (!query.isNullOrBlank()) query else order.searchQuery
