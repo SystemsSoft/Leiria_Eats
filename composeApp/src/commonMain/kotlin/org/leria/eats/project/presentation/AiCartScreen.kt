@@ -54,7 +54,7 @@ fun AiCartScreen(
     cartRestaurants: List<Restaurant>,
     onRemoveItem: (Product) -> Unit,
     onAddItem: (Product) -> Unit = {},
-    onCheckout: (Address, Double, Double, String) -> Unit,
+    onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     userAddresses: List<Address> = emptyList(),
     onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null },
     onGoToRestaurant: ((Restaurant) -> Unit)? = null,
@@ -124,9 +124,9 @@ fun AiCartScreen(
             restaurants = cartRestaurants,
             onGetDeliveryFee = onGetDeliveryFee,
             onDismiss = { showServiceFeeSheet = false },
-            onConfirm = { address, deliveryFee, serviceFee, deliveryType ->
+            onConfirm = { address, deliveryFee, serviceFee, deliveryType, feesMap ->
                 showServiceFeeSheet = false
-                onCheckout(address, deliveryFee, serviceFee, deliveryType)
+                onCheckout(address, deliveryFee, serviceFee, deliveryType, feesMap)
             }
         )
     }
@@ -372,7 +372,7 @@ fun AiServiceFeeBottomSheet(
     userAddresses: List<Address>,
     onGetAddressFromMap: (Double, Double) -> String?,
     onDismiss: () -> Unit,
-    onConfirm: (Address, Double, Double, String) -> Unit,
+    onConfirm: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     restaurants: List<Restaurant>,
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null
 ) {
@@ -747,7 +747,8 @@ fun AiServiceFeeBottomSheet(
                         .clip(RoundedCornerShape(14.dp))
                         .background(if (canConfirm) Brush.horizontalGradient(listOf(CartPrimary, KomaOrangeEnd)) else SolidColor(CartMuted.copy(alpha = 0.3f)))
                         .then(if (canConfirm) Modifier.clickable { 
-                            onConfirm(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType) 
+                            val finalFeesMap = if (isPickup) emptyMap() else deliveryFeesMap.mapValues { it.value.delivery_fee }
+                            onConfirm(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType, finalFeesMap) 
                         } else Modifier),
                     contentAlignment = Alignment.Center
                 ) {

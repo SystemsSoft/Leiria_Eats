@@ -71,6 +71,7 @@ data class SearchUiState(
     val selectedAddressForCheckout: Address? = null,
     val pendingDeliveryFee: Double = 0.0,
     val pendingServiceFee: Double = 0.0,
+    val pendingDeliveryFeesMap: Map<String, Double> = emptyMap(),
     val isProcessingAutoPayment: Boolean = false,
     val autoPaymentOrderId: Int? = null,
     val autoPaymentIntentId: String? = null,

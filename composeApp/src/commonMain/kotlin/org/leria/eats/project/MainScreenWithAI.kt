@@ -606,8 +606,8 @@ fun MainScreenWithAI(
                                         cartRestaurants = uiState.cartRestaurants,
                                         onAddItem = { product -> viewModel.addToCart(product) },
                                         onRemoveItem = { product -> viewModel.removeFromCart(product) },
-                                        onCheckout = { address, deliveryFee, serviceFee, deliveryType ->
-                                            viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType)
+                                        onCheckout = { address, deliveryFee, serviceFee, deliveryType, feesMap ->
+                                            viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType, feesMap)
                                         },
                                         userAddresses = uiState.userProfile.addresses,
                                         onGetAddressFromMap = { lat, long ->
@@ -640,8 +640,8 @@ fun MainScreenWithAI(
                                         restaurantSelected = uiState.selectedRestaurant,
                                         onAddItem = { product -> viewModel.addToCart(product) },
                                         onRemoveItem = { product -> viewModel.removeFromCart(product) },
-                                        onCheckout = { address, deliveryFee, serviceFee, deliveryType ->
-                                            viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType)
+                                        onCheckout = { address, deliveryFee, serviceFee, deliveryType, feesMap ->
+                                            viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType, feesMap)
                                         },
                                         userAddresses = uiState.userProfile.addresses,
                                         onGetAddressFromMap = { lat, long ->

@@ -24,10 +24,12 @@ import org.leria.eats.project.data.RatingItemRequest
 import org.leria.eats.project.data.RatingRequest
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.data.SearchResponse
+import org.leria.eats.project.data.SubOrderRequest
 import org.leria.eats.project.presentation.ChatMessage
 import org.leria.eats.project.presentation.ChatMessageType
 import org.leria.eats.project.presentation.MainTab
 import org.leria.eats.project.presentation.SearchUiState
+import org.leria.eats.project.util.Ulid
 
 class SearchViewModel(
     private val apiClient: LeriaApiClient,
@@ -38,6 +40,11 @@ class SearchViewModel(
     /** Gera um código de pedido numérico único com 9 dígitos */
     private fun generateTrackingCode(): String {
         return (100000000..999999999).random().toString()
+    }
+
+    /** Gera um identificador único de string (ULID) */
+    private fun generateGid(prefix: String = "ord"): String {
+        return "${prefix}_${Ulid.nextUlid()}"
     }
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -917,8 +924,13 @@ class SearchViewModel(
         _uiState.update { it.copy(isAddressSheetVisible = true) }
     }
 
-    /** Called from the ServiceFeeBottomSheet — skips the address selection sheet */
-    fun checkoutWithAddress(address: Address, deliveryFee: Double = 0.0, serviceFee: Double = 0.0, deliveryType: String = "delivery") {
+    fun checkoutWithAddress(
+        address: Address, 
+        deliveryFee: Double = 0.0, 
+        serviceFee: Double = 0.0, 
+        deliveryType: String = "delivery",
+        deliveryFeesMap: Map<String, Double> = emptyMap()
+    ) {
         val currentState = _uiState.value
         if (currentState.userProfile.name.isBlank()) {
             _uiState.update { it.copy(error = "Por favor, preencha seu Nome no Perfil.") }
@@ -927,12 +939,19 @@ class SearchViewModel(
         }
         if (currentState.cartItems.isEmpty()) return
         // Store the delivery type chosen in the summary
-        _uiState.update { it.copy(pendingDeliveryType = deliveryType) }
+        _uiState.update { 
+            it.copy(
+                pendingDeliveryType = deliveryType,
+                pendingDeliveryFee = deliveryFee,
+                pendingServiceFee = serviceFee,
+                selectedAddressForCheckout = address
+            ) 
+        }
         val hasSavedPaymentMethods = currentState.userProfile.savedPaymentMethods.isNotEmpty()
         if (hasSavedPaymentMethods) {
-            showPaymentConfirmForAddress(address, deliveryFee, serviceFee)
+            showPaymentConfirmForAddress(address, deliveryFee, serviceFee, deliveryFeesMap)
         } else {
-            showSavePaymentSheetForAddress(address, deliveryFee, serviceFee)
+            showSavePaymentSheetForAddress(address, deliveryFee, serviceFee, deliveryFeesMap)
         }
     }
 
@@ -959,26 +978,28 @@ class SearchViewModel(
         _uiState.update { it.copy(showSavePaymentSheet = false) }
     }
 
-    fun showPaymentConfirmForAddress(address: Address, deliveryFee: Double = 0.0, serviceFee: Double = 0.0) {
+    fun showPaymentConfirmForAddress(address: Address, deliveryFee: Double = 0.0, serviceFee: Double = 0.0, deliveryFeesMap: Map<String, Double> = emptyMap()) {
         _uiState.update {
             it.copy(
                 isAddressSheetVisible = false,
                 showPaymentConfirmSheet = true,
                 selectedAddressForCheckout = address,
                 pendingDeliveryFee = deliveryFee,
-                pendingServiceFee = serviceFee
+                pendingServiceFee = serviceFee,
+                pendingDeliveryFeesMap = deliveryFeesMap
             )
         }
     }
 
-    fun showSavePaymentSheetForAddress(address: Address, deliveryFee: Double = 0.0, serviceFee: Double = 0.0) {
+    fun showSavePaymentSheetForAddress(address: Address, deliveryFee: Double = 0.0, serviceFee: Double = 0.0, deliveryFeesMap: Map<String, Double> = emptyMap()) {
         _uiState.update {
             it.copy(
                 isAddressSheetVisible = false,
                 showSavePaymentSheet = true,
                 selectedAddressForCheckout = address,
                 pendingDeliveryFee = deliveryFee,
-                pendingServiceFee = serviceFee
+                pendingServiceFee = serviceFee,
+                pendingDeliveryFeesMap = deliveryFeesMap
             )
         }
     }
@@ -1007,22 +1028,32 @@ class SearchViewModel(
         val savePaymentMethod = currentState.pendingCheckoutSavePaymentMethod
         val deliveryFee = currentState.pendingDeliveryFee
         val serviceFee = currentState.pendingServiceFee
+        val deliveryFeesMap = currentState.pendingDeliveryFeesMap
+        
         _uiState.update {
             it.copy(
                 selectedAddressForCheckout = null,
                 pendingCheckoutSavePaymentMethod = false,
                 pendingDeliveryFee = 0.0,
-                pendingServiceFee = 0.0
+                pendingServiceFee = 0.0,
+                pendingDeliveryFeesMap = emptyMap()
             )
         }
-        confirmCheckout(address, savePaymentMethod, deliveryType, deliveryFee, serviceFee)
+        confirmCheckout(address, savePaymentMethod, deliveryType, deliveryFee, serviceFee, deliveryFeesMap)
     }
 
     fun dismissAddressSheet() {
         _uiState.update { it.copy(isAddressSheetVisible = false) }
     }
 
-    fun confirmCheckout(selectedAddress: Address, savePaymentMethod: Boolean = false, deliveryType: String = "", deliveryFee: Double = 0.0, serviceFee: Double = 0.0) {
+    fun confirmCheckout(
+        selectedAddress: Address, 
+        savePaymentMethod: Boolean = false, 
+        deliveryType: String = "", 
+        deliveryFee: Double = 0.0, 
+        serviceFee: Double = 0.0,
+        deliveryFeesMap: Map<String, Double> = emptyMap()
+    ) {
         _uiState.update {
             it.copy(
                 isAddressSheetVisible = false,
@@ -1047,20 +1078,13 @@ class SearchViewModel(
         }
 
         viewModelScope.launch {
-            var firstStripeUrl: String? = null
-            var successCount = 0
-            var anyFailure = false
-            val totalRestaurants = itemsByRestaurantGid.size
+            val masterGid = generateGid("mst")
+            val trackingCode = generateTrackingCode()
+            val subOrders = mutableListOf<SubOrderRequest>()
             
-            // Taxas distribuídas (simplificação para múltiplos pedidos)
-            val serviceFeePerOrder = serviceFee / totalRestaurants
-            val deliveryFeePerOrder = deliveryFee / totalRestaurants
-
             for ((restaurantGid, products) in itemsByRestaurantGid) {
-                if (restaurantGid == null) {
-                    anyFailure = true
-                    continue
-                }
+                if (restaurantGid == null) continue
+                
                 // 1. Obter metadados do restaurante
                 var restaurant = currentState.cartRestaurants.find { it.gid == restaurantGid }
                 if (restaurant == null) {
@@ -1078,12 +1102,9 @@ class SearchViewModel(
                     }
                 }
 
-                if (restaurant == null) {
-                    anyFailure = true
-                    continue
-                }
+                if (restaurant == null) continue
 
-                // 2. Preparar itens do pedido
+                // 2. Preparar itens do sub-pedido
                 val orderItems = products.map { product ->
                     OrderItemRequest(
                         product_gid = product.gid,
@@ -1096,97 +1117,116 @@ class SearchViewModel(
                     )
                 }
 
-                val trackingCode = generateTrackingCode()
-                val baseTime = products.maxOfOrNull { p ->
+                val subBaseTime = products.maxOfOrNull { p ->
                     p.preparationTime.filter { it.isDigit() || it == '.' }.toDoubleOrNull()?.toInt() ?: 0
                 } ?: 0
 
-                // 3. Criar request
-                val request = OrderRequest(
-                    user_id = currentState.userProfile.id,
-                    user_name = currentState.userProfile.name,
-                    user_address = selectedAddress.address,
-                    user_phone = currentState.userProfile.phone,
-                    restaurant_gid = restaurant.gid,
-                    restaurant_name = restaurant.name,
-                    restaurant_image_url = restaurant.image_url,
-                    restaurant_category = restaurant.category,
-                    items = orderItems,
-                    save_payment_method = savePaymentMethod,
-                    search_query = currentState.lastSearchQuery,
-                    tracking_code = trackingCode,
-                    deliveryType = deliveryType,
-                    baseTime = baseTime,
-                    deliveryLatitude = selectedAddress.latitude,
-                    deliveryLongitude = selectedAddress.longitude,
-                    deliveryFee = deliveryFeePerOrder,
-                    serviceFee = serviceFeePerOrder
-                )
+                val subDeliveryFee = deliveryFeesMap[restaurantGid] ?: (deliveryFee / itemsByRestaurantGid.size)
 
-                // 4. Iniciar checkout
-                try {
-                    val sessionResponse = apiClient.initiateCheckout(request)
-                    if (sessionResponse != null) {
-                        if (sessionResponse.auto_paid) {
-                            successCount++
-                            // Guardar mapeamentos
-                            val orderId = sessionResponse.order_id
-                            if (orderId != null) {
-                                profileRepository.saveOrderSearchQuery(orderId.toString(), currentState.lastSearchQuery)
-                                val productGidMap = products.map { it.name to it.gid }
-                                profileRepository.saveOrderProductGids(orderId.toString(), productGidMap)
-                                profileRepository.saveOrderRestaurantGid(orderId.toString(), restaurant.gid)
-                            }
-                        } else if (firstStripeUrl == null) {
-                            firstStripeUrl = sessionResponse.url
-                        }
-                    } else {
-                        anyFailure = true
-                    }
-                } catch (e: Exception) {
-                    anyFailure = true
-                    e.printStackTrace()
-                }
-            }
-
-            // 5. Finalizar estado
-            if (successCount > 0 || firstStripeUrl != null) {
-                val greeting = buildGreeting(currentState.userProfile.name)
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        isProcessingAutoPayment = false,
-                        cartItems = emptyList(),
-                        cartRestaurantGid = null,
-                        cartRestaurants = emptyList(),
-                        selectedRestaurant = null,
-                        cartAiMessage = null,
-                        restaurantResults = emptyList(),
-                        productResults = emptyList(),
-                        textInput = "",
-                        lastSearchQuery = "",
-                        aiReply = greeting,
-                        isSuggestionMode = false,
-                        selectedCategory = null,
-                        showSearchTypeSheet = false,
-                        pendingRestaurantResults = emptyList(),
-                        pendingProductResults = emptyList(),
-                        currentTab = if (firstStripeUrl != null) currentState.currentTab else MainTab.ORDERS,
-                        checkoutUrl = firstStripeUrl,
-                        error = if (anyFailure) "Alguns pedidos falharam ao ser processados." else null,
-                        pendingSavePaymentMethod = false,
-                        orderJustPlaced = successCount > 0,
-                        isAiCartFlow = false
+                subOrders.add(
+                    SubOrderRequest(
+                        gid = generateGid("sub"),
+                        orderGid = masterGid,
+                        restaurantGid = restaurant.gid,
+                        restaurantName = restaurant.name,
+                        restaurantImageUrl = restaurant.image_url,
+                        restaurantCategory = restaurant.category,
+                        items = orderItems,
+                        deliveryFee = subDeliveryFee,
+                        baseTime = subBaseTime
                     )
-                }
-                
-                if (successCount > 0) {
-                    refreshOrders()
-                    startBackgroundPolling(currentState.userProfile.id)
-                }
-            } else {
-                _uiState.update { it.copy(isLoading = false, error = "Erro ao processar seus pedidos. Tente novamente.") }
+                )
             }
+
+            if (subOrders.isEmpty()) {
+                _uiState.update { it.copy(isLoading = false, error = "Erro ao processar itens da sacola.") }
+                return@launch
+            }
+
+            // 3. Criar Master Request
+            val masterRequest = OrderRequest(
+                gid = masterGid,
+                user_id = currentState.userProfile.id,
+                user_name = currentState.userProfile.name,
+                user_address = selectedAddress.address,
+                user_phone = currentState.userProfile.phone,
+                save_payment_method = savePaymentMethod,
+                search_query = currentState.lastSearchQuery,
+                tracking_code = trackingCode,
+                deliveryType = deliveryType,
+                deliveryLatitude = selectedAddress.latitude,
+                deliveryLongitude = selectedAddress.longitude,
+                totalDeliveryFee = deliveryFee,
+                totalServiceFee = serviceFee,
+                subOrders = subOrders
+            )
+
+            // 4. Iniciar checkout único
+            try {
+                val sessionResponse = apiClient.initiateCheckout(masterRequest)
+                if (sessionResponse != null) {
+                    val orderId = sessionResponse.order_id
+                    if (orderId != null) {
+                        // Guardar mapeamentos para o pedido principal
+                        profileRepository.saveOrderSearchQuery(orderId.toString(), currentState.lastSearchQuery)
+                        
+                        // Para múltiplos restaurantes, o gid do restaurante no nível superior pode ser do primeiro ou nulo
+                        // Aqui usamos o primeiro restaurante como referência para a UI se necessário
+                        subOrders.firstOrNull()?.let { firstSub ->
+                            profileRepository.saveOrderRestaurantGid(orderId.toString(), firstSub.restaurantGid)
+                        }
+                    }
+
+                    if (sessionResponse.auto_paid) {
+                        finalizeOrderState(isSuccess = true, checkoutUrl = null, autoPaid = true)
+                    } else {
+                        finalizeOrderState(isSuccess = true, checkoutUrl = sessionResponse.url, autoPaid = false)
+                    }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, error = "Erro ao iniciar sessão de pagamento.") }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _uiState.update { it.copy(isLoading = false, error = "Erro crítico: ${e.message}") }
+            }
+        }
+    }
+
+    private fun finalizeOrderState(isSuccess: Boolean, checkoutUrl: String?, autoPaid: Boolean) {
+        val currentState = _uiState.value
+        val greeting = buildGreeting(currentState.userProfile.name)
+        
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                isProcessingAutoPayment = false,
+                cartItems = if (isSuccess) emptyList() else it.cartItems,
+                cartRestaurantGid = if (isSuccess) null else it.cartRestaurantGid,
+                cartRestaurants = if (isSuccess) emptyList() else it.cartRestaurants,
+                selectedRestaurant = null,
+                cartAiMessage = null,
+                restaurantResults = emptyList(),
+                productResults = emptyList(),
+                textInput = "",
+                lastSearchQuery = "",
+                aiReply = greeting,
+                isSuggestionMode = false,
+                selectedCategory = null,
+                showSearchTypeSheet = false,
+                pendingRestaurantResults = emptyList(),
+                pendingProductResults = emptyList(),
+                currentTab = if (checkoutUrl != null) currentState.currentTab else MainTab.ORDERS,
+                checkoutUrl = checkoutUrl,
+                error = if (!isSuccess) "Falha ao processar o pedido." else null,
+                pendingSavePaymentMethod = false,
+                orderJustPlaced = autoPaid,
+                isAiCartFlow = false
+            )
+        }
+        
+        if (autoPaid) {
+            refreshOrders()
+            startBackgroundPolling(currentState.userProfile.id)
         }
     }
 

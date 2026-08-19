@@ -79,7 +79,7 @@ fun CartScreen(
     cartItems: List<Product>,
     onRemoveItem: (Product) -> Unit,
     onAddItem: (Product) -> Unit = {},
-    onCheckout: (Address, Double, Double, String) -> Unit,
+    onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     restaurantSelected: Restaurant?,
     userAddresses: List<Address> = emptyList(),
     onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null },
@@ -148,7 +148,8 @@ fun CartScreen(
             onDismiss = { showServiceFeeSheet = false },
             onConfirm = { address, deliveryFee, serviceFee, deliveryType ->
                 showServiceFeeSheet = false
-                onCheckout(address, deliveryFee, serviceFee, deliveryType)
+                val feesMap = if (restaurantSelected != null) mapOf(restaurantSelected.gid to deliveryFee) else emptyMap()
+                onCheckout(address, deliveryFee, serviceFee, deliveryType, feesMap)
             }
         )
     }

@@ -91,35 +91,50 @@ data class CompanyResponse(
 
 @Serializable
 data class OrderRequest(
+    val gid: String = "", // Identificador único global do pedido (Master GID)
     val user_id: String,
     val user_name: String,
     val user_address: String,
     val user_phone: String,
-    @SerialName("restaurant_gid")
-    val restaurant_gid: String, // MUDOU: restaurant_id: Int -> restaurant_gid: String
-    val restaurant_name: String,
-    @SerialName("restaurant_image_url")
-    val restaurant_image_url: String?,
-    @SerialName("restaurant_category")
-    val restaurant_category: String,
-    val items: List<OrderItemRequest>,
     val save_payment_method: Boolean = false,
     @SerialName("search_query")
     val search_query: String = "",
     @SerialName("tracking_code")
-    val tracking_code: String = "",
+    val tracking_code: String = "", // Código principal para o estafeta
     @SerialName("delivery_type")
     val deliveryType: String = "",
-    @SerialName("base_time")
-    val baseTime: Int = 0,
     @SerialName("delivery_latitude")
     val deliveryLatitude: Double? = null,
     @SerialName("delivery_longitude")
     val deliveryLongitude: Double? = null,
+    @SerialName("total_delivery_fee")
+    val totalDeliveryFee: Double = 0.0,
+    @SerialName("total_service_fee")
+    val totalServiceFee: Double = 0.0,
+    
+    // Lista de sub-pedidos (um para cada restaurante)
+    @SerialName("sub_orders")
+    val subOrders: List<SubOrderRequest> = emptyList()
+)
+
+@Serializable
+data class SubOrderRequest(
+    val gid: String = "", // Identificador próprio do sub-pedido
+    @SerialName("order_gid")
+    val orderGid: String = "", // Relacionamento com o pedido pai (OrderRequest.gid)
+    @SerialName("restaurant_gid")
+    val restaurantGid: String,
+    @SerialName("restaurant_name")
+    val restaurantName: String,
+    @SerialName("restaurant_image_url")
+    val restaurantImageUrl: String?,
+    @SerialName("restaurant_category")
+    val restaurantCategory: String,
+    val items: List<OrderItemRequest>,
     @SerialName("delivery_fee")
     val deliveryFee: Double = 0.0,
-    @SerialName("service_fee")
-    val serviceFee: Double = 0.0
+    @SerialName("base_time")
+    val baseTime: Int = 0
 )
 
 @Serializable
