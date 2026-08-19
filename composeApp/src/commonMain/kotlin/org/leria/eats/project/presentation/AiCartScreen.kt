@@ -262,20 +262,6 @@ fun AiCartScreen(
                     }
                 }
             }
-            
-            // ── Resumo Geral ─────────────────────────────────────────────
-            if (cartItems.isNotEmpty()) {
-                HorizontalDivider(color = CartPrimary.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Total Geral", color = CartText, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text(formatCurrency(total), color = CartSecondary, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp)
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
         }
 
         // ── Floating Action Button ───────────────────────────────────────
@@ -429,8 +415,15 @@ fun AiServiceFeeBottomSheet(
     val totalDeliveryFee = if (isPickup) 0.0 else deliveryFeesMap.values.sumOf { it.delivery_fee }
     val grandTotal = cartTotal + serviceFee + totalDeliveryFee
 
+    // Auto-select first address if none is selected
+    LaunchedEffect(userAddresses) {
+        if (selectedAddress == null && userAddresses.isNotEmpty()) {
+            selectedAddress = userAddresses.firstOrNull()
+        }
+    }
+
     // Fetch all delivery fees whenever selected address changes
-    LaunchedEffect(selectedAddress) {
+    LaunchedEffect(selectedAddress, isPickup) {
         val addr = selectedAddress
         if (addr?.latitude != null && addr.longitude != null && onGetDeliveryFee != null && !isPickup) {
             feesLoading = true
@@ -629,24 +622,39 @@ fun AiServiceFeeBottomSheet(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(CartSurface)
-                            .border(1.dp, CartPrimary.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
-                            .clickable { if (!isResolvingAddress) showAddressPicker = true }
-                            .padding(14.dp)
-                    ) {
-                        if (isResolvingAddress) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = CartPrimary)
-                        } else if (selectedAddress != null) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.LocationOn, null, tint = CartPrimary, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(selectedAddress!!.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = CartText)
-                                    Text(selectedAddress!!.address, fontSize = 12.sp, color = CartMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (selectedAddress == null && !isResolvingAddress) {
+                        // Se não houver endereço, mostramos um botão chamativo para selecionar
+                        Button(
+                            onClick = { showAddressPicker = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = CartPrimary.copy(alpha = 0.1f)),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, CartPrimary.copy(alpha = 0.4f))
+                        ) {
+                            Icon(Icons.Default.AddLocation, null, tint = CartPrimary)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Selecionar endereço", color = CartPrimary)
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(CartSurface)
+                                .border(1.dp, CartPrimary.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                                .clickable { if (!isResolvingAddress) showAddressPicker = true }
+                                .padding(14.dp)
+                        ) {
+                            if (isResolvingAddress) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = CartPrimary)
+                            } else if (selectedAddress != null) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.LocationOn, null, tint = CartPrimary, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(selectedAddress!!.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = CartText)
+                                        Text(selectedAddress!!.address, fontSize = 12.sp, color = CartMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
                                 }
                             }
                         }

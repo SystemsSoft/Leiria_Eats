@@ -271,7 +271,9 @@ fun MainScreenWithAI(
             exit = fadeOut() + slideOutHorizontally(targetOffsetX = { fullWidth -> -fullWidth })
         ) {
             // Address sheet and main scaffold when there's no checkout URL
-            if (uiState.isAddressSheetVisible) {
+            // Validamos isAddressSheetVisible apenas se não for o fluxo de Sacola IA,
+            // já que a AiCartScreen lida com seu próprio seletor de endereço.
+            if (uiState.isAddressSheetVisible && !uiState.isAiCartFlow) {
                 AddressSelectionBottomSheet(
                     addresses = uiState.userProfile.addresses,
                     onAddressSelected = { address ->
