@@ -196,12 +196,16 @@ fun OrderDetailView(
     val displayStatus = getDisplayStatus(order.status, order.deliveryType)
     var showExpandedQr by remember { mutableStateOf(false) }
 
-    // Calcula o total apenas dos sub-pedidos ativos (não cancelados)
-    val activeSubOrdersTotal = remember(order.subOrders) {
-        order.subOrders.filter { it.status != "Cancelado" }.sumOf { it.total }
+    // Calcula os valores dos sub-pedidos ativos (não cancelados)
+    val activeSubOrders = remember(order.subOrders) {
+        order.subOrders.filter { it.status != "Cancelado" }
     }
-    // Total ajustado: Sub-pedidos ativos + taxas (taxas geralmente são fixas ou reembolsadas parcialmente, mas aqui subtraímos o valor do item cancelado)
-    val adjustedGrandTotal = activeSubOrdersTotal + order.totalDeliveryFee + order.totalServiceFee
+    // No backend, subOrder.total já inclui a sua respectiva delivery_fee
+    val activeDeliveryTotal = activeSubOrders.sumOf { it.deliveryFee }
+    val activeProductsTotal = activeSubOrders.sumOf { it.total - it.deliveryFee }
+    
+    // Total ajustado: Somas dos totais individuais ativos + Taxa de Serviço Master
+    val adjustedGrandTotal = activeSubOrders.sumOf { it.total } + order.totalServiceFee
 
     // ── Expanded QR Dialog ──────────────────────────────────────────────────
     if (showExpandedQr) {
@@ -381,8 +385,8 @@ fun OrderDetailView(
                     .padding(18.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SummaryRow("Subtotal dos produtos", formatCurrency(activeSubOrdersTotal))
-                    SummaryRow("Total de entrega", formatCurrency(order.totalDeliveryFee))
+                    SummaryRow("Subtotal dos produtos", formatCurrency(activeProductsTotal))
+                    SummaryRow("Total de entrega", formatCurrency(activeDeliveryTotal))
                     SummaryRow("Taxa de serviço Koma", formatCurrency(order.totalServiceFee))
                     
                     HorizontalDivider(color = OGold.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
@@ -464,21 +468,60 @@ fun SubOrderCard(
                         .border(1.dp, KomaSoftRed.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
                         .padding(12.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.Top) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = KomaSoftRed,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Row(verticalAlignment = Alignment.Top) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = KomaSoftRed,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Este item foi cancelado por solicitação do restaurante. O reembolso já está a ser processado para o seu método de pagamento.",
+                                color = KomaSoftRed,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider(color = KomaSoftRed.copy(alpha = 0.2f))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
                         Text(
-                            text = "Este item foi cancelado por solicitação do restaurante. O reembolso já está a ser processado para o seu método de pagamento.",
+                            text = "Valor a ser reembolsado:",
                             color = KomaSoftRed,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                            fontWeight = FontWeight.Medium
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
                         )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Produtos", color = KomaSoftRed.copy(alpha = 0.8f), fontSize = 12.sp)
+                            Text(formatCurrency(subOrder.total - subOrder.deliveryFee), color = KomaSoftRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Taxa de entrega", color = KomaSoftRed.copy(alpha = 0.8f), fontSize = 12.sp)
+                            Text(formatCurrency(subOrder.deliveryFee), color = KomaSoftRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        HorizontalDivider(color = KomaSoftRed.copy(alpha = 0.1f), thickness = 0.5.dp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Total Reembolso", color = KomaSoftRed, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                            Text(formatCurrency(subOrder.total), color = KomaSoftRed, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
+                        }
                     }
                 }
             }
@@ -558,8 +601,10 @@ fun OrderItemCard(
 
     // Calcula o total ajustado para o card da lista
     val adjustedTotal = remember(order) {
-        val activeSubTotal = order.subOrders.filter { it.status != "Cancelado" }.sumOf { it.total }
-        activeSubTotal + order.totalDeliveryFee + order.totalServiceFee
+        val activeSubOrders = order.subOrders.filter { it.status != "Cancelado" }
+        // Sub-total já é a soma dos totais individuais (que incluem taxa de entrega de cada restaurante)
+        val activeSubOrdersTotal = activeSubOrders.sumOf { it.total }
+        activeSubOrdersTotal + order.totalServiceFee
     }
 
     Box(
