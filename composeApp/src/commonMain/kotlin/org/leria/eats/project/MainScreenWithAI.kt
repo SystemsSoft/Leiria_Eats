@@ -584,13 +584,8 @@ fun MainScreenWithAI(
                                              "Me mostre opções vegetarianas" ou "Estou com vontade de comer um doce sem lactose". Eu vasculho os restaurantes cadastrados no meu banco de dados e 
                                              te respondo em segundos, como um garçom de verdade, a melhor opção pra você. 
                                             Fique à vontade para pedir o que gosta e pedir sugestões!
-                                            
-                                            Se quiser me conhecer mais,diga ou digite favorito para entender como repetir um pedido favorito.
-                                            Diga ou digite Caixa surpresa,para entender como funciona o agendamento de caixa surpresa em restaurantes disponíveis.
-                                            E diga ou digite múltiplos pedidos para entender como adicionar vários restaurantes a um único pedido e realizar um único pagameto.
                                         
-                                            No entanto se a fome está batendo já podemos começar.
-                                       
+                                                                       
                                             Me diga, o que você está com vontade de comer hoje?
                                         """.trimIndent()
                                         
