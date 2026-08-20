@@ -195,7 +195,14 @@ fun OrderDetailView(
 ) {
     val displayStatus = getDisplayStatus(order.status, order.deliveryType)
     var showExpandedQr by remember { mutableStateOf(false) }
-    
+
+    // Calcula o total apenas dos sub-pedidos ativos (não cancelados)
+    val activeSubOrdersTotal = remember(order.subOrders) {
+        order.subOrders.filter { it.status != "Cancelado" }.sumOf { it.total }
+    }
+    // Total ajustado: Sub-pedidos ativos + taxas (taxas geralmente são fixas ou reembolsadas parcialmente, mas aqui subtraímos o valor do item cancelado)
+    val adjustedGrandTotal = activeSubOrdersTotal + order.totalDeliveryFee + order.totalServiceFee
+
     // ── Expanded QR Dialog ──────────────────────────────────────────────────
     if (showExpandedQr) {
         AlertDialog(
@@ -374,7 +381,7 @@ fun OrderDetailView(
                     .padding(18.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SummaryRow("Subtotal dos produtos", formatCurrency(order.subOrders.sumOf { it.total }))
+                    SummaryRow("Subtotal dos produtos", formatCurrency(activeSubOrdersTotal))
                     SummaryRow("Total de entrega", formatCurrency(order.totalDeliveryFee))
                     SummaryRow("Taxa de serviço Koma", formatCurrency(order.totalServiceFee))
                     
@@ -386,7 +393,7 @@ fun OrderDetailView(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Total Pago", color = OText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text(formatCurrency(order.total), color = OGold, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                        Text(formatCurrency(adjustedGrandTotal), color = OGold, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
                     }
                 }
             }
@@ -402,14 +409,19 @@ fun SubOrderCard(
     onRateItem: (orderId: String, productGid: String, restaurantGid: String, productName: String, rating: Int) -> Unit
 ) {
     val subStatus = getDisplayStatus(subOrder.status, null)
+    val isCancelled = subOrder.status == "Cancelado"
     val statusColor = getStatusColor(subStatus)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(OCard)
-            .border(1.dp, OGold.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+            .background(if (isCancelled) OCard.copy(alpha = 0.5f) else OCard)
+            .border(
+                width = 1.dp,
+                color = if (isCancelled) KomaSoftRed.copy(alpha = 0.4f) else OGold.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(16.dp)
+            )
             .padding(16.dp)
     ) {
         Column {
@@ -429,7 +441,7 @@ fun SubOrderCard(
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(subOrder.restaurantName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = OText)
+                    Text(subOrder.restaurantName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = if (isCancelled) OMuted else OText)
                     Text(subOrder.restaurantCategory, fontSize = 11.sp, color = OMuted)
                 }
                 Box(
@@ -439,6 +451,35 @@ fun SubOrderCard(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(subStatus, color = statusColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            if (isCancelled) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(KomaSoftRed.copy(alpha = 0.1f))
+                        .border(1.dp, KomaSoftRed.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
+                        .padding(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.Top) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = KomaSoftRed,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Este item foi cancelado por solicitação do restaurante. O reembolso já está a ser processado para o seu método de pagamento.",
+                            color = KomaSoftRed,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
 
@@ -514,6 +555,12 @@ fun OrderItemCard(
     val displayStatus = getDisplayStatus(order.status, order.deliveryType)
     val statusColor = getStatusColor(displayStatus)
     val statusIcon = getStatusIcon(displayStatus)
+
+    // Calcula o total ajustado para o card da lista
+    val adjustedTotal = remember(order) {
+        val activeSubTotal = order.subOrders.filter { it.status != "Cancelado" }.sumOf { it.total }
+        activeSubTotal + order.totalDeliveryFee + order.totalServiceFee
+    }
 
     Box(
         modifier = Modifier
@@ -592,7 +639,7 @@ fun OrderItemCard(
                     Spacer(modifier = Modifier.width(5.dp))
                     Text(displayStatus, color = statusColor, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 }
-                Text(formatCurrency(order.total), color = OGold, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(formatCurrency(adjustedTotal), color = OGold, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             }
         }
     }
