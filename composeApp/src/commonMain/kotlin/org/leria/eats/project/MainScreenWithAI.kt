@@ -55,18 +55,41 @@ import org.leria.eats.project.theme.*
  * - Substitui "x1" por "uma"
  * - Normaliza espaços
  */
-private fun prepareTextForTts(text: String): String =
-    text
-        // Remove emojis e símbolos Unicode
+private fun prepareTextForTts(text: String): String {
+    val processedText = text
+        // Trata preços: "13.00 €", "13,00€", "13€" -> "13 euros" ou "13 euros e 50 cêntimos"
+        // 1. Caso com decimais diferentes de zero: 13,50 € -> 13 euros e 50 cêntimos
+        .replace(Regex("""(\d+)[.,]([1-9]\d|0[1-9])\s*€""")) { match ->
+            "${match.groupValues[1]} euros e ${match.groupValues[2]} cêntimos"
+        }
+        // 2. Caso com decimais zero ou sem decimais: 13.00 € ou 13 € -> 13 euros
+        .replace(Regex("""(\d+)(?:[.,]00)?\s*€""")) { match ->
+            "${match.groupValues[1]} euros"
+        }
+        // 3. Caso o preço apareça sem o símbolo no final mas com formato de preço: 13,00 -> 13 euros
+        .replace(Regex("""\b(\d+)[.,]00\b""")) { match ->
+            "${match.groupValues[1]} euros"
+        }
+
+    return processedText
+        // Remove caracteres de formatação (Markdown) e parênteses que poluem a fala
+        .replace("*", "")
+        .replace("_", "")
+        .replace("#", "")
+        .replace("(", " ")
+        .replace(")", " ")
+        // Remove emojis e símbolos Unicode (exceto pontuação básica como . , ? !)
         .replace(Regex("[\\p{So}\\p{Sm}\\p{Sk}\\p{Sc}]"), "")
         .replace(Regex("[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]"), "") // surrogate emoji pairs
         .replace(Regex("[\u2600-\u27FF]"), "")  // misc symbols, dingbats, arrows
         .replace(Regex("[\uFE00-\uFE0F]"), "")  // variation selectors
-        // Substitui x1 por "uma"
+        // Ajustes de fala comuns
         .replace(Regex("\\bx1\\b", RegexOption.IGNORE_CASE), "uma")
+        .replace(Regex("\\bx(\\d+)\\b", RegexOption.IGNORE_CASE), "$1 unidades de")
         // Normaliza espaços múltiplos
         .replace(Regex("\\s{2,}"), " ")
         .trim()
+}
 
 // ─── Aliases locais → paleta central ─────────────────────────────────────────
 private val KomaDeepBg = KomaBg
