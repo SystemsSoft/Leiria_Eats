@@ -25,6 +25,8 @@ import org.leria.eats.project.data.RatingRequest
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.data.SearchResponse
 import org.leria.eats.project.data.SubOrderRequest
+import org.leria.eats.project.payment.StripePaymentManager
+import org.leria.eats.project.payment.StripePaymentResult
 import org.leria.eats.project.presentation.ChatMessage
 import org.leria.eats.project.presentation.ChatMessageType
 import org.leria.eats.project.presentation.MainTab
@@ -38,6 +40,7 @@ class SearchViewModel(
     private val apiClient: LeriaApiClient,
     private val profileRepository: ProfileRepository,
     private val chatRepository: ChatRepository,
+    private val stripePaymentManager: StripePaymentManager
 ) : ViewModel() {
 
     /** Gera um código de pedido numérico único com 9 dígitos */
@@ -1188,8 +1191,38 @@ class SearchViewModel(
 
                     if (sessionResponse.auto_paid) {
                         finalizeOrderState(isSuccess = true, checkoutUrl = null, autoPaid = true)
-                    } else {
+                    } else if (sessionResponse.clientSecret != null) {
+                        // Inicializa o SDK com a chave vinda do servidor
+                        val key = sessionResponse.publishableKey 
+                            ?: "pk_test_51TyC5WEv3cCEwtfr67LPi8l5lrzC9XzOKx5C9haQkDTBSeWbEyjSbrcudEFeR6OAblPv2rHq1WQQmnGIJpPdAJJU00IOw8BsSu"
+                        
+                        println("💳 Iniciando Stripe com chave: ${key.takeLast(10)}")
+                        stripePaymentManager.init(key)
+
+                        // Inicia o SDK nativo da Stripe
+                        stripePaymentManager.presentPaymentSheet(
+                            paymentIntentClientSecret = sessionResponse.clientSecret,
+                            customerId = sessionResponse.customerId,
+                            ephemeralKeySecret = sessionResponse.ephemeralKey,
+                            onResult = { result ->
+                                when (result) {
+                                    is StripePaymentResult.Completed -> {
+                                        finalizeOrderState(isSuccess = true, checkoutUrl = null, autoPaid = false)
+                                    }
+                                    is StripePaymentResult.Canceled -> {
+                                        _uiState.update { it.copy(isLoading = false, error = "Pagamento cancelado.") }
+                                    }
+                                    is StripePaymentResult.Failed -> {
+                                        _uiState.update { it.copy(isLoading = false, error = "Erro no pagamento: ${result.error}") }
+                                    }
+                                }
+                            }
+                        )
+                    } else if (sessionResponse.url != null) {
+                        // Fallback para WebView se necessário
                         finalizeOrderState(isSuccess = true, checkoutUrl = sessionResponse.url, autoPaid = false)
+                    } else {
+                        _uiState.update { it.copy(isLoading = false, error = "Erro ao iniciar sessão de pagamento.") }
                     }
                 } else {
                     _uiState.update { it.copy(isLoading = false, error = "Erro ao iniciar sessão de pagamento.") }

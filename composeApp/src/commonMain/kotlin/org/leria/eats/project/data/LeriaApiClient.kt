@@ -13,6 +13,7 @@ import io.ktor.utils.io.*
 import io.ktor.utils.io.readUTF8Line
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -20,10 +21,14 @@ import kotlinx.serialization.json.jsonPrimitive
 
 @Serializable
 data class PaymentIntentResponse(
-    val url: String?,
+    val url: String? = null,
     val auto_paid: Boolean = false,
     val order_id: Int? = null,
-    val payment_intent_id: String? = null
+    val payment_intent_id: String? = null,
+    val publishableKey: String? = null,
+    val clientSecret: String? = null,
+    val customerId: String? = null,
+    val ephemeralKey: String? = null
 )
 
 class LeriaApiClient {

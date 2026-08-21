@@ -36,6 +36,9 @@ kotlin {
             // play-services-location mantido para GPS (FusedLocationProvider)
             implementation("com.google.android.gms:play-services-location:21.0.1")
 
+            // Stripe Android Native SDK
+            implementation(libs.stripe.android)
+
             // ZXing para geração de QR codes localmente
             implementation("com.google.zxing:core:3.5.3")
         }
