@@ -516,7 +516,10 @@ class SearchViewModel(
                 apiClient.sendChatMessageStream(resolvedQuery.trim()).collect { chunk ->
                     lastChunk = chunk
                     val fragment = chunk.text ?: chunk.response ?: ""
-                    fullResponseText += fragment
+                    
+                    // Limpa tags internas da IA que não devem aparecer para o usuário
+                    val cleanedFragment = fragment.replace("[[CONFIRM_ORDER]]", "")
+                    fullResponseText += cleanedFragment
 
                     _uiState.update { state ->
                         val messages = state.chatMessages.toMutableList()
@@ -551,6 +554,12 @@ class SearchViewModel(
                             isLoading = false // Oculta o indicador de "pensando" assim que o texto começa a chegar
                         )
                     }
+
+                    // Se detectar confirmação imediata no chunk, podemos processar logo
+                    if (chunk.orderConfirmed) {
+                        // O flow será cancelado pelo return@collect (implícito no loop se quisermos interromper)
+                        // Mas aqui apenas marcamos para processar ao fim do stream
+                    }
                 }
 
                 // Processamento pós-stream
@@ -558,9 +567,21 @@ class SearchViewModel(
                 
                 _uiState.update { it.copy(isStreaming = false) }
 
-                // Verifica se o pedido foi confirmado pela IA
-                if (finalResponse.orderConfirmed) {
-                    handleOrderConfirmation(finalResponse)
+                // Verifica se o pedido foi confirmado pela IA (Master Final Object)
+                if (finalResponse.orderConfirmed || fullResponseText.contains("[[CONFIRM_ORDER]]")) {
+                    // Garante que o texto final não tenha a tag se ela veio no acumulado
+                    val finalCleanedText = fullResponseText.replace("[[CONFIRM_ORDER]]", "").trim()
+                    
+                    _uiState.update { state ->
+                        val messages = state.chatMessages.toMutableList()
+                        val idx = messages.indexOfFirst { it.id == currentAiMessageId }
+                        if (idx != -1) {
+                            messages[idx] = messages[idx].copy(text = finalCleanedText)
+                        }
+                        state.copy(chatMessages = messages, aiReply = finalCleanedText)
+                    }
+
+                    handleOrderConfirmation(finalResponse.copy(response = finalCleanedText))
                     _uiState.update { it.copy(isLoading = false) }
                     return@launch
                 }

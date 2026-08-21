@@ -2,6 +2,7 @@ package org.leria.eats.project.data
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 // ANTES: SearchRequest
 // DEPOIS: ChatRequest com IA Generativa
@@ -68,7 +69,8 @@ data class ChatResponse(
     @SerialName("order_confirmed")
     val orderConfirmed: Boolean = false,
     @SerialName("session_id")
-    val sessionId: String? = null           // NOVO
+    val sessionId: String? = null,
+    val cart: JsonElement? = null           // NOVO: Captura o objeto cart se presente
 )
 
 @Deprecated("Use ChatResponse instead", ReplaceWith("ChatResponse(response = reply, products = productResults)"))
