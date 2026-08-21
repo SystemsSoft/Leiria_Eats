@@ -447,25 +447,108 @@ private fun SmartRestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
 }
 
 @Composable
-private fun HomeProductList(products: List<Pair<Product, Restaurant>>, onProductClick: (Product, Restaurant) -> Unit) {
-    if (products.isEmpty()) { Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("🍔", fontSize = 40.sp); Spacer(modifier = Modifier.height(12.dp)); Text("Nenhum produto encontrado...", color = AiTextMuted, fontSize = 14.sp, fontWeight = FontWeight.Medium) } } ; return }
-    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        items(products) { (product, restaurant) -> HomeProductItem(product = product, restaurant = restaurant, onClick = { onProductClick(product, restaurant) }) }
+private fun HomeProductList(
+    products: List<Pair<Product, Restaurant>>,
+    onProductClick: (Product, Restaurant) -> Unit
+) {
+    if (products.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("🍔", fontSize = 40.sp)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    "Nenhum produto encontrado...",
+                    color = AiTextMuted,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+        return
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        items(products) { (product, restaurant) ->
+            CompactHomeProductItem(
+                product = product,
+                restaurant = restaurant,
+                onClick = { onProductClick(product, restaurant) }
+            )
+        }
     }
 }
 
 @Composable
-private fun HomeProductItem(product: Product, restaurant: Restaurant, onClick: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(AiCard).clickable { onClick() }.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(12.dp)).background(AiSurface)) { KamelImage(resource = asyncPainterResource(data = product.image_url ?: ""), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop, onLoading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = AiPrimary) } }, onFailure = { Box(Modifier.fillMaxSize().background(AiSurface)) }) }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = product.name, fontWeight = FontWeight.Bold, color = AiText, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(text = "de ${restaurant.name}", color = AiTextMuted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = formatCurrency(product.price), color = AiSecondary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+private fun CompactHomeProductItem(
+    product: Product,
+    restaurant: Restaurant,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(AiCard)
+            .clickable { onClick() },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Imagem quadrada
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+        ) {
+            KamelImage(
+                resource = asyncPainterResource(data = product.image_url ?: ""),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                onLoading = {
+                    Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = AiPrimary)
+                    }
+                },
+                onFailure = { Box(Modifier.fillMaxSize().background(AiSurface)) }
+            )
         }
-        Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = AiPrimary.copy(alpha = 0.6f), modifier = Modifier.size(16.dp))
+
+        Column(
+            modifier = Modifier.padding(6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = product.name,
+                fontWeight = FontWeight.Bold,
+                color = AiText,
+                fontSize = 10.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = restaurant.name,
+                color = AiTextMuted,
+                fontSize = 9.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = formatCurrency(product.price),
+                color = AiSecondary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 
