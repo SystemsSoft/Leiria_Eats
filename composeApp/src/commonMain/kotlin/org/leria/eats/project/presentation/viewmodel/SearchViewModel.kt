@@ -1194,7 +1194,7 @@ class SearchViewModel(
                     } else if (sessionResponse.clientSecret != null) {
                         // Inicializa o SDK com a chave vinda do servidor
                         val key = sessionResponse.publishableKey 
-                            ?: "pk_test_51TyC5WEv3cCEwtfr67LPi8l5lrzC9XzOKx5C9haQkDTBSeWbEyjSbrcudEFeR6OAblPv2rHq1WQQmnGIJpPdAJJU00IOw8BsSu"
+                            ?: ""
                         
                         println("💳 Iniciando Stripe com chave: ${key.takeLast(10)}")
                         stripePaymentManager.init(key)
