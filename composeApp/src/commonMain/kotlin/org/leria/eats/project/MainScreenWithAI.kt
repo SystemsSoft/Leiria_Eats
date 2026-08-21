@@ -591,10 +591,20 @@ fun MainScreenWithAI(
                                         viewModel.onTabSelected(MainTab.HOME)
                                     },
                                     onAddToCart = { product -> viewModel.addToCart(product) },
+                                    onRemoveFromCart = { product -> viewModel.removeFromCart(product) },
+                                    onCheckout = { address, deliveryFee, serviceFee, deliveryType, feesMap ->
+                                        viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType, feesMap)
+                                    },
                                     onViewCart = { viewModel.onTabSelected(MainTab.CART) },
                                     onClearSearch = { viewModel.clearSearch() },
                                     onSearchTypeSelected = { showRestaurants -> viewModel.onSearchTypeSelected(showRestaurants) },
                                     onDismissSearchTypeSheet = { viewModel.dismissSearchTypeSheet() },
+                                    onGetDeliveryFee = { custLat, custLon, restLat, restLon, restGid ->
+                                        viewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restGid)
+                                    },
+                                    onGetAddressFromMap = { lat, long ->
+                                        locationService.getAddressFromCoordinates(lat, long)
+                                    },
                                     onIntroClick = {
                                         val introText = """
                                             Olá! Que bom ter você por aqui! 👋

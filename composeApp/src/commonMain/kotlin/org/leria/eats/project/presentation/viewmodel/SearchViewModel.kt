@@ -655,7 +655,7 @@ class SearchViewModel(
         _uiState.update {
             it.copy(
                 isLoading = false,
-                currentTab = MainTab.CART,
+                currentTab = MainTab.AI, // Mantém no Chat para exibir a Sacola IA integrada
                 isAiCartFlow = true
             )
         }
