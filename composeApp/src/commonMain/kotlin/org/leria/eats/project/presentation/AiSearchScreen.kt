@@ -29,9 +29,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import org.jetbrains.compose.resources.painterResource
 import komaai.composeapp.generated.resources.Res
 import komaai.composeapp.generated.resources.logo
-import org.jetbrains.compose.resources.painterResource
 import org.leria.eats.project.data.Address
 import org.leria.eats.project.data.DeliveryFeeResponse
 import org.leria.eats.project.data.Product
@@ -72,10 +74,8 @@ fun AiSearchScreen(
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
     onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null }
 ) {
-    // Estado para controlar o produto selecionado
     var selectedProduct by remember { mutableStateOf<Product?>(null) }
 
-    // Pulsing glow animation
     val glowAlpha by rememberInfiniteTransition(label = "glow").animateFloat(
         initialValue = 0.15f, targetValue = 0.55f, label = "glowAlpha",
         animationSpec = infiniteRepeatable(tween(2200, easing = EaseInOutSine), RepeatMode.Reverse)
@@ -83,7 +83,6 @@ fun AiSearchScreen(
 
     Scaffold(
         topBar = {
-            // TopBar com AiSimpleHeader
             AiTopBar(
                 glowAlpha = glowAlpha,
                 isListening = isListening,
@@ -92,7 +91,6 @@ fun AiSearchScreen(
             )
         },
         bottomBar = {
-            // ── INPUT BAR ───────────────────────────────────────────────────────
             AiSemanticInputBar(
                 value = uiState.textInput,
                 isListening = isListening,
@@ -104,13 +102,11 @@ fun AiSearchScreen(
         },
         containerColor = AiDeepBg
     ) { paddingValues ->
-        // ── CONTEÚDO CENTRAL (CHAT) ────────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Sempre exibir chat de mensagens (mesmo vazio)
             ChatMessagesView(
                 messages = uiState.chatMessages,
                 isLoading = uiState.isLoading,
@@ -128,7 +124,6 @@ fun AiSearchScreen(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Boas-vindas centralizado se não houver mensagens e não estiver no fluxo da Sacola IA
             if (uiState.chatMessages.isEmpty() && !uiState.isLoading && !uiState.isAiCartFlow) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -143,7 +138,6 @@ fun AiSearchScreen(
         }
     }
 
-    // ── BOTTOM SHEET: escolha entre restaurantes ou produtos ───────────────────
     if (uiState.showSearchTypeSheet) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
@@ -242,7 +236,6 @@ fun AiSearchScreen(
         }
     }
 
-    // ── BOTTOM SHEET: detalhes do produto ───────────────────────────────────────
     selectedProduct?.let { product ->
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
         ModalBottomSheet(
@@ -263,7 +256,6 @@ fun AiSearchScreen(
     }
 }
 
-// ─── AI Top Bar ───────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AiTopBar(
@@ -325,7 +317,6 @@ private fun AiTopBar(
     )
 }
 
-// ─── Chat Messages View ───────────────────────────────────────────────────────
 @Composable
 private fun ChatMessagesView(
     messages: List<ChatMessage>,
@@ -392,7 +383,6 @@ private fun ChatMessagesView(
     }
 }
 
-// ─── User Message Bubble ──────────────────────────────────────────────────────
 @Composable
 private fun UserMessageBubble(message: ChatMessage) {
     Row(
@@ -411,7 +401,6 @@ private fun UserMessageBubble(message: ChatMessage) {
     }
 }
 
-// ─── AI Message Bubble ────────────────────────────────────────────────────────
 @Composable
 private fun AiMessageBubble(
     message: ChatMessage,
@@ -454,7 +443,6 @@ private fun AiMessageBubble(
     }
 }
 
-// ─── AI Typing Indicator ──────────────────────────────────────────────────────
 @Composable
 private fun AiTypingIndicator() {
     Row(
@@ -485,7 +473,6 @@ private fun AiTypingIndicator() {
     }
 }
 
-// ─── AI Cart Chat Bubble ──────────────────────────────────────────────────────
 @Composable
 private fun AiCartChatBubble(
     cartItems: List<Product>,
@@ -496,22 +483,65 @@ private fun AiCartChatBubble(
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
     onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null }
 ) {
-    var showServiceFeeSheet by remember { mutableStateOf(false) }
-    val total = cartItems.sumOf { it.price * it.quantity }
+    var selectedAddress by remember { mutableStateOf(userAddresses.firstOrNull()) }
+    var selectedDeliveryType by remember { mutableStateOf("delivery") }
+    val isPickup = selectedDeliveryType == "pickup"
+    
+    var deliveryFeesMap by remember { mutableStateOf<Map<String, DeliveryFeeResponse>>(emptyMap()) }
+    var feesLoading by remember { mutableStateOf(false) }
+    var feesError by remember { mutableStateOf<String?>(null) }
+    
+    val cartTotal = cartItems.sumOf { it.price * it.quantity }
+    val serviceFee = (cartTotal * 0.05).coerceIn(0.49, 1.99)
+    val totalDeliveryFee = if (isPickup) 0.0 else deliveryFeesMap.values.sumOf { it.delivery_fee }
+    val grandTotal = cartTotal + serviceFee + totalDeliveryFee
+    
     val groupedItems = remember(cartItems) { cartItems.groupBy { it.restaurant_gid } }
 
-    if (showServiceFeeSheet) {
-        AiServiceFeeBottomSheet(
-            cartTotal = total,
-            userAddresses = userAddresses,
-            onGetAddressFromMap = onGetAddressFromMap,
-            restaurants = cartRestaurants,
-            onGetDeliveryFee = onGetDeliveryFee,
-            onDismiss = { showServiceFeeSheet = false },
-            onConfirm = { address, deliveryFee, serviceFee, deliveryType, feesMap ->
-                showServiceFeeSheet = false
-                onCheckout(address, deliveryFee, serviceFee, deliveryType, feesMap)
+    LaunchedEffect(userAddresses) {
+        if (selectedAddress == null && userAddresses.isNotEmpty()) {
+            selectedAddress = userAddresses.firstOrNull()
+        }
+    }
+
+    LaunchedEffect(selectedAddress, isPickup, cartRestaurants) {
+        val addr = selectedAddress
+        if (addr?.latitude != null && addr.longitude != null && onGetDeliveryFee != null && !isPickup) {
+            feesLoading = true
+            feesError = null
+            try {
+                val results = cartRestaurants.filter { it.latitude != null && it.longitude != null }.map { restaurant ->
+                    async {
+                        val feeRes = onGetDeliveryFee(
+                            addr.latitude, addr.longitude,
+                            restaurant.latitude!!, restaurant.longitude!!,
+                            restaurant.gid
+                        )
+                        restaurant.gid to feeRes
+                    }
+                }.awaitAll()
+
+                val newFees = results.mapNotNull { (gid, feeRes) -> 
+                    feeRes?.let { gid to it } 
+                }.toMap()
+
+                deliveryFeesMap = newFees
+                if (newFees.size < cartRestaurants.size) {
+                    feesError = "Alguns restaurantes não entregam nesta área."
+                }
+            } catch (e: Exception) {
+                feesError = e.message ?: "Erro ao calcular taxas."
             }
+            feesLoading = false
+        }
+    }
+
+    var showAddressSheet by remember { mutableStateOf(false) }
+    if (showAddressSheet) {
+        AddressSelectionBottomSheet(
+            addresses = userAddresses,
+            onAddressSelected = { selectedAddress = it; showAddressSheet = false },
+            onDismiss = { showAddressSheet = false }
         )
     }
 
@@ -521,7 +551,7 @@ private fun AiCartChatBubble(
     ) {
         Column(
             modifier = Modifier.widthIn(max = 320.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Box(
                 modifier = Modifier
@@ -536,7 +566,7 @@ private fun AiCartChatBubble(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Minha Sacola IA", fontWeight = FontWeight.Bold, color = AiText, fontSize = 15.sp)
                     }
-                    Text("Preparei a sua sacola com estes itens:", fontSize = 12.sp, color = AiTextMuted)
+                    Text("Tudo pronto! Verifique os detalhes abaixo para finalizar.", fontSize = 12.sp, color = AiTextMuted)
                 }
             }
 
@@ -550,40 +580,141 @@ private fun AiCartChatBubble(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(20.dp))
                     .background(AiCard)
+                    .border(1.dp, AiPrimary.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
+                    .padding(14.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AiSurface)
+                            .padding(4.dp)
+                    ) {
+                        listOf("delivery" to "Entrega", "pickup" to "Recolha").forEach { (type, label) ->
+                            val isSelected = selectedDeliveryType == type
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) AiPrimary else Color.Transparent)
+                                    .clickable { selectedDeliveryType = type }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(label, color = if (isSelected) Color.Black else AiTextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    if (!isPickup) {
+                        Column {
+                            Text("Entregar em:", fontSize = 11.sp, color = AiTextMuted, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(AiSurface)
+                                    .clickable { showAddressSheet = true }
+                                    .padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.LocationOn, null, tint = AiPrimary, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(selectedAddress?.name ?: "Selecionar endereço", fontSize = 13.sp, color = AiText, fontWeight = FontWeight.Bold, maxLines = 1)
+                                    if (selectedAddress != null) {
+                                        Text(selectedAddress!!.address, fontSize = 11.sp, color = AiTextMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                }
+                                Icon(Icons.Default.Edit, null, tint = AiTextMuted, modifier = Modifier.size(14.dp))
+                            }
+                        }
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(AiCard)
                     .border(1.dp, AiPrimary.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
                     .padding(16.dp)
             ) {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!isPickup && cartRestaurants.size > 1) {
+                        cartRestaurants.forEach { restaurant ->
+                            val fee = deliveryFeesMap[restaurant.gid]?.delivery_fee
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Entrega ${restaurant.name}", fontSize = 11.sp, color = AiTextMuted)
+                                if (feesLoading) CircularProgressIndicator(modifier = Modifier.size(10.dp), strokeWidth = 2.dp, color = AiPrimary)
+                                else Text(formatCurrency(fee ?: 0.0), fontSize = 11.sp, color = AiText)
+                            }
+                        }
+                        HorizontalDivider(color = AiTextMuted.copy(alpha = 0.1f))
+                    }
+
+                    SummaryRowIntegrated("Produtos", formatCurrency(cartTotal))
+                    if (!isPickup) SummaryRowIntegrated("Total Entrega", formatCurrency(totalDeliveryFee))
+                    SummaryRowIntegrated("Taxa de Serviço", formatCurrency(serviceFee))
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Total do Pedido", fontWeight = FontWeight.Bold, color = AiText, fontSize = 14.sp)
-                        Text(formatCurrency(total), fontWeight = FontWeight.ExtraBold, color = AiSecondary, fontSize = 18.sp)
+                        Text("Total a pagar", fontWeight = FontWeight.Bold, color = AiText, fontSize = 15.sp)
+                        Text(formatCurrency(grandTotal), fontWeight = FontWeight.ExtraBold, color = AiSecondary, fontSize = 18.sp)
                     }
+                    
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    val canConfirm = selectedAddress != null && !feesLoading && (isPickup || deliveryFeesMap.size == cartRestaurants.size)
+                    
                     Button(
-                        onClick = { showServiceFeeSheet = true },
+                        onClick = { 
+                            val finalFeesMap = if (isPickup) emptyMap() else deliveryFeesMap.mapValues { it.value.delivery_fee }
+                            onCheckout(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType, finalFeesMap) 
+                        },
+                        enabled = canConfirm,
                         modifier = Modifier.fillMaxWidth().height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                         contentPadding = PaddingValues(0.dp)
                     ) {
                         Box(
-                            modifier = Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(AiPrimary, KomaOrangeEnd))),
+                            modifier = Modifier.fillMaxSize().background(
+                                if (canConfirm) Brush.horizontalGradient(listOf(AiPrimary, KomaOrangeEnd))
+                                else SolidColor(AiTextMuted.copy(alpha = 0.1f))
+                            ),
                             contentAlignment = Alignment.Center
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.CheckCircle, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.CheckCircle, null, tint = if (canConfirm) Color.White else AiTextMuted, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Finalizar e Pagar", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
+                                Text("Confirmar e Pagar", fontWeight = FontWeight.Bold, color = if (canConfirm) Color.White else AiTextMuted, fontSize = 14.sp)
                             }
                         }
+                    }
+
+                    if (feesError != null && !isPickup) {
+                        Text(feesError!!, color = KomaSoftRed, fontSize = 10.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SummaryRowIntegrated(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, fontSize = 12.sp, color = AiTextMuted)
+        Text(value, fontSize = 12.sp, color = AiText, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -641,7 +772,6 @@ private fun AiCartChatSection(
     }
 }
 
-// ─── Restaurant Chat Card ─────────────────────────────────────────────────────
 @Composable
 private fun RestaurantChatCard(
     restaurant: Restaurant,
@@ -683,7 +813,6 @@ private fun RestaurantChatCard(
     }
 }
 
-// ─── Product Chat Card ────────────────────────────────────────────────────────
 @Composable
 private fun ProductChatCard(
     product: Product,
@@ -732,7 +861,6 @@ private fun ProductChatCard(
     }
 }
 
-// ─── Gemini-style Listening Feedback ──────────────────────────────────────────
 @Composable
 private fun GeminiListeningFeedback() {
     val infiniteTransition = rememberInfiniteTransition(label = "gemini")
@@ -761,7 +889,6 @@ private fun GeminiListeningFeedback() {
     )
 }
 
-// ─── Input Bar semântica ───────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AiSemanticInputBar(
@@ -861,7 +988,6 @@ private fun AiSemanticInputBar(
     }
 }
 
-// ─── Product Detail Bottom Sheet ──────────────────────────────────────────────
 @Composable
 private fun ProductDetailBottomSheet(
     product: Product,
@@ -896,7 +1022,6 @@ private fun ProductDetailBottomSheet(
     }
 }
 
-// ─── Botão de Boas-vindas (Centralizado) ──────────────────────────────────────
 @Composable
 private fun AiWelcomeButton(
     onClick: () -> Unit,
