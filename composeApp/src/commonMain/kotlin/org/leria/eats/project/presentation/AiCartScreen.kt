@@ -127,6 +127,9 @@ fun AiCartScreen(
             onConfirm = { address, deliveryFee, serviceFee, deliveryType, feesMap ->
                 showServiceFeeSheet = false
                 onCheckout(address, deliveryFee, serviceFee, deliveryType, feesMap)
+            },
+            onRemoveRestaurant = { gid ->
+                cartItems.filter { it.restaurant_gid == gid }.forEach { onRemoveItem(it) }
             }
         )
     }
@@ -374,7 +377,8 @@ fun AiServiceFeeBottomSheet(
     onDismiss: () -> Unit,
     onConfirm: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     restaurants: List<Restaurant>,
-    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
+    onRemoveRestaurant: (String) -> Unit = {}
 ) {
     val serviceFee = (cartTotal * 0.05).coerceIn(0.49, 1.99)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -411,9 +415,45 @@ fun AiServiceFeeBottomSheet(
     var deliveryFeesMap by remember { mutableStateOf<Map<String, DeliveryFeeResponse>>(emptyMap()) }
     var feesLoading by remember { mutableStateOf(false) }
     var feesError by remember { mutableStateOf<String?>(null) }
+    
+    // Estado para restaurantes fora da área
+    var outOfAreaRestaurant by remember { mutableStateOf<Restaurant?>(null) }
 
     val totalDeliveryFee = if (isPickup) 0.0 else deliveryFeesMap.values.sumOf { it.delivery_fee }
     val grandTotal = cartTotal + serviceFee + totalDeliveryFee
+
+    if (outOfAreaRestaurant != null) {
+        AlertDialog(
+            onDismissRequest = { outOfAreaRestaurant = null },
+            containerColor = CartCard,
+            title = { 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("📍 ", fontSize = 20.sp)
+                    Text("Fora da área", fontWeight = FontWeight.Bold, color = CartText)
+                }
+            },
+            text = {
+                Text(
+                    "Infelizmente, o restaurante \"${outOfAreaRestaurant?.name}\" não entrega nesta localização. Os itens desta loja serão removidos da sua sacola.",
+                    color = CartMuted
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val restaurantToRemove = outOfAreaRestaurant
+                        if (restaurantToRemove != null) {
+                            onRemoveRestaurant(restaurantToRemove.gid)
+                        }
+                        outOfAreaRestaurant = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = CartPrimary)
+                ) {
+                    Text("Compreendido", color = Color.Black)
+                }
+            }
+        )
+    }
 
     // Auto-select first address if none is selected
     LaunchedEffect(userAddresses) {
@@ -431,12 +471,20 @@ fun AiServiceFeeBottomSheet(
             try {
                 val results = restaurants.filter { it.latitude != null && it.longitude != null }.map { restaurant ->
                     async {
-                        val feeRes = onGetDeliveryFee(
-                            addr.latitude, addr.longitude,
-                            restaurant.latitude!!, restaurant.longitude!!,
-                            restaurant.gid
-                        )
-                        restaurant.gid to feeRes
+                        try {
+                            val feeRes = onGetDeliveryFee(
+                                addr.latitude, addr.longitude,
+                                restaurant.latitude!!, restaurant.longitude!!,
+                                restaurant.gid
+                            )
+                            restaurant.gid to feeRes
+                        } catch (e: Exception) {
+                            val errorMsg = e.message ?: ""
+                            if (errorMsg.contains("fora da área", ignoreCase = true)) {
+                                outOfAreaRestaurant = restaurant
+                            }
+                            restaurant.gid to null
+                        }
                     }
                 }.awaitAll()
 
@@ -445,7 +493,7 @@ fun AiServiceFeeBottomSheet(
                 }.toMap()
 
                 deliveryFeesMap = newFees
-                if (newFees.size < restaurants.size) {
+                if (newFees.size < restaurants.size && outOfAreaRestaurant == null) {
                     feesError = "Alguns restaurantes não entregam nesta área."
                 }
             } catch (e: Exception) {

@@ -527,6 +527,9 @@ private fun AiCartChatBubble(
     var deliveryFeesMap by remember { mutableStateOf<Map<String, DeliveryFeeResponse>>(emptyMap()) }
     var feesLoading by remember { mutableStateOf(false) }
     var feesError by remember { mutableStateOf<String?>(null) }
+
+    // Estado para restaurantes fora da área
+    var outOfAreaRestaurant by remember { mutableStateOf<Restaurant?>(null) }
     
     val cartTotal = cartItems.sumOf { it.price * it.quantity }
     val serviceFee = (cartTotal * 0.05).coerceIn(0.49, 1.99)
@@ -534,6 +537,41 @@ private fun AiCartChatBubble(
     val grandTotal = cartTotal + serviceFee + totalDeliveryFee
     
     val groupedItems = remember(cartItems) { cartItems.groupBy { it.restaurant_gid } }
+
+    if (outOfAreaRestaurant != null) {
+        AlertDialog(
+            onDismissRequest = { outOfAreaRestaurant = null },
+            containerColor = AiCard,
+            title = { 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("📍 ", fontSize = 20.sp)
+                    Text("Fora da área", fontWeight = FontWeight.Bold, color = AiText)
+                }
+            },
+            text = {
+                Text(
+                    "Infelizmente, o restaurante \"${outOfAreaRestaurant?.name}\" não entrega nesta localização. Os itens desta loja serão removidos da sua sacola.",
+                    color = AiTextMuted
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val restaurantToRemove = outOfAreaRestaurant
+                        if (restaurantToRemove != null) {
+                            cartItems.filter { it.restaurant_gid == restaurantToRemove.gid }.forEach {
+                                onRemoveItem(it)
+                            }
+                        }
+                        outOfAreaRestaurant = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AiPrimary)
+                ) {
+                    Text("Compreendido", color = Color.Black)
+                }
+            }
+        )
+    }
 
     LaunchedEffect(userAddresses) {
         if (selectedAddress == null && userAddresses.isNotEmpty()) {
@@ -549,12 +587,20 @@ private fun AiCartChatBubble(
             try {
                 val results = cartRestaurants.filter { it.latitude != null && it.longitude != null }.map { restaurant ->
                     async {
-                        val feeRes = onGetDeliveryFee(
-                            addr.latitude, addr.longitude,
-                            restaurant.latitude!!, restaurant.longitude!!,
-                            restaurant.gid
-                        )
-                        restaurant.gid to feeRes
+                        try {
+                            val feeRes = onGetDeliveryFee(
+                                addr.latitude, addr.longitude,
+                                restaurant.latitude!!, restaurant.longitude!!,
+                                restaurant.gid
+                            )
+                            restaurant.gid to feeRes
+                        } catch (e: Exception) {
+                            val errorMsg = e.message ?: ""
+                            if (errorMsg.contains("fora da área", ignoreCase = true)) {
+                                outOfAreaRestaurant = restaurant
+                            }
+                            restaurant.gid to null
+                        }
                     }
                 }.awaitAll()
 
@@ -563,7 +609,7 @@ private fun AiCartChatBubble(
                 }.toMap()
 
                 deliveryFeesMap = newFees
-                if (newFees.size < cartRestaurants.size) {
+                if (newFees.size < cartRestaurants.size && outOfAreaRestaurant == null) {
                     feesError = "Alguns restaurantes não entregam nesta área."
                 }
             } catch (e: Exception) {
