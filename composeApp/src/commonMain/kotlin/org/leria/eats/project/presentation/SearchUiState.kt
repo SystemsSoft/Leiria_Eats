@@ -73,6 +73,7 @@ data class SearchUiState(
     val pendingServiceFee: Double = 0.0,
     val pendingDeliveryFeesMap: Map<String, Double> = emptyMap(),
     val isProcessingAutoPayment: Boolean = false,
+    val isStreaming: Boolean = false, // Indica se a IA está enviando texto em tempo real
     val autoPaymentOrderId: Int? = null,
     val autoPaymentIntentId: String? = null,
     val pendingSavePaymentMethod: Boolean = false,

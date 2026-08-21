@@ -110,6 +110,7 @@ fun AiSearchScreen(
             ChatMessagesView(
                 messages = uiState.chatMessages,
                 isLoading = uiState.isLoading,
+                isStreaming = uiState.isStreaming,
                 cartItems = uiState.cartItems,
                 cartRestaurants = uiState.cartRestaurants,
                 isAiCartFlow = uiState.isAiCartFlow,
@@ -321,6 +322,7 @@ private fun AiTopBar(
 private fun ChatMessagesView(
     messages: List<ChatMessage>,
     isLoading: Boolean,
+    isStreaming: Boolean,
     cartItems: List<Product>,
     cartRestaurants: List<Restaurant>,
     isAiCartFlow: Boolean,
@@ -336,10 +338,13 @@ private fun ChatMessagesView(
 ) {
     val listState = rememberLazyListState()
 
-    LaunchedEffect(messages.size, isLoading, isAiCartFlow, cartItems.size) {
-        if (messages.isNotEmpty() || isLoading || (isAiCartFlow && cartItems.isNotEmpty())) {
-            val lastIndex = if (isLoading) messages.size else if (isAiCartFlow && cartItems.isNotEmpty()) messages.size else messages.size - 1
+    val lastMessageTextLength = messages.lastOrNull()?.text?.length ?: 0
+
+    LaunchedEffect(messages.size, isLoading, isStreaming, isAiCartFlow, cartItems.size, lastMessageTextLength) {
+        if (messages.isNotEmpty() || isLoading || isStreaming || (isAiCartFlow && cartItems.isNotEmpty())) {
+            val lastIndex = if (isLoading || isStreaming) messages.size else if (isAiCartFlow && cartItems.isNotEmpty()) messages.size else messages.size - 1
             if (lastIndex >= 0) {
+                // Scroll mais rápido/suave durante o streaming
                 listState.animateScrollToItem(lastIndex)
             }
         }
@@ -352,10 +357,12 @@ private fun ChatMessagesView(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(messages) { message ->
+            val isLastMessage = message == messages.lastOrNull()
             when (message.type) {
                 ChatMessageType.USER -> UserMessageBubble(message = message)
                 ChatMessageType.AI -> AiMessageBubble(
                     message = message,
+                    isTyping = isLastMessage && isStreaming,
                     onRestaurantClick = onRestaurantClick,
                     onAddToCart = onAddToCart,
                     onProductClick = onProductClick
@@ -404,6 +411,7 @@ private fun UserMessageBubble(message: ChatMessage) {
 @Composable
 private fun AiMessageBubble(
     message: ChatMessage,
+    isTyping: Boolean = false,
     onRestaurantClick: (Restaurant) -> Unit,
     onAddToCart: (Product) -> Unit,
     onProductClick: (Product) -> Unit = {}
@@ -424,7 +432,16 @@ private fun AiMessageBubble(
                         .border(1.dp, AiPrimary.copy(alpha = 0.2f), RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp))
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    Text(text = message.text, style = MaterialTheme.typography.bodyMedium, color = AiText)
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = message.text, 
+                            style = MaterialTheme.typography.bodyMedium, 
+                            color = AiText
+                        )
+                        if (isTyping) {
+                            AiTypingCursor()
+                        }
+                    }
                 }
             }
 
@@ -441,6 +458,26 @@ private fun AiMessageBubble(
             }
         }
     }
+}
+
+@Composable
+private fun AiTypingCursor() {
+    val infiniteTransition = rememberInfiniteTransition(label = "cursor")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(400),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "cursorAlpha"
+    )
+    Box(
+        modifier = Modifier
+            .padding(start = 4.dp, bottom = 2.dp)
+            .size(width = 8.dp, height = 16.dp)
+            .background(AiPrimary.copy(alpha = alpha), RoundedCornerShape(1.dp))
+    )
 }
 
 @Composable

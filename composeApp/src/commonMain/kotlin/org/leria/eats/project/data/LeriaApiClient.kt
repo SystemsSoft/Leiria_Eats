@@ -4,13 +4,15 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.get
-import io.ktor.client.request.post
-import io.ktor.client.request.put
-import io.ktor.client.request.setBody
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.*
+import io.ktor.utils.io.readUTF8Line
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -25,13 +27,15 @@ data class PaymentIntentResponse(
 )
 
 class LeriaApiClient {
+    private val json = Json {
+        prettyPrint = true
+        isLenient = true
+        ignoreUnknownKeys = true
+    }
+
     private val client = HttpClient {
         install(ContentNegotiation) {
-            json(Json {
-                prettyPrint = true
-                isLenient = true
-                ignoreUnknownKeys = true
-            })
+            json(json)
         }
         install(HttpTimeout) {
             requestTimeoutMillis = 120_000 // 2 minutos
@@ -43,6 +47,30 @@ class LeriaApiClient {
     private val baseUrl = "https://api.leiriaeats.com"
     private val urlLocal = "http://192.168.29.31:8000"
     private val urlprod = "https://api.leiriaeats.com"
+
+    private fun normalizeUrl(url: String?): String? {
+        if (url == null || url.isBlank()) return null
+        return if (url.startsWith("http")) url else "$baseUrl$url"
+    }
+
+    private fun normalizeProductUrl(product: Product): Product {
+        return product.copy(image_url = normalizeUrl(product.image_url))
+    }
+
+    private fun normalizeRestaurantUrls(restaurant: Restaurant): Restaurant {
+        return restaurant.copy(
+            image_url = normalizeUrl(restaurant.image_url),
+            products = restaurant.products.map { normalizeProductUrl(it) }
+        )
+    }
+
+    private fun normalizeChatResponse(response: ChatResponse): ChatResponse {
+        return response.copy(
+            products = response.products.map { normalizeProductUrl(it) },
+            productResults = response.productResults.map { normalizeProductUrl(it) },
+            restaurantResults = response.restaurantResults.map { normalizeRestaurantUrls(it) }
+        )
+    }
 
     // Session ID para contexto conversacional com IA
     private var sessionId: String? = null
@@ -62,7 +90,7 @@ class LeriaApiClient {
         return sessionId!!
     }
 
-    // NOVO: Endpoint com IA Generativa
+    // NOVO: Endpoint com IA Generativa (Síncrono)
     suspend fun sendChatMessage(text: String, restaurantGid: String? = null): ChatResponse {
         val response = client.post("$baseUrl/chat/sales") {
             contentType(ContentType.Application.Json)
@@ -72,7 +100,39 @@ class LeriaApiClient {
                 sessionId = getOrCreateSessionId()
             ))
         }
-        return response.body()
+        val chatResponse: ChatResponse = response.body()
+        return normalizeChatResponse(chatResponse)
+    }
+
+    // NOVO: Endpoint com IA Generativa (Streaming)
+    fun sendChatMessageStream(text: String, restaurantGid: String? = null): Flow<ChatResponse> = flow {
+        val request = ChatRequest(
+            message = text,
+            restaurantGid = restaurantGid,
+            sessionId = getOrCreateSessionId()
+        )
+        
+        client.preparePost("$baseUrl/chat/sales/stream") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.execute { response ->
+            val channel = response.bodyAsChannel()
+            while (!channel.isClosedForRead) {
+                val line = channel.readUTF8Line() ?: break
+                if (line.startsWith("data: ")) {
+                    val data = line.substring(6).trim()
+                    if (data.isNotBlank()) {
+                        try {
+                            val chunk = json.decodeFromString<ChatResponse>(data)
+                            emit(normalizeChatResponse(chunk))
+                        } catch (e: Exception) {
+                            println("⚠️ Erro ao decodificar chunk: ${e.message}")
+                            println("JSON input: $data")
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // NOVO: Verificar status do servidor de IA
@@ -125,7 +185,19 @@ class LeriaApiClient {
             val response = client.get("$baseUrl/orders/customer/$userId")
             
             if (response.status.value == 200) {
-                response.body()
+                val orders: List<Order> = response.body()
+                orders.map { order ->
+                    order.copy(
+                        subOrders = order.subOrders.map { sub ->
+                            sub.copy(
+                                restaurantImageUrl = normalizeUrl(sub.restaurantImageUrl),
+                                items = sub.items.map { item ->
+                                    item.copy(imageUrl = normalizeUrl(item.imageUrl) ?: "")
+                                }
+                            )
+                        }
+                    )
+                }
             } else {
                 val errorBody: String = response.body()
                 println("⚠️ Erro ${response.status.value} ao buscar pedidos: $errorBody")
@@ -142,7 +214,11 @@ class LeriaApiClient {
             val response = client.get("$baseUrl/companies/$gidCompany")
 
             if (response.status.value == 200) {
-                response.body()
+                val company: CompanyResponse = response.body()
+                company.copy(
+                    imageUrl = normalizeUrl(company.imageUrl) ?: "",
+                    products = company.products.map { normalizeProductUrl(it) }
+                )
             } else {
                 val errorBody: String = response.body()
                 println("⚠️ Erro ${response.status.value} ao buscar empresa: $errorBody")
@@ -162,7 +238,7 @@ class LeriaApiClient {
                 // A API do backend retorna uma lista de CompanyResponse
                 val companies: List<CompanyResponse> = response.body()
                 companies.map { company ->
-                    Restaurant(
+                    normalizeRestaurantUrls(Restaurant(
                         gid = company.gid,
                         name = company.name,
                         category = company.category,
@@ -171,7 +247,7 @@ class LeriaApiClient {
                         plan = company.plan,
                         latitude = company.latitude,
                         longitude = company.longitude
-                    )
+                    ))
                 }
             } else {
                 val errorBody: String = response.body()

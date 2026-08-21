@@ -28,6 +28,7 @@ data class Product(
     val name: String = "",
     val description: String = "",
     val price: Double = 0.0,
+    @SerialName("image_url")
     val image_url: String? = null,
     @SerialName("restaurant_gid")
     val restaurant_gid: String? = null, // Permite nulo para evitar erro de desserialização
@@ -57,13 +58,17 @@ data class Restaurant(
 // DEPOIS: ChatResponse com IA Generativa
 @Serializable
 data class ChatResponse(
+    val type: String? = null,               // NOVO: "chunk" ou "final"
+    val text: String? = null,               // NOVO: usado em chunks de stream
     val response: String? = null,
     val intent: String? = null,
     val restaurantResults: List<Restaurant> = emptyList(),
     val productResults: List<Product> = emptyList(),
     val products: List<Product> = emptyList(),
     @SerialName("order_confirmed")
-    val orderConfirmed: Boolean = false
+    val orderConfirmed: Boolean = false,
+    @SerialName("session_id")
+    val sessionId: String? = null           // NOVO
 )
 
 @Deprecated("Use ChatResponse instead", ReplaceWith("ChatResponse(response = reply, products = productResults)"))

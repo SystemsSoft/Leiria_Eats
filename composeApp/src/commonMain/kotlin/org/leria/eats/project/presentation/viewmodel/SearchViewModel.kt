@@ -30,6 +30,9 @@ import org.leria.eats.project.presentation.ChatMessageType
 import org.leria.eats.project.presentation.MainTab
 import org.leria.eats.project.presentation.SearchUiState
 import org.leria.eats.project.util.Ulid
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onStart
 
 class SearchViewModel(
     private val apiClient: LeriaApiClient,
@@ -501,22 +504,69 @@ class SearchViewModel(
         // Adiciona a mensagem do usuário ao chat
         addUserMessage(resolvedQuery)
 
-        _uiState.update { it.copy(isLoading = true, error = null, isSuggestionMode = false) }
+        _uiState.update { it.copy(isLoading = true, isStreaming = false, error = null, isSuggestionMode = false) }
+        
         viewModelScope.launch {
             try {
-                // Usa o novo endpoint com IA Generativa
-                val chatResponse = apiClient.sendChatMessage(resolvedQuery.trim())
+                val currentAiMessageId = "ai_${kotlin.random.Random.nextLong()}"
+                var fullResponseText = ""
+                var lastChunk: ChatResponse? = null
+
+                // Consome o stream da IA
+                apiClient.sendChatMessageStream(resolvedQuery.trim()).collect { chunk ->
+                    lastChunk = chunk
+                    val fragment = chunk.text ?: chunk.response ?: ""
+                    fullResponseText += fragment
+
+                    _uiState.update { state ->
+                        val messages = state.chatMessages.toMutableList()
+                        val existingIndex = messages.indexOfFirst { it.id == currentAiMessageId }
+                        
+                        val updatedMessage = if (existingIndex != -1) {
+                            messages[existingIndex].copy(
+                                text = fullResponseText,
+                                restaurants = if (chunk.restaurantResults.isNotEmpty()) chunk.restaurantResults else messages[existingIndex].restaurants,
+                                products = if (chunk.products.isNotEmpty()) chunk.products else (if (chunk.productResults.isNotEmpty()) chunk.productResults else messages[existingIndex].products)
+                            )
+                        } else {
+                            ChatMessage(
+                                id = currentAiMessageId,
+                                type = ChatMessageType.AI,
+                                text = fullResponseText,
+                                restaurants = chunk.restaurantResults,
+                                products = if (chunk.products.isNotEmpty()) chunk.products else chunk.productResults
+                            )
+                        }
+
+                        if (existingIndex != -1) {
+                            messages[existingIndex] = updatedMessage
+                        } else {
+                            messages.add(updatedMessage)
+                        }
+                        
+                        state.copy(
+                            chatMessages = messages.takeLast(20),
+                            aiReply = fullResponseText,
+                            isStreaming = true,
+                            isLoading = false // Oculta o indicador de "pensando" assim que o texto começa a chegar
+                        )
+                    }
+                }
+
+                // Processamento pós-stream
+                val finalResponse = lastChunk ?: return@launch
+                
+                _uiState.update { it.copy(isStreaming = false) }
 
                 // Verifica se o pedido foi confirmado pela IA
-                if (chatResponse.orderConfirmed) {
-                    handleOrderConfirmation(chatResponse)
+                if (finalResponse.orderConfirmed) {
+                    handleOrderConfirmation(finalResponse)
+                    _uiState.update { it.copy(isLoading = false) }
                     return@launch
                 }
 
-                // Se o usuário pediu para ver todos os restaurantes explicitamente,
-                // consome o endpoint /restaurants separado da IA para garantir que a
-                // lista completa seja obtida e separada do resultado gerado pela IA.
-                var aiRestaurantResults: List<Restaurant> = chatResponse.restaurantResults
+                // Lógica de "ver todos" ou resultados específicos
+                var aiRestaurantResults: List<Restaurant> = finalResponse.restaurantResults
                 if (resolvedQuery.equals("ver todos", ignoreCase = true)
                     || resolvedQuery.equals("restaurantes", ignoreCase = true)
                     || resolvedQuery.contains("todos os restaurantes", ignoreCase = true)
@@ -525,104 +575,42 @@ class SearchViewModel(
                         val all = apiClient.getAllRestaurants()
                         if (all.isNotEmpty()) aiRestaurantResults = all
                     } catch (e: Exception) {
-                        // Mantém os resultados da IA caso o endpoint falhe
                         println("⚠️ Falha ao buscar /restaurants: ${e.message}")
                     }
                 }
 
-                // Converte para SearchResponse para compatibilidade com código existente
-                val response = SearchResponse(
-                    reply = chatResponse.response,
-                    intent = chatResponse.intent,
-                    restaurantResults = aiRestaurantResults,
-                    productResults = if (chatResponse.products.isNotEmpty())
-                        chatResponse.products
-                    else
-                        chatResponse.productResults
-                )
+                val aiProductResults = if (finalResponse.products.isNotEmpty()) finalResponse.products else finalResponse.productResults
 
-                val hasBoth = response.restaurantResults.isNotEmpty() && response.productResults.isNotEmpty()
-                val hasOnlyRestaurants = response.restaurantResults.isNotEmpty() && response.productResults.isEmpty()
-                val hasOnlyProducts = response.restaurantResults.isEmpty() && response.productResults.isNotEmpty()
-
-                if (hasBoth) {
-                    // Guarda resultados pendentes e pede ao utilizador para escolher
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            aiReply = response.reply?: "",
-                            textInput = "",
-                            lastSearchQuery = resolvedQuery,
-                            pendingRestaurantResults = response.restaurantResults,
-                            pendingProductResults = response.productResults,
-                            showSearchTypeSheet = true
-                        )
-                    }
-                } else if (hasOnlyRestaurants) {
-                    val resolvedReply = when {
-                        resolvedQuery.equals("ver todos", ignoreCase = true) ->
-                            _uiState.value.aiReply.ifBlank { "Todos os restaurantes disponíveis" }
-                        else -> response.reply
-                    }
-
-                    // Adiciona mensagem da IA com restaurantes
-                    addAiMessage(
-                        text = resolvedReply ?: "Encontrei estes restaurantes para você:",
-                        restaurants = response.restaurantResults
-                    )
-
-                    // Se a pesquisa trouxe todos os restaurantes, atualiza também a lista do Home
+                _uiState.update { state ->
+                    // Atualiza o Home se necessário
                     val updatedAllRestaurants = if (
                         resolvedQuery.equals("ver todos", ignoreCase = true) &&
-                        response.restaurantResults.isNotEmpty()
-                    ) response.restaurantResults else _uiState.value.allRestaurants
+                        aiRestaurantResults.isNotEmpty()
+                    ) aiRestaurantResults else state.allRestaurants
 
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            aiReply = resolvedReply?: "",
-                            restaurantResults = response.restaurantResults,
-                            productResults = emptyList(),
-                            textInput = "",
-                            lastSearchQuery = resolvedQuery,
-                            allRestaurants = updatedAllRestaurants
+                    // Atualiza a última mensagem com os resultados finais consolidados
+                    val messages = state.chatMessages.toMutableList()
+                    val idx = messages.indexOfFirst { it.id == currentAiMessageId }
+                    if (idx != -1) {
+                        messages[idx] = messages[idx].copy(
+                            restaurants = aiRestaurantResults,
+                            products = aiProductResults
                         )
                     }
-                } else if (hasOnlyProducts) {
-                    val aiReplyText = response.reply ?: "Encontrei estes produtos para você:"
 
-                    // Adiciona mensagem da IA com produtos
-                    addAiMessage(
-                        text = aiReplyText,
-                        products = response.productResults
+                    state.copy(
+                        isLoading = false,
+                        chatMessages = messages,
+                        restaurantResults = aiRestaurantResults,
+                        productResults = aiProductResults,
+                        textInput = "",
+                        lastSearchQuery = resolvedQuery,
+                        allRestaurants = updatedAllRestaurants,
+                        showSearchTypeSheet = aiRestaurantResults.isNotEmpty() && aiProductResults.isNotEmpty()
                     )
-
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            aiReply = aiReplyText,
-                            restaurantResults = emptyList(),
-                            productResults = response.productResults,
-                            textInput = "",
-                            lastSearchQuery = resolvedQuery
-                        )
-                    }
-                } else {
-                    // Nenhum resultado encontrado
-                    val noResultsMessage = response.reply ?: "Desculpe, não encontrei nada relacionado à sua pesquisa. Tente usar outras palavras!"
-                    addAiMessage(text = noResultsMessage)
-
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            aiReply = noResultsMessage,
-                            restaurantResults = emptyList(),
-                            productResults = emptyList(),
-                            textInput = "",
-                            lastSearchQuery = resolvedQuery
-                        )
-                    }
                 }
+                
+                saveChatMessages()
 
             } catch (e: Exception) {
                 val errorMessage = "Erro ao conectar: ${e.message}"
