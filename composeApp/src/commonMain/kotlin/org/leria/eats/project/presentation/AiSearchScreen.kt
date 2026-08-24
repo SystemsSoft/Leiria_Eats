@@ -116,17 +116,9 @@ fun AiSearchScreen(
                 messages = uiState.chatMessages,
                 isLoading = uiState.isLoading,
                 isStreaming = uiState.isStreaming,
-                cartItems = uiState.cartItems,
-                cartRestaurants = uiState.cartRestaurants,
-                isAiCartFlow = uiState.isAiCartFlow,
-                userAddresses = uiState.userProfile.addresses,
                 onRestaurantClick = onRestaurantClick,
                 onAddToCart = onAddToCart,
-                onRemoveFromCart = onRemoveFromCart,
                 onProductClick = { product -> selectedProduct = product },
-                onCheckout = onCheckout,
-                onGetDeliveryFee = onGetDeliveryFee,
-                onGetAddressFromMap = onGetAddressFromMap,
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -248,26 +240,18 @@ private fun ChatMessagesView(
     messages: List<ChatMessage>,
     isLoading: Boolean,
     isStreaming: Boolean,
-    cartItems: List<Product>,
-    cartRestaurants: List<Restaurant>,
-    isAiCartFlow: Boolean,
-    userAddresses: List<Address>,
     onRestaurantClick: (Restaurant) -> Unit,
     onAddToCart: (Product) -> Unit,
-    onRemoveFromCart: (Product) -> Unit,
     onProductClick: (Product) -> Unit = {},
-    onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit = { _, _, _, _, _ -> },
-    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
-    onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null },
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
 
     val lastMessageTextLength = messages.lastOrNull()?.text?.length ?: 0
 
-    LaunchedEffect(messages.size, isLoading, isStreaming, isAiCartFlow, cartItems.size, lastMessageTextLength) {
-        if (messages.isNotEmpty() || isLoading || isStreaming || (isAiCartFlow && cartItems.isNotEmpty())) {
-            val lastIndex = if (isLoading || isStreaming) messages.size else if (isAiCartFlow && cartItems.isNotEmpty()) messages.size else messages.size - 1
+    LaunchedEffect(messages.size, isLoading, isStreaming, lastMessageTextLength) {
+        if (messages.isNotEmpty() || isLoading || isStreaming) {
+            val lastIndex = if (isLoading || isStreaming) messages.size else messages.size - 1
             if (lastIndex >= 0) {
                 // Scroll mais rápido/suave durante o streaming
                 listState.animateScrollToItem(lastIndex)
@@ -291,21 +275,6 @@ private fun ChatMessagesView(
                     onRestaurantClick = onRestaurantClick,
                     onAddToCart = onAddToCart,
                     onProductClick = onProductClick
-                )
-            }
-        }
-
-        if (isAiCartFlow && cartItems.isNotEmpty()) {
-            item(key = "ai_cart_bubble") {
-                AiCartChatBubble(
-                    cartItems = cartItems,
-                    cartRestaurants = cartRestaurants,
-                    userAddresses = userAddresses,
-                    onAddItem = onAddToCart,
-                    onRemoveItem = onRemoveFromCart,
-                    onCheckout = onCheckout,
-                    onGetDeliveryFee = onGetDeliveryFee,
-                    onGetAddressFromMap = onGetAddressFromMap
                 )
             }
         }
