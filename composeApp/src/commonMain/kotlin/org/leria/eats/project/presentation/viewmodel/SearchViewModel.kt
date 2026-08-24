@@ -1453,30 +1453,32 @@ class SearchViewModel(
      * Usado para permitir edição (remoção/alteração de quantidade) via conversa.
      */
     private fun updateAiCart(products: List<Product>) {
-        if (products.isEmpty()) return
+        val filteredProducts = products.filter { it.quantity > 0 }
+        if (filteredProducts.isEmpty()) return
         
         _uiState.update { currentState ->
             currentState.copy(
-                cartItems = products,
-                cartRestaurantGid = products.firstOrNull()?.restaurant_gid ?: currentState.cartRestaurantGid,
+                cartItems = filteredProducts,
+                cartRestaurantGid = filteredProducts.firstOrNull()?.restaurant_gid ?: currentState.cartRestaurantGid,
                 isAiCartFlow = true 
             )
         }
 
         // Busca metadados para todos os restaurantes únicos na lista de produtos
-        val uniqueRestaurantGids = products.mapNotNull { it.restaurant_gid }.distinct()
+        val uniqueRestaurantGids = filteredProducts.mapNotNull { it.restaurant_gid }.distinct()
         uniqueRestaurantGids.forEach { gid ->
             fetchCompanyByGid(gid)
         }
     }
 
     private fun addProductsToCart(products: List<Product>) {
-        if (products.isEmpty()) return
+        val filteredProducts = products.filter { it.quantity > 0 }
+        if (filteredProducts.isEmpty()) return
 
         _uiState.update { currentState ->
             val cartItems = currentState.cartItems.toMutableList()
             
-            for (product in products) {
+            for (product in filteredProducts) {
                 // Tenta encontrar um item existente (mesmo GID ou mesmo Nome + Restaurante)
                 val existingIndex = cartItems.indexOfFirst { 
                     (it.gid.isNotBlank() && it.gid == product.gid) || 
