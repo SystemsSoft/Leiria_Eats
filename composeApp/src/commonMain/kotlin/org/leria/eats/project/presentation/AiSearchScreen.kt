@@ -73,7 +73,13 @@ fun AiSearchScreen(
     onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null }
 ) {
     var selectedProduct by remember { mutableStateOf<Product?>(null) }
+    var isCartExpanded by remember { mutableStateOf(false) }
 
+    // Sincroniza a expansão do carrinho com o fluxo da IA
+    LaunchedEffect(uiState.isAiCartFlow) {
+        if (uiState.isAiCartFlow) isCartExpanded = true
+    }
+    // Pulsing glow animation
     val glowAlpha by rememberInfiniteTransition(label = "glow").animateFloat(
         initialValue = 0.15f, targetValue = 0.55f, label = "glowAlpha",
         animationSpec = infiniteRepeatable(tween(2200, easing = EaseInOutSine), RepeatMode.Reverse)
@@ -105,6 +111,7 @@ fun AiSearchScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // ── CHAT DE MENSAGENS (Fundo) ──────────────────────────────────
             ChatMessagesView(
                 messages = uiState.chatMessages,
                 isLoading = uiState.isLoading,
@@ -123,6 +130,24 @@ fun AiSearchScreen(
                 modifier = Modifier.fillMaxSize()
             )
 
+            // ── SACOLA IA ITERATIVA (OVERLAY) ───────────────────────────────
+            if (uiState.isAiCartFlow && uiState.cartItems.isNotEmpty()) {
+                AiIterativeCartOverlay(
+                    isExpanded = isCartExpanded,
+                    onToggle = { isCartExpanded = !isCartExpanded },
+                    cartItems = uiState.cartItems,
+                    cartRestaurants = uiState.cartRestaurants,
+                    userAddresses = uiState.userProfile.addresses,
+                    onAddItem = onAddToCart,
+                    onRemoveItem = onRemoveFromCart,
+                    onCheckout = onCheckout,
+                    onGetDeliveryFee = onGetDeliveryFee,
+                    onGetAddressFromMap = onGetAddressFromMap,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+            }
+
+            // Boas-vindas centralizado se não houver mensagens e não estiver no fluxo da Sacola IA
             if (uiState.chatMessages.isEmpty() && !uiState.isLoading && !uiState.isAiCartFlow) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -291,6 +316,115 @@ private fun ChatMessagesView(
     }
 }
 
+// ─── Ai Iterative Cart Overlay (Abordagem Inovadora) ────────────────────────
+@Composable
+private fun AiIterativeCartOverlay(
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    cartItems: List<Product>,
+    cartRestaurants: List<Restaurant>,
+    userAddresses: List<Address>,
+    onAddItem: (Product) -> Unit,
+    onRemoveItem: (Product) -> Unit,
+    onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
+    onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null },
+    modifier: Modifier = Modifier
+) {
+    val cartTotal = cartItems.sumOf { it.price * it.quantity }
+    val cartCount = cartItems.sumOf { it.quantity }
+    
+    val heightScale by animateFloatAsState(
+        targetValue = if (isExpanded) 1f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioLowBouncy),
+        label = "height"
+    )
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .padding(bottom = 8.dp)
+            .graphicsLayer { translationY = 0f } // Stay above input
+    ) {
+        // ── Painel Expandível (Glassmorphic) ──────────────────────────────────
+        AnimatedVisibility(
+            visible = isExpanded,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 450.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(AiCard.copy(alpha = 0.92f)) // Efeito de vidro (leve transparência)
+                    .border(1.dp, AiPrimary.copy(alpha = 0.2f), RoundedCornerShape(24.dp))
+                    .padding(2.dp)
+            ) {
+                // Conteúdo da Sacola (Reusando a lógica do Chat Bubble mas adaptada)
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AutoAwesome, null, tint = AiPrimary, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Minha Sacola IA", fontWeight = FontWeight.Bold, color = AiText, fontSize = 16.sp)
+                        }
+                        IconButton(onClick = onToggle, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.KeyboardArrowDown, null, tint = AiTextMuted)
+                        }
+                    }
+                    
+                    Box(modifier = Modifier.weight(1f, fill = false)) {
+                        AiCartChatBubble(
+                            cartItems = cartItems,
+                            cartRestaurants = cartRestaurants,
+                            userAddresses = userAddresses,
+                            onAddItem = onAddItem,
+                            onRemoveItem = onRemoveItem,
+                            onCheckout = onCheckout,
+                            onGetDeliveryFee = onGetDeliveryFee,
+                            onGetAddressFromMap = onGetAddressFromMap,
+                            isIntegrated = true // Nova flag para ajuste visual
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // ── Pílula Flutuante (Estado Minimizado) ──────────────────────────────
+        if (!isExpanded) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .clip(RoundedCornerShape(50.dp))
+                    .background(Brush.horizontalGradient(listOf(AiPrimary, KomaOrangeEnd)))
+                    .clickable { onToggle() }
+                    .padding(horizontal = 20.dp, vertical = 10.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.ShoppingBag, null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Sacola IA: $cartCount itens • ${formatCurrency(cartTotal)}",
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(Icons.Default.KeyboardArrowUp, null, tint = Color.Black.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun UserMessageBubble(message: ChatMessage) {
     Row(
@@ -420,7 +554,8 @@ private fun AiCartChatBubble(
     onRemoveItem: (Product) -> Unit,
     onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
-    onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null }
+    onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null },
+    isIntegrated: Boolean = false // Flag para remover o fundo redundante no modo overlay
 ) {
     var selectedAddress by remember { mutableStateOf(userAddresses.firstOrNull()) }
     var selectedDeliveryType by remember { mutableStateOf("delivery") }
@@ -530,32 +665,12 @@ private fun AiCartChatBubble(
         )
     }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Start
-    ) {
+    // No modo integrado (Overlay), não renderizamos a estrutura de linha externa nem o header de boas vindas
+    if (isIntegrated) {
         Column(
-            modifier = Modifier.widthIn(max = 320.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp))
-                    .background(Brush.horizontalGradient(listOf(AiBotBubble, AiCard)))
-                    .border(1.dp, AiPrimary.copy(alpha = 0.3f), RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp))
-                    .padding(16.dp)
-            ) {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.AutoAwesome, null, tint = AiPrimary, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Minha Sacola IA", fontWeight = FontWeight.Bold, color = AiText, fontSize = 15.sp)
-                    }
-                    Text("Tudo pronto! Verifique os detalhes abaixo para finalizar.", fontSize = 12.sp, color = AiTextMuted)
-                }
-            }
-
-            // ── Itens por Restaurante ─────────────────────────────────────────
             groupedItems.forEach { (restaurantGid, products) ->
                 val restaurant = cartRestaurants.find { it.gid == restaurantGid }
                 AiCartChatSection(
@@ -571,7 +686,7 @@ private fun AiCartChatBubble(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(20.dp))
-                    .background(AiCard)
+                    .background(AiSurface)
                     .border(1.dp, AiPrimary.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
                     .padding(14.dp)
             ) {
@@ -580,7 +695,7 @@ private fun AiCartChatBubble(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(AiSurface)
+                            .background(AiCard)
                             .padding(4.dp)
                     ) {
                         listOf("delivery" to "Entrega", "pickup" to "Recolha").forEach { (type, label) ->
@@ -607,7 +722,7 @@ private fun AiCartChatBubble(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(AiSurface)
+                                    .background(AiCard)
                                     .clickable { showAddressSheet = true }
                                     .padding(10.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -631,23 +746,11 @@ private fun AiCartChatBubble(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(20.dp))
-                    .background(AiCard)
+                    .background(AiSurface)
                     .border(1.dp, AiPrimary.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
                     .padding(16.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (!isPickup && cartRestaurants.size > 1) {
-                        cartRestaurants.forEach { restaurant ->
-                            val fee = deliveryFeesMap[restaurant.gid]?.delivery_fee
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Entrega ${restaurant.name}", fontSize = 11.sp, color = AiTextMuted)
-                                if (feesLoading) CircularProgressIndicator(modifier = Modifier.size(10.dp), strokeWidth = 2.dp, color = AiPrimary)
-                                else Text(formatCurrency(fee ?: 0.0), fontSize = 11.sp, color = AiText)
-                            }
-                        }
-                        HorizontalDivider(color = AiTextMuted.copy(alpha = 0.1f))
-                    }
-
                     SummaryRowIntegrated("Produtos", formatCurrency(cartTotal))
                     if (!isPickup) SummaryRowIntegrated("Total Entrega", formatCurrency(totalDeliveryFee))
                     SummaryRowIntegrated("Taxa de Serviço", formatCurrency(serviceFee))
@@ -660,10 +763,10 @@ private fun AiCartChatBubble(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Total a pagar", fontWeight = FontWeight.Bold, color = AiText, fontSize = 15.sp)
-                        Text(formatCurrency(grandTotal), fontWeight = FontWeight.ExtraBold, color = AiSecondary, fontSize = 18.sp)
+                        Text(formatCurrency(grandTotal), fontWeight = FontWeight.ExtraBold, color = AiSecondary, fontSize = 20.sp)
                     }
                     
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     val canConfirm = selectedAddress != null && !feesLoading && (isPickup || deliveryFeesMap.size == cartRestaurants.size)
                     
@@ -685,16 +788,179 @@ private fun AiCartChatBubble(
                             ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.CheckCircle, null, tint = if (canConfirm) Color.White else AiTextMuted, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Confirmar e Pagar", fontWeight = FontWeight.Bold, color = if (canConfirm) Color.White else AiTextMuted, fontSize = 14.sp)
+                            Text("Confirmar e Pagar", fontWeight = FontWeight.Bold, color = if (canConfirm) Color.White else AiTextMuted, fontSize = 15.sp)
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // MANTÉM O LAYOUT DE BUBBLE ORIGINAL PARA O CHAT
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Column(
+                modifier = Modifier.widthIn(max = 320.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp))
+                        .background(Brush.horizontalGradient(listOf(AiBotBubble, AiCard)))
+                        .border(1.dp, AiPrimary.copy(alpha = 0.3f), RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp))
+                        .padding(16.dp)
+                ) {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AutoAwesome, null, tint = AiPrimary, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Minha Sacola IA", fontWeight = FontWeight.Bold, color = AiText, fontSize = 15.sp)
+                        }
+                        Text("Preparei a sua sacola com estes itens:", fontSize = 12.sp, color = AiTextMuted)
+                    }
+                }
+
+                groupedItems.forEach { (restaurantGid, products) ->
+                    val restaurant = cartRestaurants.find { it.gid == restaurantGid }
+                    AiCartChatSection(
+                        restaurant = restaurant, 
+                        restaurantGid = restaurantGid, 
+                        products = products, 
+                        onAddItem = onAddItem,
+                        onRemoveItem = onRemoveItem
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(AiCard)
+                        .border(1.dp, AiPrimary.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
+                        .padding(14.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(AiSurface)
+                                .padding(4.dp)
+                        ) {
+                            listOf("delivery" to "Entrega", "pickup" to "Recolha").forEach { (type, label) ->
+                                val isSelected = selectedDeliveryType == type
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) AiPrimary else Color.Transparent)
+                                        .clickable { selectedDeliveryType = type }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(label, color = if (isSelected) Color.Black else AiTextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        if (!isPickup) {
+                            Column {
+                                Text("Entregar em:", fontSize = 11.sp, color = AiTextMuted, fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(AiSurface)
+                                        .clickable { showAddressSheet = true }
+                                        .padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.LocationOn, null, tint = AiPrimary, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(selectedAddress?.name ?: "Selecionar endereço", fontSize = 13.sp, color = AiText, fontWeight = FontWeight.Bold, maxLines = 1)
+                                        if (selectedAddress != null) {
+                                            Text(selectedAddress!!.address, fontSize = 11.sp, color = AiTextMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        }
+                                    }
+                                    Icon(Icons.Default.Edit, null, tint = AiTextMuted, modifier = Modifier.size(14.dp))
+                                }
                             }
                         }
                     }
+                }
 
-                    if (feesError != null && !isPickup) {
-                        Text(feesError!!, color = KomaSoftRed, fontSize = 10.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(AiCard)
+                        .border(1.dp, AiPrimary.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
+                        .padding(16.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (!isPickup && cartRestaurants.size > 1) {
+                            cartRestaurants.forEach { restaurant ->
+                                val fee = deliveryFeesMap[restaurant.gid]?.delivery_fee
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("Entrega ${restaurant.name}", fontSize = 11.sp, color = AiTextMuted)
+                                    if (feesLoading) CircularProgressIndicator(modifier = Modifier.size(10.dp), strokeWidth = 2.dp, color = AiPrimary)
+                                    else Text(formatCurrency(fee ?: 0.0), fontSize = 11.sp, color = AiText)
+                                }
+                            }
+                            HorizontalDivider(color = AiTextMuted.copy(alpha = 0.1f))
+                        }
+
+                        SummaryRowIntegrated("Produtos", formatCurrency(cartTotal))
+                        if (!isPickup) SummaryRowIntegrated("Total Entrega", formatCurrency(totalDeliveryFee))
+                        SummaryRowIntegrated("Taxa de Serviço", formatCurrency(serviceFee))
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Total a pagar", fontWeight = FontWeight.Bold, color = AiText, fontSize = 15.sp)
+                            Text(formatCurrency(grandTotal), fontWeight = FontWeight.ExtraBold, color = AiSecondary, fontSize = 18.sp)
+                        }
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        val canConfirm = selectedAddress != null && !feesLoading && (isPickup || deliveryFeesMap.size == cartRestaurants.size)
+                        
+                        Button(
+                            onClick = { 
+                                val finalFeesMap = if (isPickup) emptyMap() else deliveryFeesMap.mapValues { it.value.delivery_fee }
+                                onCheckout(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType, finalFeesMap) 
+                            },
+                            enabled = canConfirm,
+                            modifier = Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize().background(
+                                    if (canConfirm) Brush.horizontalGradient(listOf(AiPrimary, KomaOrangeEnd))
+                                    else SolidColor(AiTextMuted.copy(alpha = 0.1f))
+                                ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.CheckCircle, null, tint = if (canConfirm) Color.White else AiTextMuted, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Confirmar e Pagar", fontWeight = FontWeight.Bold, color = if (canConfirm) Color.White else AiTextMuted, fontSize = 14.sp)
+                                }
+                            }
+                        }
+
+                        if (feesError != null && !isPickup) {
+                            Text(feesError!!, color = KomaSoftRed, fontSize = 10.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                        }
                     }
                 }
             }
