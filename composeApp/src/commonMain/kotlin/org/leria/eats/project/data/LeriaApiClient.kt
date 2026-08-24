@@ -140,6 +140,19 @@ class LeriaApiClient {
         }
     }
 
+    // NOVO: Confirmar a sessão do pedido (Limpeza de estado no servidor)
+    suspend fun confirmOrderSession(sessionId: String): Boolean {
+        return try {
+            val response = client.post("$baseUrl/chat/session/$sessionId/confirm") {
+                contentType(ContentType.Application.Json)
+            }
+            response.status.value == 200
+        } catch (e: Exception) {
+            println("⚠️ Erro ao confirmar sessão da IA: ${e.message}")
+            false
+        }
+    }
+
     // NOVO: Verificar status do servidor de IA
     suspend fun checkChatStatus(): Boolean {
         return try {

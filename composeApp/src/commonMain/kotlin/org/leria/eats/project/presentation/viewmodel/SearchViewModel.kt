@@ -554,14 +554,14 @@ class SearchViewModel(
                             chatMessages = messages.takeLast(20),
                             aiReply = fullResponseText,
                             isStreaming = true,
-                            isLoading = false // Oculta o indicador de "pensando" assim que o texto começa a chegar
+                            isLoading = false, // Oculta o indicador de "pensando" assim que o texto começa a chegar
+                            currentAiSessionId = chunk.sessionId ?: state.currentAiSessionId
                         )
                     }
 
-                    // Se detectar confirmação imediata no chunk, podemos processar logo
-                    if (chunk.orderConfirmed) {
-                        // O flow será cancelado pelo return@collect (implícito no loop se quisermos interromper)
-                        // Mas aqui apenas marcamos para processar ao fim do stream
+                    // Se detectar sinal de mostrar sacola imediata no chunk
+                    if (chunk.showCart) {
+                        // Podemos processar logo ou aguardar o fim do stream
                     }
                 }
 
@@ -570,8 +570,8 @@ class SearchViewModel(
                 
                 _uiState.update { it.copy(isStreaming = false) }
 
-                // Verifica se o pedido foi confirmado pela IA (Master Final Object)
-                if (finalResponse.orderConfirmed || fullResponseText.contains("[[CONFIRM_ORDER]]")) {
+                // Verifica se deve mostrar a sacola IA integrada (Master Final Object ou Tag)
+                if (finalResponse.showCart || fullResponseText.contains("[[CONFIRM_ORDER]]")) {
                     // Garante que o texto final não tenha a tag se ela veio no acumulado
                     val finalCleanedText = fullResponseText.replace("[[CONFIRM_ORDER]]", "").trim()
                     
@@ -581,10 +581,14 @@ class SearchViewModel(
                         if (idx != -1) {
                             messages[idx] = messages[idx].copy(text = finalCleanedText)
                         }
-                        state.copy(chatMessages = messages, aiReply = finalCleanedText)
+                        state.copy(
+                            chatMessages = messages, 
+                            aiReply = finalCleanedText,
+                            currentAiSessionId = finalResponse.sessionId ?: state.currentAiSessionId
+                        )
                     }
 
-                    handleOrderConfirmation(finalResponse.copy(response = finalCleanedText))
+                    handleShowCart(finalResponse.copy(response = finalCleanedText))
                     _uiState.update { it.copy(isLoading = false) }
                     return@launch
                 }
@@ -646,23 +650,25 @@ class SearchViewModel(
     }
 
     /**
-     * Processa a confirmação do pedido pela IA.
-     * Sincroniza os produtos da IA com o carrinho e valida o restaurante.
+     * Processa a exibição da sacola integrada pela IA.
+     * Sincroniza os produtos da IA com o carrinho e permite continuar editando.
      */
-    private suspend fun handleOrderConfirmation(chatResponse: ChatResponse) {
+    private fun handleShowCart(chatResponse: ChatResponse) {
         val aiProducts = chatResponse.products
         
         if (aiProducts.isEmpty()) {
-            val errorMsg = "Não encontrei os produtos para finalizar o pedido. Pode repetir o que deseja?"
-            addAiMessage(text = errorMsg)
-            _uiState.update { it.copy(isLoading = false, error = errorMsg) }
+            // Se não houver produtos novos no objeto final, apenas ativa o fluxo de sacola
+            // com o que já estiver no carrinho (se houver)
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    isAiCartFlow = true
+                )
+            }
             return
         }
 
         addProductsToCart(aiProducts)
-
-        val confirmationMessage = chatResponse.response ?: "Perfeito! Tudo pronto com o seu pedido."
-        addAiMessage(text = confirmationMessage)
 
         _uiState.update {
             it.copy(
@@ -672,11 +678,8 @@ class SearchViewModel(
             )
         }
 
-        delay(500)
-
-        checkout()
-        
-        clearSearch()
+        // Removido o checkout() automático para permitir "continuar editando" via IA
+        // O usuário pode clicar em "Finalizar e Pagar" dentro da própria bolha da sacola no chat.
     }
 
     fun onSearchTypeSelected(showRestaurants: Boolean) {
@@ -1090,6 +1093,12 @@ class SearchViewModel(
         }
 
         viewModelScope.launch {
+            // Se o pedido veio da IA, notifica o servidor para confirmar a sessão
+            currentState.currentAiSessionId?.let { sessionId ->
+                println("🚀 Confirmando sessão da IA no servidor: $sessionId")
+                apiClient.confirmOrderSession(sessionId)
+            }
+
             val masterGid = generateGid("mst")
             val trackingCode = generateTrackingCode()
             val subOrders = mutableListOf<SubOrderRequest>()

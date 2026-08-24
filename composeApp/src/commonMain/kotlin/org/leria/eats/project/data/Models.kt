@@ -66,8 +66,8 @@ data class ChatResponse(
     val restaurantResults: List<Restaurant> = emptyList(),
     val productResults: List<Product> = emptyList(),
     val products: List<Product> = emptyList(),
-    @SerialName("order_confirmed")
-    val orderConfirmed: Boolean = false,
+    @SerialName("show_cart")
+    val showCart: Boolean = false,
     @SerialName("session_id")
     val sessionId: String? = null,
     val cart: JsonElement? = null           // NOVO: Captura o objeto cart se presente
