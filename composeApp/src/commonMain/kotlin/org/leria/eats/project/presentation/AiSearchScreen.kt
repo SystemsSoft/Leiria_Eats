@@ -62,7 +62,6 @@ fun AiSearchScreen(
     onMicClick: () -> Unit,
     onSendClick: () -> Unit,
     onTextChange: (String) -> Unit,
-    onRestaurantClick: (Restaurant) -> Unit,
     onAddToCart: (Product) -> Unit,
     onRemoveFromCart: (Product) -> Unit,
     onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
@@ -154,7 +153,6 @@ fun AiSearchScreen(
                 messages = uiState.chatMessages,
                 isLoading = uiState.isLoading,
                 isStreaming = uiState.isStreaming,
-                onRestaurantClick = onRestaurantClick,
                 onAddToCart = onAddToCart,
                 onProductClick = { product -> selectedProduct = product },
                 modifier = Modifier.fillMaxSize()
@@ -278,7 +276,6 @@ private fun ChatMessagesView(
     messages: List<ChatMessage>,
     isLoading: Boolean,
     isStreaming: Boolean,
-    onRestaurantClick: (Restaurant) -> Unit,
     onAddToCart: (Product) -> Unit,
     onProductClick: (Product) -> Unit = {},
     modifier: Modifier = Modifier
@@ -310,7 +307,6 @@ private fun ChatMessagesView(
                 ChatMessageType.AI -> AiMessageBubble(
                     message = message,
                     isTyping = isLastMessage && isStreaming,
-                    onRestaurantClick = onRestaurantClick,
                     onAddToCart = onAddToCart,
                     onProductClick = onProductClick
                 )
@@ -454,7 +450,6 @@ private fun UserMessageBubble(message: ChatMessage) {
 private fun AiMessageBubble(
     message: ChatMessage,
     isTyping: Boolean = false,
-    onRestaurantClick: (Restaurant) -> Unit,
     onAddToCart: (Product) -> Unit,
     onProductClick: (Product) -> Unit = {}
 ) {
@@ -484,12 +479,6 @@ private fun AiMessageBubble(
                             AiTypingCursor()
                         }
                     }
-                }
-            }
-
-            if (message.restaurants.isNotEmpty()) {
-                message.restaurants.forEach { restaurant ->
-                    RestaurantChatCard(restaurant = restaurant, onClick = { onRestaurantClick(restaurant) })
                 }
             }
 
@@ -1043,47 +1032,6 @@ private fun AiCartChatSection(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun RestaurantChatCard(
-    restaurant: Restaurant,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(AiCard)
-            .border(1.dp, AiPrimary.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(12.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Brush.radialGradient(listOf(AiPrimary.copy(alpha = 0.2f), Color.Transparent)))
-                    .border(1.dp, AiPrimary.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("🍽️", fontSize = 24.sp)
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = restaurant.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AiText)
-                if (restaurant.category.isNotBlank()) {
-                    Text(text = restaurant.category, style = MaterialTheme.typography.bodySmall, color = AiTextMuted, maxLines = 2)
-                }
-            }
-
-            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = AiPrimary, modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = -90f })
         }
     }
 }

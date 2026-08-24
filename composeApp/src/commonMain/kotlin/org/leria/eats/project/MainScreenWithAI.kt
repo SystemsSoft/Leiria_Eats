@@ -584,10 +584,6 @@ fun MainScreenWithAI(
                                         viewModel.sendSearch()
                                     },
                                     onTextChange = { viewModel.onQueryChange(it) },
-                                    onRestaurantClick = { restaurant ->
-                                        viewModel.selectRestaurantOrAddToCart(restaurant)
-                                        viewModel.onTabSelected(MainTab.HOME)
-                                    },
                                     onAddToCart = { product -> viewModel.addToCart(product) },
                                     onRemoveFromCart = { product -> viewModel.removeFromCart(product) },
                                     onCheckout = { address, deliveryFee, serviceFee, deliveryType, feesMap ->
