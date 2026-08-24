@@ -31,6 +31,7 @@ import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
 import komaai.composeapp.generated.resources.Res
 import komaai.composeapp.generated.resources.logo
@@ -340,12 +341,19 @@ private fun AiIterativeCartOverlay(
 ) {
     val cartTotal = cartItems.sumOf { it.price * it.quantity }
     val cartCount = cartItems.sumOf { it.quantity }
-    
-    val heightScale by animateFloatAsState(
-        targetValue = if (isExpanded) 1f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioLowBouncy),
-        label = "height"
-    )
+    val scrollState = rememberScrollState()
+
+    // ── Animação de "pulo" inicial para indicar scroll ───────────────────────
+    LaunchedEffect(isExpanded) {
+        if (isExpanded) {
+            delay(800) // Espera a abertura do painel
+            if (scrollState.maxValue > 0) {
+                scrollState.animateScrollTo(50, tween(400, easing = EaseOutBack))
+                delay(100)
+                scrollState.animateScrollTo(0, tween(400, easing = EaseInSine))
+            }
+        }
+    }
 
     Column(
         modifier = modifier
@@ -369,7 +377,7 @@ private fun AiIterativeCartOverlay(
                     .border(1.dp, AiPrimary.copy(alpha = 0.2f), RoundedCornerShape(24.dp))
                     .padding(2.dp)
             ) {
-                // Conteúdo da Sacola (Reusando a lógica do Chat Bubble mas adaptada)
+                // Conteúdo da Sacola
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -396,8 +404,31 @@ private fun AiIterativeCartOverlay(
                             onCheckout = onCheckout,
                             onGetDeliveryFee = onGetDeliveryFee,
                             onGetAddressFromMap = onGetAddressFromMap,
-                            isIntegrated = true // Nova flag para ajuste visual
+                            isIntegrated = true,
+                            scrollState = scrollState
                         )
+
+                        // ── Indicador de Scroll Pulsante ─────────────────────────
+                        if (scrollState.value < scrollState.maxValue) {
+                            val infiniteTransition = rememberInfiniteTransition(label = "scrollHint")
+                            val bounce by infiniteTransition.animateFloat(
+                                initialValue = 0f, targetValue = 8f,
+                                animationSpec = infiniteRepeatable(tween(800, easing = EaseInOutSine), RepeatMode.Reverse),
+                                label = "bounce"
+                            )
+                            
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 4.dp)
+                                    .graphicsLayer { translationY = bounce }
+                                    .size(24.dp)
+                                    .background(AiPrimary.copy(alpha = 0.8f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.KeyboardArrowDown, null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                            }
+                        }
                     }
                 }
             }
@@ -555,7 +586,8 @@ private fun AiCartChatBubble(
     onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
     onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null },
-    isIntegrated: Boolean = false // Flag para remover o fundo redundante no modo overlay
+    isIntegrated: Boolean = false, // Flag para remover o fundo redundante no modo overlay
+    scrollState: ScrollState = rememberScrollState()
 ) {
     var selectedAddress by remember { mutableStateOf(userAddresses.firstOrNull()) }
     var selectedDeliveryType by remember { mutableStateOf("delivery") }
@@ -668,7 +700,7 @@ private fun AiCartChatBubble(
     // No modo integrado (Overlay), não renderizamos a estrutura de linha externa nem o header de boas vindas
     if (isIntegrated) {
         Column(
-            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth().verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             groupedItems.forEach { (restaurantGid, products) ->
