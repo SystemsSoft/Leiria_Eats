@@ -436,10 +436,11 @@ class SearchViewModel(
         restaurants: List<Restaurant> = emptyList(),
         products: List<Product> = emptyList()
     ) {
+        val cleanedText = text.replace(Regex("\\n{3,}"), "\n\n").trim()
         val message = ChatMessage(
             id = "ai_${kotlin.random.Random.nextLong()}",
             type = ChatMessageType.AI,
-            text = text,
+            text = cleanedText,
             restaurants = restaurants,
             products = products
         )
@@ -527,9 +528,14 @@ class SearchViewModel(
                     lastChunk = chunk
                     val fragment = chunk.text ?: chunk.response ?: ""
                     
-                    // Limpa tags internas da IA que não devem aparecer para o usuário
+                    // Limpa tags internas e reduz espaços em branco excessivos
                     val cleanedFragment = fragment.replace("[[CONFIRM_ORDER]]", "")
                     fullResponseText += cleanedFragment
+                    
+                    // Tratamento final para exibição: remove triplas quebras de linha e trim no início/fim
+                    val displayResponseText = fullResponseText
+                        .replace(Regex("\\n{3,}"), "\n\n")
+                        .trimStart()
 
                     _uiState.update { state ->
                         val messages = state.chatMessages.toMutableList()
@@ -537,7 +543,7 @@ class SearchViewModel(
                         
                         val updatedMessage = if (existingIndex != -1) {
                             messages[existingIndex].copy(
-                                text = fullResponseText,
+                                text = displayResponseText,
                                 restaurants = if (chunk.restaurantResults.isNotEmpty()) chunk.restaurantResults else messages[existingIndex].restaurants,
                                 products = if (chunk.products.isNotEmpty()) chunk.products else (if (chunk.productResults.isNotEmpty()) chunk.productResults else messages[existingIndex].products)
                             )
@@ -545,7 +551,7 @@ class SearchViewModel(
                             ChatMessage(
                                 id = currentAiMessageId,
                                 type = ChatMessageType.AI,
-                                text = fullResponseText,
+                                text = displayResponseText,
                                 restaurants = chunk.restaurantResults,
                                 products = if (chunk.products.isNotEmpty()) chunk.products else chunk.productResults
                             )
@@ -559,7 +565,7 @@ class SearchViewModel(
                         
                         state.copy(
                             chatMessages = messages.takeLast(20),
-                            aiReply = fullResponseText,
+                            aiReply = displayResponseText,
                             isStreaming = true,
                             isLoading = false, // Oculta o indicador de "pensando" assim que o texto começa a chegar
                             currentAiSessionId = chunk.sessionId ?: state.currentAiSessionId
@@ -579,8 +585,11 @@ class SearchViewModel(
 
                 // Verifica se deve mostrar a sacola IA integrada (Master Final Object ou Tag)
                 if (finalResponse.showCart || fullResponseText.contains("[[CONFIRM_ORDER]]")) {
-                    // Garante que o texto final não tenha a tag se ela veio no acumulado
-                    val finalCleanedText = fullResponseText.replace("[[CONFIRM_ORDER]]", "").trim()
+                    // Garante que o texto final não tenha a tag e remove brancos excessivos
+                    val finalCleanedText = fullResponseText
+                        .replace("[[CONFIRM_ORDER]]", "")
+                        .replace(Regex("\\n{3,}"), "\n\n")
+                        .trim()
                     
                     _uiState.update { state ->
                         val messages = state.chatMessages.toMutableList()

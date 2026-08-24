@@ -186,7 +186,6 @@ fun AiSearchScreen(
                     cartItems = uiState.cartItems,
                     cartRestaurants = uiState.cartRestaurants,
                     userAddresses = uiState.userProfile.addresses,
-                    onAddItem = onAddToCart,
                     onRemoveItem = onRemoveFromCart,
                     onCheckout = onCheckout,
                     onGetDeliveryFee = onGetDeliveryFee,
@@ -303,8 +302,8 @@ private fun ChatMessagesView(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(messages) { message ->
             val isLastMessage = message == messages.lastOrNull()
@@ -332,7 +331,6 @@ private fun AiIterativeCartOverlay(
     cartItems: List<Product>,
     cartRestaurants: List<Restaurant>,
     userAddresses: List<Address>,
-    onAddItem: (Product) -> Unit,
     onRemoveItem: (Product) -> Unit,
     onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
@@ -399,7 +397,6 @@ private fun AiIterativeCartOverlay(
                             cartItems = cartItems,
                             cartRestaurants = cartRestaurants,
                             userAddresses = userAddresses,
-                            onAddItem = onAddItem,
                             onRemoveItem = onRemoveItem,
                             onCheckout = onCheckout,
                             onGetDeliveryFee = onGetDeliveryFee,
@@ -474,7 +471,7 @@ private fun UserMessageBubble(message: ChatMessage) {
                 .widthIn(max = 280.dp)
                 .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 4.dp))
                 .background(Brush.linearGradient(listOf(AiPrimary, KomaGoldAccent)))
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 14.dp, vertical = 8.dp)
         ) {
             Text(text = message.text, style = MaterialTheme.typography.bodyMedium, color = Color.Black)
         }
@@ -494,7 +491,7 @@ private fun AiMessageBubble(
     ) {
         Column(
             modifier = Modifier.widthIn(max = 320.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             if (message.text.isNotBlank()) {
                 Box(
@@ -502,7 +499,7 @@ private fun AiMessageBubble(
                         .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp))
                         .background(Brush.horizontalGradient(listOf(AiBotBubble, AiCard)))
                         .border(1.dp, AiPrimary.copy(alpha = 0.2f), RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp))
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
@@ -581,7 +578,6 @@ private fun AiCartChatBubble(
     cartItems: List<Product>,
     cartRestaurants: List<Restaurant>,
     userAddresses: List<Address>,
-    onAddItem: (Product) -> Unit,
     onRemoveItem: (Product) -> Unit,
     onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
@@ -708,9 +704,7 @@ private fun AiCartChatBubble(
                 AiCartChatSection(
                     restaurant = restaurant, 
                     restaurantGid = restaurantGid, 
-                    products = products, 
-                    onAddItem = onAddItem,
-                    onRemoveItem = onRemoveItem
+                    products = products
                 )
             }
 
@@ -853,16 +847,14 @@ private fun AiCartChatBubble(
                     }
                 }
 
-                groupedItems.forEach { (restaurantGid, products) ->
-                    val restaurant = cartRestaurants.find { it.gid == restaurantGid }
-                    AiCartChatSection(
-                        restaurant = restaurant, 
-                        restaurantGid = restaurantGid, 
-                        products = products, 
-                        onAddItem = onAddItem,
-                        onRemoveItem = onRemoveItem
-                    )
-                }
+            groupedItems.forEach { (restaurantGid, products) ->
+                val restaurant = cartRestaurants.find { it.gid == restaurantGid }
+                AiCartChatSection(
+                    restaurant = restaurant, 
+                    restaurantGid = restaurantGid, 
+                    products = products
+                )
+            }
 
                 Box(
                     modifier = Modifier
@@ -1012,9 +1004,7 @@ private fun SummaryRowIntegrated(label: String, value: String) {
 private fun AiCartChatSection(
     restaurant: Restaurant?,
     restaurantGid: String?,
-    products: List<Product>,
-    onAddItem: (Product) -> Unit,
-    onRemoveItem: (Product) -> Unit
+    products: List<Product>
 ) {
     Column(
         modifier = Modifier
@@ -1055,17 +1045,6 @@ private fun AiCartChatSection(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(formatCurrency(product.price * product.quantity), color = AiSecondary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    
-                    // Controles de quantidade
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { onRemoveItem(product) }, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Default.Remove, null, tint = AiTextMuted, modifier = Modifier.size(14.dp))
-                        }
-                        IconButton(onClick = { onAddItem(product.copy(quantity = 1)) }, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Default.Add, null, tint = AiPrimary, modifier = Modifier.size(14.dp))
-                        }
-                    }
                 }
             }
         }
