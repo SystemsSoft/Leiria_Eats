@@ -376,6 +376,7 @@ private fun ChatMessagesView(
                     cartItems = cartItems,
                     cartRestaurants = cartRestaurants,
                     userAddresses = userAddresses,
+                    onAddItem = onAddToCart,
                     onRemoveItem = onRemoveFromCart,
                     onCheckout = onCheckout,
                     onGetDeliveryFee = onGetDeliveryFee,
@@ -515,6 +516,7 @@ private fun AiCartChatBubble(
     cartItems: List<Product>,
     cartRestaurants: List<Restaurant>,
     userAddresses: List<Address>,
+    onAddItem: (Product) -> Unit,
     onRemoveItem: (Product) -> Unit,
     onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
@@ -653,9 +655,16 @@ private fun AiCartChatBubble(
                 }
             }
 
+            // ── Itens por Restaurante ─────────────────────────────────────────
             groupedItems.forEach { (restaurantGid, products) ->
                 val restaurant = cartRestaurants.find { it.gid == restaurantGid }
-                AiCartChatSection(restaurant = restaurant, restaurantGid = restaurantGid, products = products, onRemoveItem = onRemoveItem)
+                AiCartChatSection(
+                    restaurant = restaurant, 
+                    restaurantGid = restaurantGid, 
+                    products = products, 
+                    onAddItem = onAddItem,
+                    onRemoveItem = onRemoveItem
+                )
             }
 
             Box(
@@ -806,6 +815,7 @@ private fun AiCartChatSection(
     restaurant: Restaurant?,
     restaurantGid: String?,
     products: List<Product>,
+    onAddItem: (Product) -> Unit,
     onRemoveItem: (Product) -> Unit
 ) {
     Column(
@@ -817,6 +827,7 @@ private fun AiCartChatSection(
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // Cabeçalho compact do restaurante
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(AiSurface)) {
                 if (restaurant?.image_url != null) {
@@ -832,6 +843,7 @@ private fun AiCartChatSection(
             }
         }
 
+        // Itens
         products.forEach { product ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -845,9 +857,16 @@ private fun AiCartChatSection(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(formatCurrency(product.price * product.quantity), color = AiSecondary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(onClick = { onRemoveItem(product) }, modifier = Modifier.size(24.dp)) {
-                        Icon(Icons.Default.DeleteOutline, null, tint = KomaSoftRed, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    
+                    // Controles de quantidade
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { onRemoveItem(product) }, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Remove, null, tint = AiTextMuted, modifier = Modifier.size(14.dp))
+                        }
+                        IconButton(onClick = { onAddItem(product.copy(quantity = 1)) }, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Add, null, tint = AiPrimary, modifier = Modifier.size(14.dp))
+                        }
                     }
                 }
             }

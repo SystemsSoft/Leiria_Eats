@@ -656,19 +656,9 @@ class SearchViewModel(
     private fun handleShowCart(chatResponse: ChatResponse) {
         val aiProducts = chatResponse.products
         
-        if (aiProducts.isEmpty()) {
-            // Se não houver produtos novos no objeto final, apenas ativa o fluxo de sacola
-            // com o que já estiver no carrinho (se houver)
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    isAiCartFlow = true
-                )
-            }
-            return
-        }
-
-        addProductsToCart(aiProducts)
+        // Se a IA enviou uma lista de produtos, ela representa o estado ATUAL da sacola para esta conversa.
+        // Substituímos os itens em vez de acumular, permitindo "edição" (remoção/alteração).
+        updateAiCart(aiProducts)
 
         _uiState.update {
             it.copy(
@@ -677,9 +667,6 @@ class SearchViewModel(
                 isAiCartFlow = true
             )
         }
-
-        // Removido o checkout() automático para permitir "continuar editando" via IA
-        // O usuário pode clicar em "Finalizar e Pagar" dentro da própria bolha da sacola no chat.
     }
 
     fun onSearchTypeSelected(showRestaurants: Boolean) {
@@ -742,7 +729,8 @@ class SearchViewModel(
             currentState.copy(
                 cartItems = updatedCart,
                 cartRestaurantGid = product.restaurant_gid,
-                isAiCartFlow = false
+                // Mantém ou ativa o fluxo de Sacola IA se estiver na aba da IA
+                isAiCartFlow = if (currentState.currentTab == MainTab.AI) true else currentState.isAiCartFlow
             )
         }
         product.restaurant_gid?.let { fetchCompanyByGid(it) }
@@ -1503,6 +1491,28 @@ class SearchViewModel(
         } catch (e: Exception) {
             println("⚠️ Erro ao buscar métodos de pagamento: ${e.message}")
             // Don't block the flow, just log the error
+        }
+    }
+
+    /**
+     * Atualiza a sacola da IA substituindo os itens atuais pelos enviados pelo servidor.
+     * Usado para permitir edição (remoção/alteração de quantidade) via conversa.
+     */
+    private fun updateAiCart(products: List<Product>) {
+        if (products.isEmpty()) return
+        
+        _uiState.update { currentState ->
+            currentState.copy(
+                cartItems = products,
+                cartRestaurantGid = products.firstOrNull()?.restaurant_gid ?: currentState.cartRestaurantGid,
+                isAiCartFlow = true 
+            )
+        }
+
+        // Busca metadados para todos os restaurantes únicos na lista de produtos
+        val uniqueRestaurantGids = products.mapNotNull { it.restaurant_gid }.distinct()
+        uniqueRestaurantGids.forEach { gid ->
+            fetchCompanyByGid(gid)
         }
     }
 
