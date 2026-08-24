@@ -76,11 +76,6 @@ fun AiSearchScreen(
     var isCartExpanded by remember { mutableStateOf(false) }
     var showClearConfirmDialog by remember { mutableStateOf(false) }
 
-    // Sincroniza a expansão do carrinho com o fluxo da IA
-    LaunchedEffect(uiState.isAiCartFlow) {
-        if (uiState.isAiCartFlow) isCartExpanded = true
-    }
-
     // ── Dialog de Confirmação para Limpar Chat e Sacola ──────────────────────
     if (showClearConfirmDialog) {
         AlertDialog(
