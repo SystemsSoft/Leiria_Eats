@@ -594,7 +594,10 @@ fun MainScreenWithAI(
                                         viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType, feesMap)
                                     },
                                     onViewCart = { viewModel.onTabSelected(MainTab.CART) },
-                                    onClearSearch = { viewModel.clearSearch() },
+                                    onClearSearch = { 
+                                        viewModel.clearSearch()
+                                        viewModel.clearCart()
+                                    },
                                     onGetDeliveryFee = { custLat, custLon, restLat, restLon, restGid ->
                                         viewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restGid)
                                     },

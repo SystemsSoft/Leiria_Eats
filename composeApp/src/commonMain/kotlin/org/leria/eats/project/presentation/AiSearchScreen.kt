@@ -74,11 +74,48 @@ fun AiSearchScreen(
 ) {
     var selectedProduct by remember { mutableStateOf<Product?>(null) }
     var isCartExpanded by remember { mutableStateOf(false) }
+    var showClearConfirmDialog by remember { mutableStateOf(false) }
 
     // Sincroniza a expansão do carrinho com o fluxo da IA
     LaunchedEffect(uiState.isAiCartFlow) {
         if (uiState.isAiCartFlow) isCartExpanded = true
     }
+
+    // ── Dialog de Confirmação para Limpar Chat e Sacola ──────────────────────
+    if (showClearConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirmDialog = false },
+            containerColor = AiCard,
+            titleContentColor = AiText,
+            textContentColor = AiTextMuted,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DeleteSweep, null, tint = AiPrimary, modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("Limpar tudo?", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Text("Ao limpar a conversa, os itens que a IA adicionou à sua sacola também serão removidos. Deseja continuar?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showClearConfirmDialog = false
+                        onClearSearch()
+                    }
+                ) {
+                    Text("Sim, Limpar", color = KomaSoftRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirmDialog = false }) {
+                    Text("Cancelar", color = AiTextMuted)
+                }
+            }
+        )
+    }
+
     // Pulsing glow animation
     val glowAlpha by rememberInfiniteTransition(label = "glow").animateFloat(
         initialValue = 0.15f, targetValue = 0.55f, label = "glowAlpha",
@@ -91,7 +128,13 @@ fun AiSearchScreen(
                 glowAlpha = glowAlpha,
                 isListening = isListening,
                 showClearButton = uiState.chatMessages.size > 1,
-                onClearChat = onClearSearch
+                onClearChat = {
+                    if (uiState.cartItems.isNotEmpty()) {
+                        showClearConfirmDialog = true
+                    } else {
+                        onClearSearch()
+                    }
+                }
             )
         },
         bottomBar = {

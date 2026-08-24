@@ -153,6 +153,19 @@ class LeriaApiClient {
         }
     }
 
+    // NOVO: Reiniciar a sessão do chat (Limpeza sem confirmação de pedido)
+    suspend fun restartChatSession(sessionId: String): Boolean {
+        return try {
+            val response = client.post("$baseUrl/chat/session/$sessionId/reset") {
+                contentType(ContentType.Application.Json)
+            }
+            response.status.value == 200
+        } catch (e: Exception) {
+            println("⚠️ Erro ao reiniciar sessão da IA: ${e.message}")
+            false
+        }
+    }
+
     // NOVO: Verificar status do servidor de IA
     suspend fun checkChatStatus(): Boolean {
         return try {

@@ -387,7 +387,13 @@ class SearchViewModel(
     }
 
     fun clearSearch() {
+        val currentState = _uiState.value
         viewModelScope.launch {
+            // Notifica o servidor para reiniciar a sessão se houver uma ativa
+            currentState.currentAiSessionId?.let { sessionId ->
+                println("🧹 Reiniciando sessão da IA no servidor: $sessionId")
+                apiClient.restartChatSession(sessionId)
+            }
             chatRepository.clearChat()
         }
         val greeting = buildGreeting(_uiState.value.userProfile.name)
@@ -398,6 +404,7 @@ class SearchViewModel(
                 aiReply = greeting,
                 textInput = "",
                 error = null,
+                currentAiSessionId = null, // Reseta o ID da sessão localmente
                 chatMessages = if (greeting.isNotBlank()) {
                     listOf(
                         ChatMessage(
