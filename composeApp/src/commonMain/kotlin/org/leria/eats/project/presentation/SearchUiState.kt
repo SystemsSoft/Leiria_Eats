@@ -60,9 +60,6 @@ data class SearchUiState(
     val isAiCartFlow: Boolean = false, // Indica se o carrinho atual veio de um fluxo da IA
     val lastSearchQuery: String = "",
     val isSuggestionMode: Boolean = false,
-    val showSearchTypeSheet: Boolean = false,
-    val pendingRestaurantResults: List<Restaurant> = emptyList(),
-    val pendingProductResults: List<Product> = emptyList(),
     val showSavePaymentSheet: Boolean = false,
     val showPaymentConfirmSheet: Boolean = false,
     val showDeliveryTypeSheet: Boolean = false,

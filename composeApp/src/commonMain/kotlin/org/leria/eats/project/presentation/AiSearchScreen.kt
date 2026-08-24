@@ -68,8 +68,6 @@ fun AiSearchScreen(
     onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     onViewCart: () -> Unit,
     onClearSearch: () -> Unit,
-    onSearchTypeSelected: (showRestaurants: Boolean) -> Unit,
-    onDismissSearchTypeSheet: () -> Unit,
     onIntroClick: () -> Unit = {},
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
     onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null }
@@ -135,104 +133,6 @@ fun AiSearchScreen(
                         modifier = Modifier.padding(horizontal = 32.dp)
                     )
                 }
-            }
-        }
-    }
-
-    if (uiState.showSearchTypeSheet) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ModalBottomSheet(
-            onDismissRequest = onDismissSearchTypeSheet,
-            sheetState = sheetState,
-            containerColor = AiSurface,
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(AiSurface)
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(44.dp).height(4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(AiTextMuted.copy(alpha = 0.3f))
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .background(
-                            Brush.radialGradient(listOf(AiPrimary.copy(alpha = 0.3f), Color.Transparent)),
-                            CircleShape
-                        )
-                        .border(1.dp, AiPrimary.copy(alpha = 0.5f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = AiPrimary, modifier = Modifier.size(28.dp))
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "O que está à procura?",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = AiText,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "A IA encontrou restaurantes e produtos relacionados com a sua pesquisa.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = AiTextMuted,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(28.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = { onSearchTypeSelected(true) },
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.horizontalGradient(listOf(AiPrimary, KomaOrangeEnd)),
-                                    RoundedCornerShape(16.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("🍽️  Restaurantes", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.White)
-                        }
-                    }
-                    Button(
-                        onClick = { onSearchTypeSelected(false) },
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                        contentPadding = PaddingValues(0.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.horizontalGradient(listOf(AiSecondary, KomaGreenDark)),
-                                    RoundedCornerShape(16.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("🛒  Produtos", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.White)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(36.dp))
             }
         }
     }

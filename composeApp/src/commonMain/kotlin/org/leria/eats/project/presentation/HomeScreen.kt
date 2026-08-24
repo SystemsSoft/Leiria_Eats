@@ -71,9 +71,7 @@ fun HomeScreen(
     onAddToCart: (Product) -> Unit,
     onRemoveFromCart: (Product) -> Unit,
     onViewCart: () -> Unit,
-    onClearSearch: () -> Unit,
-    onSearchTypeSelected: (showRestaurants: Boolean) -> Unit,
-    onDismissSearchTypeSheet: () -> Unit
+    onClearSearch: () -> Unit
 ) {
     var isProductCategoryMode by remember { mutableStateOf(false) }
 

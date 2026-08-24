@@ -633,8 +633,7 @@ class SearchViewModel(
                         productResults = aiProductResults,
                         textInput = "",
                         lastSearchQuery = resolvedQuery,
-                        allRestaurants = updatedAllRestaurants,
-                        showSearchTypeSheet = aiRestaurantResults.isNotEmpty() && aiProductResults.isNotEmpty()
+                        allRestaurants = updatedAllRestaurants
                     )
                 }
                 
@@ -665,52 +664,6 @@ class SearchViewModel(
                 isLoading = false,
                 currentTab = MainTab.AI, // Mantém no Chat para exibir a Sacola IA integrada
                 isAiCartFlow = true
-            )
-        }
-    }
-
-    fun onSearchTypeSelected(showRestaurants: Boolean) {
-        val state = _uiState.value
-        if (showRestaurants) {
-            addAiMessage(
-                text = state.aiReply.ifBlank { "Aqui estão os restaurantes:" },
-                restaurants = state.pendingRestaurantResults
-            )
-
-            _uiState.update {
-                it.copy(
-                    showSearchTypeSheet = false,
-                    restaurantResults = state.pendingRestaurantResults,
-                    productResults = emptyList(),
-                    pendingRestaurantResults = emptyList(),
-                    pendingProductResults = emptyList()
-                )
-            }
-        } else {
-            val products = state.pendingProductResults
-            addAiMessage(
-                text = state.aiReply.ifBlank { "Aqui estão os produtos:" },
-                products = products
-            )
-
-            _uiState.update {
-                it.copy(
-                    showSearchTypeSheet = false,
-                    restaurantResults = emptyList(),
-                    productResults = products,
-                    pendingRestaurantResults = emptyList(),
-                    pendingProductResults = emptyList()
-                )
-            }
-        }
-    }
-
-    fun dismissSearchTypeSheet() {
-        _uiState.update {
-            it.copy(
-                showSearchTypeSheet = false,
-                pendingRestaurantResults = emptyList(),
-                pendingProductResults = emptyList()
             )
         }
     }
@@ -1251,9 +1204,6 @@ class SearchViewModel(
                 aiReply = greeting,
                 isSuggestionMode = false,
                 selectedCategory = null,
-                showSearchTypeSheet = false,
-                pendingRestaurantResults = emptyList(),
-                pendingProductResults = emptyList(),
                 currentTab = if (checkoutUrl != null) currentState.currentTab else MainTab.ORDERS,
                 checkoutUrl = checkoutUrl,
                 error = if (!isSuccess) "Falha ao processar o pedido." else null,
@@ -1311,9 +1261,6 @@ class SearchViewModel(
                     aiReply = greeting, // Reset to greeting
                     isSuggestionMode = false, // Reset suggestion mode
                     selectedCategory = null, // Clear selected category
-                    showSearchTypeSheet = false, // Clear search type sheet
-                    pendingRestaurantResults = emptyList(), // Clear pending restaurants
-                    pendingProductResults = emptyList(), // Clear pending products
                     currentTab = MainTab.ORDERS,
                     error = null,
                     pendingSavePaymentMethod = false,

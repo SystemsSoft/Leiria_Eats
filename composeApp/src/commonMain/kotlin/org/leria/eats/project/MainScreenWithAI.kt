@@ -558,9 +558,7 @@ fun MainScreenWithAI(
                                     onAddToCart = { product -> viewModel.addToCart(product) },
                                     onRemoveFromCart = { product -> viewModel.removeFromCart(product) },
                                     onViewCart = { viewModel.onTabSelected(MainTab.CART) },
-                                    onClearSearch = { viewModel.clearSearch() },
-                                    onSearchTypeSelected = { showRestaurants -> viewModel.onSearchTypeSelected(showRestaurants) },
-                                    onDismissSearchTypeSheet = { viewModel.dismissSearchTypeSheet() }
+                                    onClearSearch = { viewModel.clearSearch() }
                                 )
                             }
                             MainTab.AI -> {
@@ -597,8 +595,6 @@ fun MainScreenWithAI(
                                     },
                                     onViewCart = { viewModel.onTabSelected(MainTab.CART) },
                                     onClearSearch = { viewModel.clearSearch() },
-                                    onSearchTypeSelected = { showRestaurants -> viewModel.onSearchTypeSelected(showRestaurants) },
-                                    onDismissSearchTypeSheet = { viewModel.dismissSearchTypeSheet() },
                                     onGetDeliveryFee = { custLat, custLon, restLat, restLon, restGid ->
                                         viewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restGid)
                                     },
