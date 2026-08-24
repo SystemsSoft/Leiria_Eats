@@ -143,22 +143,41 @@ fun AiSearchScreen(
         },
         containerColor = AiDeepBg
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // ── CHAT DE MENSAGENS (Fundo) ──────────────────────────────────
-            ChatMessagesView(
-                messages = uiState.chatMessages,
-                isLoading = uiState.isLoading,
-                isStreaming = uiState.isStreaming,
-                onAddToCart = onAddToCart,
-                onProductClick = { product -> selectedProduct = product },
-                modifier = Modifier.fillMaxSize()
-            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                // ── CHAT DE MENSAGENS ──────────────────────────────────
+                ChatMessagesView(
+                    messages = uiState.chatMessages,
+                    isLoading = uiState.isLoading,
+                    isStreaming = uiState.isStreaming,
+                    onAddToCart = onAddToCart,
+                    onProductClick = { product -> selectedProduct = product },
+                    modifier = Modifier.fillMaxSize()
+                )
 
-            // ── SACOLA IA ITERATIVA (OVERLAY) ───────────────────────────────
+                // Boas-vindas centralizado se não houver mensagens e não estiver no fluxo da Sacola IA
+                if (uiState.chatMessages.isEmpty() && !uiState.isLoading && !uiState.isAiCartFlow) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AiWelcomeButton(
+                            onClick = onIntroClick,
+                            modifier = Modifier.padding(horizontal = 32.dp)
+                        )
+                    }
+                }
+            }
+
+            // ── SACOLA IA ITERATIVA (Abaixo do Chat) ─────────────────────────
             if (uiState.isAiCartFlow && uiState.cartItems.isNotEmpty()) {
                 AiIterativeCartOverlay(
                     isExpanded = isCartExpanded,
@@ -170,22 +189,8 @@ fun AiSearchScreen(
                     onRemoveItem = onRemoveFromCart,
                     onCheckout = onCheckout,
                     onGetDeliveryFee = onGetDeliveryFee,
-                    onGetAddressFromMap = onGetAddressFromMap,
-                    modifier = Modifier.align(Alignment.BottomCenter)
+                    onGetAddressFromMap = onGetAddressFromMap
                 )
-            }
-
-            // Boas-vindas centralizado se não houver mensagens e não estiver no fluxo da Sacola IA
-            if (uiState.chatMessages.isEmpty() && !uiState.isLoading && !uiState.isAiCartFlow) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AiWelcomeButton(
-                        onClick = onIntroClick,
-                        modifier = Modifier.padding(horizontal = 32.dp)
-                    )
-                }
             }
         }
     }
@@ -319,7 +324,6 @@ private fun ChatMessagesView(
     }
 }
 
-// ─── Ai Iterative Cart Overlay (Abordagem Inovadora) ────────────────────────
 @Composable
 private fun AiIterativeCartOverlay(
     isExpanded: Boolean,
