@@ -1,19 +1,13 @@
 package org.leria.eats.project
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -29,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -332,116 +327,108 @@ fun MainScreenWithAI(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(KomaDeepBg)
-                                .border(
-                                    width = 1.dp,
-                                    brush = Brush.horizontalGradient(
-                                        listOf(
-                                            KomaNavGold.copy(alpha = 0.0f),
-                                            KomaNavGold.copy(alpha = 0.35f),
-                                            KomaNavGreen.copy(alpha = 0.25f),
-                                            KomaNavGold.copy(alpha = 0.0f)
-                                        )
-                                    ),
-                                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
-                                )
-                                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                                .padding(start = 32.dp, end = 32.dp, bottom = 28.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            NavigationBar(
-                                containerColor = Color.Transparent,
-                                contentColor = KomaMuted,
-                                tonalElevation = 0.dp,
-                                modifier = Modifier.fillMaxWidth()
+                            Surface(
+                                color = KomaDeepBg.copy(alpha = 0.96f),
+                                shape = RoundedCornerShape(28.dp),
+                                modifier = Modifier
+                                    .widthIn(max = 500.dp)
+                                    .border(
+                                        width = 1.dp,
+                                        brush = Brush.horizontalGradient(
+                                            listOf(
+                                                KomaNavGold.copy(alpha = 0.1f), 
+                                                KomaNavGold.copy(alpha = 0.5f), 
+                                                KomaNavGreen.copy(alpha = 0.4f), 
+                                                KomaNavGold.copy(alpha = 0.1f)
+                                            )
+                                        ),
+                                        shape = RoundedCornerShape(28.dp)
+                                    ),
+                                shadowElevation = 12.dp
                             ) {
-                                val selectedColor = KomaNavGold
-                                val unselectedColor = KomaMuted.copy(alpha = 0.55f)
-                                val selectedIconOnBadge = KomaGoldOnDark
-
-                                // ── IA ─────────────────────────────────────────────
-                                NavigationBarItem(
-                                    icon = { Icon(Icons.Default.AutoAwesome, contentDescription = "IA") },
-                                    label = {
-                                        Text(
-                                            "IA",
-                                            fontSize = 10.sp,
-                                            fontWeight = if (uiState.currentTab == MainTab.AI) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    },
-                                    selected = uiState.currentTab == MainTab.AI,
-                                    onClick = { viewModel.onTabSelected(MainTab.AI) },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = selectedIconOnBadge,
-                                        selectedTextColor = selectedColor,
-                                        indicatorColor = KomaGold,
-                                        unselectedIconColor = unselectedColor,
-                                        unselectedTextColor = unselectedColor
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(72.dp) // Altura ideal para conter ícone + texto sem corte
+                                        .padding(horizontal = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceEvenly,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val tabs = listOf(
+                                        Triple(MainTab.AI, "IA", Icons.Default.AutoAwesome),
+                                        Triple(MainTab.HOME, "Explorar", Icons.Default.Restaurant),
+                                        Triple(MainTab.ORDERS, "Pedidos", Icons.AutoMirrored.Filled.List),
+                                        Triple(MainTab.PROFILE, "Perfil", Icons.Default.Person)
                                     )
-                                )
 
-                                // ── Início ────────────────────────────────────────
-                                NavigationBarItem(
-                                    icon = { Icon(Icons.Default.Restaurant, contentDescription = "Início") },
-                                    label = {
-                                        Text(
-                                            "Restaurantes",
-                                            fontSize = 10.sp,
-                                            fontWeight = if (uiState.currentTab == MainTab.HOME) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    },
-                                    selected = uiState.currentTab == MainTab.HOME,
-                                    onClick = { viewModel.onTabSelected(MainTab.HOME) },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = selectedIconOnBadge,
-                                        selectedTextColor = selectedColor,
-                                        indicatorColor = KomaGold,
-                                        unselectedIconColor = unselectedColor,
-                                        unselectedTextColor = unselectedColor
-                                    )
-                                )
+                                    tabs.forEach { (tab, label, icon) ->
+                                        val isSelected = uiState.currentTab == tab
+                                        
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
+                                                .clickable(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = null
+                                                ) { viewModel.onTabSelected(tab) },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center,
+                                                modifier = Modifier.padding(top = 2.dp)
+                                            ) {
+                                                val contentColor by animateColorAsState(
+                                                    targetValue = if (isSelected) KomaNavGold else KomaMuted.copy(alpha = 0.5f),
+                                                    label = "color"
+                                                )
+                                                val scale by animateFloatAsState(
+                                                    targetValue = if (isSelected) 1.12f else 1f,
+                                                    label = "scale"
+                                                )
 
-
-                                // ── Pedidos ───────────────────────────────────────
-                                NavigationBarItem(
-                                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Pedidos") },
-                                    label = {
-                                        Text(
-                                            "Pedidos",
-                                            fontSize = 10.sp,
-                                            fontWeight = if (uiState.currentTab == MainTab.ORDERS) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    },
-                                    selected = uiState.currentTab == MainTab.ORDERS,
-                                    onClick = { viewModel.onTabSelected(MainTab.ORDERS) },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = selectedIconOnBadge,
-                                        selectedTextColor = selectedColor,
-                                        indicatorColor = KomaGold,
-                                        unselectedIconColor = unselectedColor,
-                                        unselectedTextColor = unselectedColor
-                                    )
-                                )
-
-                                // ── Perfil ────────────────────────────────────────
-                                NavigationBarItem(
-                                    icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
-                                    label = {
-                                        Text(
-                                            "Perfil",
-                                            fontSize = 10.sp,
-                                            fontWeight = if (uiState.currentTab == MainTab.PROFILE) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    },
-                                    selected = uiState.currentTab == MainTab.PROFILE,
-                                    onClick = { viewModel.onTabSelected(MainTab.PROFILE) },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = selectedIconOnBadge,
-                                        selectedTextColor = selectedColor,
-                                        indicatorColor = KomaGold,
-                                        unselectedIconColor = unselectedColor,
-                                        unselectedTextColor = unselectedColor
-                                    )
-                                )
-                            } // NavigationBar
+                                                Icon(
+                                                    imageVector = icon,
+                                                    contentDescription = label,
+                                                    tint = contentColor,
+                                                    modifier = Modifier
+                                                        .size(20.dp)
+                                                        .graphicsLayer {
+                                                            scaleX = scale
+                                                            scaleY = scale
+                                                        }
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = label,
+                                                    fontSize = 9.sp,
+                                                    color = contentColor,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                    maxLines = 1
+                                                )
+                                                
+                                                // Indicador de seleção inferior (dot)
+                                                AnimatedVisibility(
+                                                    visible = isSelected,
+                                                    enter = expandVertically() + fadeIn(),
+                                                    exit = shrinkVertically() + fadeOut()
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .padding(top = 2.dp)
+                                                            .size(4.dp)
+                                                            .background(KomaNavGold, CircleShape)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                } // Row
+                            } // Surface
                         } // Box
                     } // AnimatedVisibility
                 }
