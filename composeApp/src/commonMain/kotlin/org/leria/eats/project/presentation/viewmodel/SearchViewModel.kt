@@ -415,7 +415,6 @@ class SearchViewModel(
         val currentQuery = _uiState.value.textInput
 
         if (currentQuery.isBlank()) {
-            clearSearch()
             return
         }
 
