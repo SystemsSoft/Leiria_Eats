@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,7 +49,6 @@ fun OrdersScreen(
     onRefresh: () -> Unit = {},
     onOrderClick: (Order) -> Unit = {},
     onBackToList: () -> Unit = {},
-    onToggleFavorite: (Order) -> Unit,
     isFiltered: Boolean,
     onFilterToggle: () -> Unit,
     orderItemRatings: Map<String, Int> = emptyMap(),
@@ -174,8 +172,7 @@ fun OrdersScreen(
                         items(filteredOrders) { order ->
                             OrderItemCard(
                                 order = order,
-                                onClick = { onOrderClick(order) },
-                                onToggleFavorite = { onToggleFavorite(order) }
+                                onClick = { onOrderClick(order) }
                             )
                         }
                     }
@@ -592,8 +589,7 @@ private fun SummaryRow(label: String, value: String) {
 @Composable
 fun OrderItemCard(
     order: Order,
-    onClick: () -> Unit,
-    onToggleFavorite: () -> Unit
+    onClick: () -> Unit
 ) {
     val displayStatus = getDisplayStatus(order.status, order.deliveryType)
     val statusColor = getStatusColor(displayStatus)
@@ -641,22 +637,6 @@ fun OrderItemCard(
                     Text(restaurantNames, color = OText, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text("${order.subOrders.size} restaurante(s)", color = OMuted, fontSize = 11.sp)
                     Text(order.deliveryAddress, color = OMuted.copy(alpha = 0.6f), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(if (order.isFavorite) OGold.copy(alpha = 0.15f) else OCard)
-                        .border(1.dp, if (order.isFavorite) OGold.copy(alpha = 0.5f) else OMuted.copy(alpha = 0.2f), CircleShape)
-                        .clickable { onToggleFavorite() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (order.isFavorite) Icons.Default.Star else Icons.Outlined.StarBorder,
-                        contentDescription = "Favoritar",
-                        tint = if (order.isFavorite) OGold else OMuted,
-                        modifier = Modifier.size(17.dp)
-                    )
                 }
             }
 

@@ -421,27 +421,6 @@ fun MainScreenWithAI(
                                     )
                                 )
 
-                                // ── Favoritos ─────────────────────────────────────
-                                NavigationBarItem(
-                                    icon = { Icon(Icons.Default.Star, contentDescription = "Favoritos") },
-                                    label = {
-                                        Text(
-                                            "Favoritos",
-                                            fontSize = 10.sp,
-                                            fontWeight = if (uiState.currentTab == MainTab.FAVORITES) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    },
-                                    selected = uiState.currentTab == MainTab.FAVORITES,
-                                    onClick = { viewModel.onTabSelected(MainTab.FAVORITES) },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = selectedIconOnBadge,
-                                        selectedTextColor = selectedColor,
-                                        indicatorColor = KomaGold,
-                                        unselectedIconColor = unselectedColor,
-                                        unselectedTextColor = unselectedColor
-                                    )
-                                )
-
                                 // ── Perfil ────────────────────────────────────────
                                 NavigationBarItem(
                                     icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
@@ -703,14 +682,12 @@ fun MainScreenWithAI(
 
                             MainTab.ORDERS -> {
                                 OrdersScreen(
-                                    // ...existing code...
                                     orders = uiState.orderHistory,
                                     isLoading = uiState.isLoading,
                                     selectedOrder = uiState.selectedOrder,
                                     onRefresh = { viewModel.refreshOrders() },
                                     onOrderClick = { order -> viewModel.selectOrder(order) },
                                     onBackToList = { viewModel.clearOrderSelection() },
-                                    onToggleFavorite = { order -> viewModel.toggleFavoriteOrder(order) },
                                     isFiltered = uiState.isFilterEnabled,
                                     onFilterToggle = { viewModel.toggleFilter() },
                                     orderItemRatings = uiState.orderItemRatings,
@@ -718,18 +695,6 @@ fun MainScreenWithAI(
                                         viewModel.rateOrderItem(orderId, productGid, restaurantGid, productName, rating)
                                     },
                                     onMarkDelivered = { orderId -> viewModel.markOrderAsDelivered(orderId) }
-                                )
-                            }
-
-                             MainTab.FAVORITES -> {
-                                FavoritesScreen(
-                                    // ...existing code...
-                                    orders = uiState.favoriteOrders,
-                                    selectedOrder = uiState.selectedOrder,
-                                    onOrderClick = { order -> viewModel.selectOrder(order) },
-                                    onToggleFavorite = { order -> viewModel.toggleFavoriteOrder(order) },
-                                    onBackToList = { viewModel.clearOrderSelection() },
-                                    onSetNickname = { orderId, nickname -> viewModel.updateFavoriteOrderNickname(orderId, nickname) }
                                 )
                             }
 

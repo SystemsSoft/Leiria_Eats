@@ -12,8 +12,7 @@ enum class MainTab {
     AI,
     CART,
     ORDERS,
-    PROFILE,
-    FAVORITES
+    PROFILE
 }
 
 @Serializable
@@ -77,7 +76,6 @@ data class SearchUiState(
     val pendingSavePaymentMethod: Boolean = false,
     val pendingProfileNavigation: Boolean = false, // Flag to navigate to profile after TTS finishes
     val orderJustPlaced: Boolean = false, // Flag to trigger voice feedback when order is placed
-    val favoriteOrderNicknames: Map<String, String> = emptyMap(),
     val orderSearchQueries: Map<String, String> = emptyMap(),
     // key = "orderId::productName", value = 1..5
     val orderItemRatings: Map<String, Int> = emptyMap(),
@@ -89,14 +87,4 @@ data class SearchUiState(
     val chatMessages: List<ChatMessage> = emptyList()
 ) {
     val cartCount: Int get() = cartItems.size
-    val favoriteOrders: List<Order> get() = orderHistory
-        .filter { it.isFavorite }
-        .map { order ->
-            val nick = favoriteOrderNicknames[order.gid]
-            val query = orderSearchQueries[order.gid]
-            order.copy(
-                nickname = if (!nick.isNullOrBlank()) nick else order.nickname,
-                searchQuery = if (!query.isNullOrBlank()) query else order.searchQuery
-            )
-        }
 }

@@ -29,11 +29,7 @@ data class Order(
     val subOrders: List<SubOrder> = emptyList(),
 
     // UI Local state / compatibility
-    val date: String = "Hoje",
-    val isFavorite: Boolean = false,
-    val nickname: String = "",
-    @SerialName("search_query")
-    val searchQuery: String = ""
+    val date: String = "Hoje"
 )
 
 @Serializable

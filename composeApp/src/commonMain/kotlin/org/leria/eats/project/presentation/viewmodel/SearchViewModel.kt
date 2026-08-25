@@ -65,8 +65,6 @@ class SearchViewModel(
         return "Crie o seu perfil para começar a pedir. Leva menos de 1 minuto! 🍽️"
     }
 
-    private val favoriteOrderIdsFlow = profileRepository.favoriteOrderIdsFlow
-
     private var initialRestaurantsLoaded = false
 
     /** Carrega todos os restaurantes e guarda em [SearchUiState.allRestaurants] para o Home. */
@@ -116,8 +114,6 @@ class SearchViewModel(
             refreshOrdersInternal()
         }
         startStatusPolling()
-        observeFavoriteOrders()
-        observeFavoriteOrderNicknames()
         observeOrderSearchQueries()
         observeOrderItemRatings()
         observeOrderProductGids()
@@ -148,50 +144,11 @@ class SearchViewModel(
     }
 
 
-    private fun observeFavoriteOrders() {
-        viewModelScope.launch {
-            favoriteOrderIdsFlow.collect { favoriteIds ->
-                _uiState.update { currentState ->
-                    val updatedOrders = currentState.orderHistory.map { order ->
-                        order.copy(isFavorite = favoriteIds.contains(order.gid))
-                    }
-                    currentState.copy(orderHistory = updatedOrders)
-                }
-            }
-        }
-    }
-
-    fun toggleFavoriteOrder(order: Order) {
-        viewModelScope.launch {
-            val currentFavorites = favoriteOrderIdsFlow.first()
-            val newFavorites = if (order.isFavorite) {
-                currentFavorites - order.gid
-            } else {
-                currentFavorites + order.gid
-            }
-            profileRepository.saveFavoriteOrderIds(newFavorites)
-        }
-    }
-
-    private fun observeFavoriteOrderNicknames() {
-        viewModelScope.launch {
-            profileRepository.favoriteOrderNicknamesFlow.collect { nicknames ->
-                _uiState.update { it.copy(favoriteOrderNicknames = nicknames) }
-            }
-        }
-    }
-
     private fun observeOrderSearchQueries() {
         viewModelScope.launch {
             profileRepository.orderSearchQueriesFlow.collect { queries ->
                 _uiState.update { it.copy(orderSearchQueries = queries) }
             }
-        }
-    }
-
-    fun updateFavoriteOrderNickname(orderId: String, nickname: String) {
-        viewModelScope.launch {
-            profileRepository.saveFavoriteOrderNickname(orderId, nickname)
         }
     }
 
@@ -262,7 +219,7 @@ class SearchViewModel(
             while (true) {
                 val userId = _uiState.value.userProfile.id
                 val tab = _uiState.value.currentTab
-                if (userId.isNotBlank() && (tab == MainTab.ORDERS || tab == MainTab.FAVORITES)) {
+                if (userId.isNotBlank() && tab == MainTab.ORDERS) {
                     refreshOrdersInternal()
                 }
                 delay(10000)
@@ -276,15 +233,11 @@ class SearchViewModel(
 
         try {
             val updatedOrders = apiClient.getCustomerOrders(userId)
-            val favoriteIds = favoriteOrderIdsFlow.first()
-            val ordersWithFavorites = updatedOrders.map { order ->
-                order.copy(isFavorite = favoriteIds.contains(order.gid))
-            }
-            _uiState.update { it.copy(orderHistory = ordersWithFavorites) }
+            _uiState.update { it.copy(orderHistory = updatedOrders) }
 
             val selectedGid = _uiState.value.selectedOrder?.gid
             if (selectedGid != null) {
-                val updatedSelected = ordersWithFavorites.find { it.gid == selectedGid }
+                val updatedSelected = updatedOrders.find { it.gid == selectedGid }
                 if (updatedSelected != null) {
                     _uiState.update { it.copy(selectedOrder = updatedSelected) }
                 }
@@ -472,46 +425,11 @@ class SearchViewModel(
         // Clear textInput immediately to prevent duplicate calls (e.g. voice race condition)
         _uiState.update { it.copy(textInput = "") }
 
-        var resolvedQuery = currentQuery.trim()
-
-        val favoriteAlias = resolvedQuery.startsWith("pedir", ignoreCase = true)
-        if (favoriteAlias) {
-            val favoriteName = resolvedQuery
-                .replaceFirst(Regex("^pedir\\s*", RegexOption.IGNORE_CASE), "")
-                .trim()
-
-            if (favoriteName.isBlank()) {
-                return
-            }
-
-            val nicknames = _uiState.value.favoriteOrderNicknames
-            val matchedOrderId = nicknames.entries
-                .firstOrNull { it.value.contains(favoriteName, ignoreCase = true) }
-                ?.key
-
-            if (matchedOrderId == null) {
-                return
-            }
-
-            val favoriteOrder = _uiState.value.favoriteOrders
-                .firstOrNull { it.gid == matchedOrderId }
-
-            if (favoriteOrder == null) {
-                return
-            }
-
-            resolvedQuery = favoriteOrder.searchQuery
-            // Determine the display name: nickname if set, otherwise restaurant name
-            val displayName = nicknames[matchedOrderId]?.takeIf { it.isNotBlank() }
-                ?: (favoriteOrder.subOrders.firstOrNull()?.restaurantName ?: "")
-            fetchSearch(resolvedQuery, favoriteName = displayName)
-            return
-        }
-
+        val resolvedQuery = currentQuery.trim()
         fetchSearch(resolvedQuery)
     }
 
-    private fun fetchSearch(resolvedQuery: String, favoriteName: String? = null) {
+    private fun fetchSearch(resolvedQuery: String) {
         // Adiciona a mensagem do usuário ao chat
         addUserMessage(resolvedQuery)
 
@@ -847,7 +765,7 @@ class SearchViewModel(
 
     fun onTabSelected(tab: MainTab) {
         _uiState.update { it.copy(currentTab = tab) }
-        if (tab == MainTab.ORDERS || tab == MainTab.FAVORITES) {
+        if (tab == MainTab.ORDERS) {
             val userId = _uiState.value.userProfile.id
             if (userId.isNotBlank()) {
                 viewModelScope.launch { refreshOrdersInternal() }

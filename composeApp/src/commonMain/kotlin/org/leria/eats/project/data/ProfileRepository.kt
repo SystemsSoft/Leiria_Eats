@@ -4,7 +4,6 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
@@ -18,8 +17,6 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
     private val PHONE_KEY = stringPreferencesKey("user_phone")
     private val PHOTO_URL_KEY = stringPreferencesKey("user_photo_url")
     private val ADDRESSES_KEY = stringPreferencesKey("user_addresses")
-    private val FAVORITE_ORDERS_KEY = stringSetPreferencesKey("favorite_orders")
-    private val FAVORITE_ORDER_NICKNAMES_KEY = stringPreferencesKey("favorite_order_nicknames")
     private val ORDER_SEARCH_QUERIES_KEY = stringPreferencesKey("order_search_queries")
     private val PAYMENT_METHODS_KEY = stringPreferencesKey("saved_payment_methods")
     private val ORDER_ITEM_RATINGS_KEY = stringPreferencesKey("order_item_ratings")
@@ -74,37 +71,6 @@ class ProfileRepository(private val dataStore: DataStore<Preferences>) {
             preferences[ADDRESSES_KEY] = addressesJson
             preferences[ALLERGIES_KEY] = allergies
             preferences[LIFESTYLES_KEY] = lifestyles
-        }
-    }
-
-    val favoriteOrderIdsFlow: Flow<Set<String>> = dataStore.data.map { preferences ->
-        preferences[FAVORITE_ORDERS_KEY] ?: emptySet()
-    }
-
-    suspend fun saveFavoriteOrderIds(ids: Set<String>) {
-        dataStore.edit { preferences ->
-            preferences[FAVORITE_ORDERS_KEY] = ids
-        }
-    }
-
-    val favoriteOrderNicknamesFlow: Flow<Map<String, String>> = dataStore.data.map { preferences ->
-        val json = preferences[FAVORITE_ORDER_NICKNAMES_KEY] ?: "{}"
-        try {
-            Json.decodeFromString<Map<String, String>>(json)
-        } catch (e: Exception) {
-            emptyMap()
-        }
-    }
-
-    suspend fun saveFavoriteOrderNickname(orderId: String, nickname: String) {
-        dataStore.edit { preferences ->
-            val current = try {
-                Json.decodeFromString<Map<String, String>>(preferences[FAVORITE_ORDER_NICKNAMES_KEY] ?: "{}")
-            } catch (e: Exception) {
-                emptyMap()
-            }
-            val updated = if (nickname.isBlank()) current - orderId else current + (orderId to nickname)
-            preferences[FAVORITE_ORDER_NICKNAMES_KEY] = Json.encodeToString(updated)
         }
     }
 
