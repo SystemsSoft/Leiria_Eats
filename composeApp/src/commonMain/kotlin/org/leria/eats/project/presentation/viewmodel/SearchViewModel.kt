@@ -785,6 +785,10 @@ class SearchViewModel(
         _uiState.update { it.copy(isFilterEnabled = !it.isFilterEnabled) }
     }
 
+    fun toggleBottomNav() {
+        _uiState.update { it.copy(isBottomNavVisible = !it.isBottomNavVisible) }
+    }
+
     suspend fun getDeliveryFee(
         customerLat: Double,
         customerLon: Double,

@@ -311,8 +311,13 @@ fun MainScreenWithAI(
             Scaffold(
                 snackbarHost = { SnackbarHost(snackbarHostState) },
                 bottomBar = {
-                    val showBottomBar = !(uiState.currentTab == MainTab.HOME && uiState.selectedRestaurant != null)
+                    val showBottomBar = if (uiState.currentTab == MainTab.AI) {
+                        uiState.isBottomNavVisible
+                    } else {
+                        !(uiState.currentTab == MainTab.HOME && uiState.selectedRestaurant != null)
                                         && uiState.currentTab != MainTab.CART
+                    }
+                    
                     AnimatedVisibility(
                         visible = showBottomBar,
                         enter = slideInVertically(
@@ -558,6 +563,7 @@ fun MainScreenWithAI(
                                         viewModel.clearSearch()
                                         viewModel.clearCart()
                                     },
+                                    onToggleNav = { viewModel.toggleBottomNav() },
                                     onGetDeliveryFee = { custLat, custLon, restLat, restLon, restGid ->
                                         viewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restGid)
                                     },

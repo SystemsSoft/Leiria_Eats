@@ -69,6 +69,7 @@ fun AiSearchScreen(
     onViewCart: () -> Unit,
     onClearSearch: () -> Unit,
     onIntroClick: () -> Unit = {},
+    onToggleNav: () -> Unit = {},
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
     onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null }
 ) {
@@ -137,9 +138,11 @@ fun AiSearchScreen(
                 value = uiState.textInput,
                 isListening = isListening,
                 isLoading = uiState.isLoading,
+                isNavVisible = uiState.isBottomNavVisible,
                 onValueChange = onTextChange,
                 onSend = onSendClick,
-                onMic = onMicClick
+                onMic = onMicClick,
+                onToggleNav = onToggleNav
             )
         },
         containerColor = AiDeepBg
@@ -1133,9 +1136,11 @@ private fun AiSemanticInputBar(
     value: String,
     isListening: Boolean,
     isLoading: Boolean,
+    isNavVisible: Boolean,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
-    onMic: () -> Unit
+    onMic: () -> Unit,
+    onToggleNav: () -> Unit
 ) {
     val borderAlpha by rememberInfiniteTransition(label = "border").animateFloat(
         initialValue = 0.3f, targetValue = 0.9f, label = "borderAlpha",
@@ -1148,7 +1153,6 @@ private fun AiSemanticInputBar(
             .padding(horizontal = 12.dp)
             .padding(bottom = 8.dp, top = 4.dp, start = 8.dp, end = 8.dp)
             .imePadding()
-            .navigationBarsPadding()
     ) {
         AnimatedVisibility(visible = isListening, enter = fadeIn(tween(300)) + expandVertically(tween(300)), exit = fadeOut(tween(200)) + shrinkVertically(tween(200))) {
             Column {
@@ -1169,57 +1173,93 @@ private fun AiSemanticInputBar(
         }
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(28.dp))
-                .background(AiCard)
-                .then(
-                    if (isListening) {
-                        val gradientShift by rememberInfiniteTransition(label = "gradientBorder").animateFloat(
-                            initialValue = 0f, targetValue = 1f,
-                            animationSpec = infiniteRepeatable(animation = tween(2000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
-                            label = "shift"
-                        )
-                        Modifier.border(3.dp, Brush.sweepGradient(colors = listOf(AiAccent, AiPrimary, KomaGoldAccent, AiSecondary, KomaGreenDark, AiAccent), center = androidx.compose.ui.geometry.Offset(x = gradientShift * 1000f, y = gradientShift * 1000f)), RoundedCornerShape(28.dp))
-                    } else {
-                        Modifier.border(1.5.dp, Brush.horizontalGradient(listOf(AiPrimary.copy(alpha = borderAlpha * 0.6f), AiSecondary.copy(alpha = borderAlpha * 0.4f))), RoundedCornerShape(28.dp))
-                    }
-                )
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = AiPrimary.copy(alpha = 0.7f), modifier = Modifier.size(18.dp).padding(start = 4.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            TextField(
-                value = value, onValueChange = onValueChange,
-                placeholder = { Text("Ex: \"Uma pizza de calabresa e alguma bebida\"...", color = AiTextMuted, fontSize = 14.sp) },
-                enabled = !isLoading, singleLine = true,
-                colors = TextFieldDefaults.colors(focusedTextColor = AiText, unfocusedTextColor = AiText, cursorColor = AiPrimary, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent, disabledContainerColor = Color.Transparent),
-                modifier = Modifier.weight(1f)
-            )
-            AnimatedVisibility(visible = value.isNotBlank() && !isLoading) {
-                IconButton(onClick = onSend, modifier = Modifier.size(36.dp).background(Brush.linearGradient(listOf(AiPrimary, AiSecondary)), CircleShape)) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar", tint = Color.White, modifier = Modifier.size(16.dp)) }
+            // ── Ícone de Menu (Trigger do BottomBar) ─────────────────────────
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(AiCard)
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.horizontalGradient(listOf(AiPrimary.copy(alpha = 0.5f), AiSecondary.copy(alpha = 0.3f))),
+                        shape = CircleShape
+                    )
+                    .clickable { onToggleNav() },
+                contentAlignment = Alignment.Center
+            ) {
+                val rotation by animateFloatAsState(
+                    targetValue = if (isNavVisible) 180f else 0f,
+                    animationSpec = spring(stiffness = Spring.StiffnessLow),
+                    label = "rotation"
+                )
+                Icon(
+                    imageVector = if (isNavVisible) Icons.Default.Close else Icons.Default.Menu,
+                    contentDescription = "Menu",
+                    tint = AiPrimary,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .graphicsLayer { rotationZ = rotation }
+                )
             }
-            if (value.isBlank() && isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(end = 4.dp), color = AiPrimary, strokeWidth = 2.dp)
-            }
-            Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                if (isListening) {
-                    val infiniteMicTransition = rememberInfiniteTransition(label = "micWaves")
-                    val outerScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.8f, animationSpec = infiniteRepeatable(animation = tween(1200, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "outerScale")
-                    val outerAlpha by infiniteMicTransition.animateFloat(initialValue = 0.6f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "outerAlpha")
-                    val middleScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.6f, animationSpec = infiniteRepeatable(animation = tween(1200, 150, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "middleScale")
-                    val middleAlpha by infiniteMicTransition.animateFloat(initialValue = 0.5f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, 150, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "middleAlpha")
-                    val innerScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.4f, animationSpec = infiniteRepeatable(animation = tween(1200, 300, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "innerScale")
-                    val innerAlpha by infiniteMicTransition.animateFloat(initialValue = 0.4f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, 300, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "innerAlpha")
-                    Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = outerScale; scaleY = outerScale; alpha = outerAlpha }.background(Brush.radialGradient(colors = listOf(AiAccent.copy(alpha = 0.3f), AiPrimary.copy(alpha = 0.2f), Color.Transparent)), CircleShape))
-                    Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = middleScale; scaleY = middleScale; alpha = middleAlpha }.background(Brush.radialGradient(colors = listOf(AiSecondary.copy(alpha = 0.4f), KomaGoldAccent.copy(alpha = 0.3f), Color.Transparent)), CircleShape))
-                    Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = innerScale; scaleY = innerScale; alpha = innerAlpha }.background(Brush.radialGradient(colors = listOf(AiPrimary.copy(alpha = 0.5f), AiAccent.copy(alpha = 0.4f), Color.Transparent)), CircleShape))
+
+            // ── Barra de Input ───────────────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(AiCard)
+                    .then(
+                        if (isListening) {
+                            val gradientShift by rememberInfiniteTransition(label = "gradientBorder").animateFloat(
+                                initialValue = 0f, targetValue = 1f,
+                                animationSpec = infiniteRepeatable(animation = tween(2000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
+                                label = "shift"
+                            )
+                            Modifier.border(3.dp, Brush.sweepGradient(colors = listOf(AiAccent, AiPrimary, KomaGoldAccent, AiSecondary, KomaGreenDark, AiAccent), center = androidx.compose.ui.geometry.Offset(x = gradientShift * 1000f, y = gradientShift * 1000f)), RoundedCornerShape(28.dp))
+                        } else {
+                            Modifier.border(1.5.dp, Brush.horizontalGradient(listOf(AiPrimary.copy(alpha = borderAlpha * 0.6f), AiSecondary.copy(alpha = borderAlpha * 0.4f))), RoundedCornerShape(28.dp))
+                        }
+                    )
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = AiPrimary.copy(alpha = 0.7f), modifier = Modifier.size(18.dp).padding(start = 4.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                TextField(
+                    value = value, onValueChange = onValueChange,
+                    placeholder = { Text("Ex: \"Uma pizza de calabresa\"...", color = AiTextMuted, fontSize = 14.sp) },
+                    enabled = !isLoading, singleLine = true,
+                    colors = TextFieldDefaults.colors(focusedTextColor = AiText, unfocusedTextColor = AiText, cursorColor = AiPrimary, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent, disabledContainerColor = Color.Transparent),
+                    modifier = Modifier.weight(1f)
+                )
+                AnimatedVisibility(visible = value.isNotBlank() && !isLoading) {
+                    IconButton(onClick = onSend, modifier = Modifier.size(36.dp).background(Brush.linearGradient(listOf(AiPrimary, AiSecondary)), CircleShape)) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar", tint = Color.White, modifier = Modifier.size(16.dp)) }
                 }
-                IconButton(onClick = onMic, enabled = !isLoading, modifier = Modifier.size(40.dp)) {
-                    val micAlpha by rememberInfiniteTransition(label = "mic").animateFloat(initialValue = if (isListening) 0.4f else 1f, targetValue = 1f, label = "micPulse", animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse))
-                    if (isListening) { Box(modifier = Modifier.size(32.dp).background(Brush.radialGradient(colors = listOf(AiAccent.copy(alpha = 0.3f), Color.Transparent)), CircleShape)) }
-                    Icon(imageVector = if (isListening) Icons.Default.MicOff else Icons.Default.Mic, contentDescription = "Microfone", tint = if (isListening) AiAccent.copy(alpha = micAlpha) else AiPrimary, modifier = Modifier.size(20.dp))
+                if (value.isBlank() && isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(end = 4.dp), color = AiPrimary, strokeWidth = 2.dp)
+                }
+                Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                    if (isListening) {
+                        val infiniteMicTransition = rememberInfiniteTransition(label = "micWaves")
+                        val outerScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.8f, animationSpec = infiniteRepeatable(animation = tween(1200, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "outerScale")
+                        val outerAlpha by infiniteMicTransition.animateFloat(initialValue = 0.6f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "outerAlpha")
+                        val middleScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.6f, animationSpec = infiniteRepeatable(animation = tween(1200, 150, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "middleScale")
+                        val middleAlpha by infiniteMicTransition.animateFloat(initialValue = 0.5f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, 150, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "middleAlpha")
+                        val innerScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.4f, animationSpec = infiniteRepeatable(animation = tween(1200, 300, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "innerScale")
+                        val innerAlpha by infiniteMicTransition.animateFloat(initialValue = 0.4f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, 300, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "innerAlpha")
+                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = outerScale; scaleY = outerScale; alpha = outerAlpha }.background(Brush.radialGradient(colors = listOf(AiAccent.copy(alpha = 0.3f), AiPrimary.copy(alpha = 0.2f), Color.Transparent)), CircleShape))
+                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = middleScale; scaleY = middleScale; alpha = middleAlpha }.background(Brush.radialGradient(colors = listOf(AiSecondary.copy(alpha = 0.4f), KomaGoldAccent.copy(alpha = 0.3f), Color.Transparent)), CircleShape))
+                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = innerScale; scaleY = innerScale; alpha = innerAlpha }.background(Brush.radialGradient(colors = listOf(AiPrimary.copy(alpha = 0.5f), AiAccent.copy(alpha = 0.4f), Color.Transparent)), CircleShape))
+                    }
+                    IconButton(onClick = onMic, enabled = !isLoading, modifier = Modifier.size(40.dp)) {
+                        val micAlpha by rememberInfiniteTransition(label = "mic").animateFloat(initialValue = if (isListening) 0.4f else 1f, targetValue = 1f, label = "micPulse", animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse))
+                        if (isListening) { Box(modifier = Modifier.size(32.dp).background(Brush.radialGradient(colors = listOf(AiAccent.copy(alpha = 0.3f), Color.Transparent)), CircleShape)) }
+                        Icon(imageVector = if (isListening) Icons.Default.MicOff else Icons.Default.Mic, contentDescription = "Microfone", tint = if (isListening) AiAccent.copy(alpha = micAlpha) else AiPrimary, modifier = Modifier.size(20.dp))
+                    }
                 }
             }
         }

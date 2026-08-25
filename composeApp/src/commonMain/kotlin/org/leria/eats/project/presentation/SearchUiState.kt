@@ -70,6 +70,7 @@ data class SearchUiState(
     val pendingDeliveryFeesMap: Map<String, Double> = emptyMap(),
     val isProcessingAutoPayment: Boolean = false,
     val isStreaming: Boolean = false, // Indica se a IA está enviando texto em tempo real
+    val isBottomNavVisible: Boolean = false, // Controla se o BottomBar está visível no chat
     val currentAiSessionId: String? = null, // ID da sessão atual da IA para confirmação final
     val autoPaymentOrderId: Int? = null,
     val autoPaymentIntentId: String? = null,
