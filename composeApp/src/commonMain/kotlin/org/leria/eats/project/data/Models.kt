@@ -66,6 +66,7 @@ data class ChatResponse(
     val restaurantResults: List<Restaurant> = emptyList(),
     val productResults: List<Product> = emptyList(),
     val products: List<Product> = emptyList(),
+    val cartProducts: List<Product> = emptyList(),
     @SerialName("show_cart")
     val showCart: Boolean = false,
     @SerialName("session_id")

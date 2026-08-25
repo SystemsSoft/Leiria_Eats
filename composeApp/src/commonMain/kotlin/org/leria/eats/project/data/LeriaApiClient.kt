@@ -72,6 +72,7 @@ class LeriaApiClient {
     private fun normalizeChatResponse(response: ChatResponse): ChatResponse {
         return response.copy(
             products = response.products.map { normalizeProductUrl(it) },
+            cartProducts = response.cartProducts.map { normalizeProductUrl(it) },
             productResults = response.productResults.map { normalizeProductUrl(it) },
             restaurantResults = response.restaurantResults.map { normalizeRestaurantUrls(it) }
         )

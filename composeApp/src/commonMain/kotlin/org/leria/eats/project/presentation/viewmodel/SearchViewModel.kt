@@ -587,11 +587,10 @@ class SearchViewModel(
      * Sincroniza os produtos da IA com o carrinho e permite continuar editando.
      */
     private fun handleShowCart(chatResponse: ChatResponse) {
-        val aiProducts = chatResponse.products
+        val aiCartProducts = chatResponse.cartProducts
         
-        // Se a IA enviou uma lista de produtos, ela representa o estado ATUAL da sacola para esta conversa.
-        // Substituímos os itens em vez de acumular, permitindo "edição" (remoção/alteração).
-        updateAiCart(aiProducts)
+        // Se a IA enviou uma lista de produtos na sacola, ela representa o estado ATUAL.
+        updateAiCart(aiCartProducts)
 
         _uiState.update {
             it.copy(
