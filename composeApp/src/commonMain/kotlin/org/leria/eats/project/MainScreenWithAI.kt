@@ -331,7 +331,7 @@ fun MainScreenWithAI(
                             contentAlignment = Alignment.Center
                         ) {
                             Surface(
-                                color = KomaDeepBg.copy(alpha = 0.96f),
+                                color = KomaDeepBg.copy(alpha = 0.85f),
                                 shape = RoundedCornerShape(28.dp),
                                 modifier = Modifier
                                     .widthIn(max = 500.dp)
@@ -442,9 +442,7 @@ fun MainScreenWithAI(
                     AnimatedContent(
                         targetState = uiState.currentTab,
                         transitionSpec = {
-                            // Smooth fade + slide animation based on navigation direction
                             when {
-                                // Profile (Onboarding) to AI - smooth fade transition
                                 initialState == MainTab.PROFILE && targetState == MainTab.AI -> {
                                     fadeIn(
                                         animationSpec = tween(
