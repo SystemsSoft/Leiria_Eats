@@ -39,9 +39,6 @@ class AndroidVoiceRecognizer(private val context: Context) : VoiceRecognizer {
     private val _error = MutableStateFlow<String?>(null)
     override val error: StateFlow<String?> = _error.asStateFlow()
 
-    private val _shouldAutoSend = MutableStateFlow(false)
-    override val shouldAutoSend: StateFlow<Boolean> = _shouldAutoSend.asStateFlow()
-
     private val _currentContext = MutableStateFlow<VoiceContext?>(null)
     override val currentContext: StateFlow<VoiceContext?> = _currentContext.asStateFlow()
 
@@ -165,7 +162,6 @@ class AndroidVoiceRecognizer(private val context: Context) : VoiceRecognizer {
             userWantsToListen = true
             accumulatedText = ""
             _results.value = ""
-            _shouldAutoSend.value = false // Reset auto-send flag
             _currentContext.value = context // Set the context
             lastTextReceived = ""
             cancelAutoPauseTimer()
@@ -178,14 +174,15 @@ class AndroidVoiceRecognizer(private val context: Context) : VoiceRecognizer {
             userWantsToListen = false // Desativa a flag (Agora pode parar de verdade)
             cancelAutoPauseTimer()
             speechRecognizer?.stopListening()
+            // Mantém o currentContext: quem observa isListening precisa saber em
+            // qual tela o microfone estava a ouvir para poder enviar a mensagem
+            // automaticamente. O contexto só é limpo no próximo startListening().
             _isListening.value = false
-            _currentContext.value = null // Clear context when stopping
         }
     }
 
     override fun clearResults() {
         _results.value = ""
-        _shouldAutoSend.value = false
         accumulatedText = ""
         lastTextReceived = ""
     }
@@ -195,11 +192,11 @@ class AndroidVoiceRecognizer(private val context: Context) : VoiceRecognizer {
         // Cancela qualquer timer anterior
         cancelAutoPauseTimer()
 
-        // Cria novo timer: se passar 1.8s sem novos resultados, envia automaticamente
+        // Cria novo timer: se passar 1.8s sem novos resultados, fecha o microfone.
+        // O fechamento (isListening = false) é o único sinal que dispara o
+        // envio automático da mensagem, evitando duplicidade.
         autoPauseTimer = Runnable {
             if (userWantsToListen && _results.value.isNotBlank()) {
-                // Detectou pausa significativa - sinaliza para enviar automaticamente
-                _shouldAutoSend.value = true
                 userWantsToListen = false
                 speechRecognizer?.stopListening()
                 _isListening.value = false

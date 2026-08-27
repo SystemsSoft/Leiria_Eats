@@ -13,7 +13,6 @@ interface VoiceRecognizer {
     val results: StateFlow<String>
     val isListening: StateFlow<Boolean>
     val error: StateFlow<String?>
-    val shouldAutoSend: StateFlow<Boolean>
     val currentContext: StateFlow<VoiceContext?>
 
     fun startListening(context: VoiceContext)

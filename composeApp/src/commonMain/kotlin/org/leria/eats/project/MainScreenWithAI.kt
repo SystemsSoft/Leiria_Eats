@@ -104,7 +104,6 @@ fun MainScreenWithAI(
     val tts = koinInject<TextToSpeechService>()
     val voiceText by voiceRecognizer.results.collectAsState()
     val isListening by voiceRecognizer.isListening.collectAsState()
-    val shouldAutoSend by voiceRecognizer.shouldAutoSend.collectAsState()
     val voiceContext by voiceRecognizer.currentContext.collectAsState()
     val permissionStatus by permissionManager.status.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -155,20 +154,10 @@ fun MainScreenWithAI(
         }
     }
 
-    // Auto-send quando detectar pausa na fala (estilo Gemini) - apenas para AI e Home Search
-    LaunchedEffect(shouldAutoSend, voiceContext) {
-        if (shouldAutoSend && (voiceContext == VoiceContext.AI_SEARCH || voiceContext == VoiceContext.HOME_SEARCH)) {
-            val capturedText = voiceText.trim()
-            if (capturedText.isNotEmpty()) {
-                viewModel.updateInputFromVoice(capturedText)
-                delay(300)
-                viewModel.sendSearch()
-            }
-        }
-    }
-
+    // Auto-envia assim que o microfone fecha (seja por pausa detectada automaticamente
+    // -estilo Gemini- ou por clique manual no botão) - apenas para AI e Home Search.
+    // Única fonte de envio automático: evita disparos duplicados de sendSearch().
     LaunchedEffect(isListening, voiceContext) {
-        // Só auto-envia se o contexto for de IA ou Home Search
         if (!isListening && (voiceContext == VoiceContext.AI_SEARCH || voiceContext == VoiceContext.HOME_SEARCH)) {
             val capturedText = voiceText.trim()
             if (capturedText.isNotEmpty()) {
@@ -183,10 +172,13 @@ fun MainScreenWithAI(
         if (permissionStatus != PermissionStatus.GRANTED) voiceRecognizer.stopListening()
     }
 
-    // Limpa os resultados de voz ao trocar de tab
+    // Limpa os resultados de voz ao trocar de tab.
+    // Importante: limpar ANTES de parar o microfone, para que o texto já
+    // esteja vazio no instante em que isListening vira false — evitando que
+    // o efeito de auto-envio dispare uma busca com um resto de transcrição.
     LaunchedEffect(uiState.currentTab) {
-        voiceRecognizer.stopListening()
         voiceRecognizer.clearResults()
+        voiceRecognizer.stopListening()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

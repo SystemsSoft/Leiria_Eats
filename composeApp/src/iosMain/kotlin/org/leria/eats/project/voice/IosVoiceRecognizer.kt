@@ -5,8 +5,14 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import platform.AVFAudio.AVAudioEngine
 import platform.AVFAudio.AVAudioSession
 import platform.AVFAudio.AVAudioSessionCategoryPlayAndRecord
@@ -32,11 +38,12 @@ class IosVoiceRecognizer : VoiceRecognizer {
     private val _error = MutableStateFlow<String?>(null)
     override val error = _error.asStateFlow()
 
-    private val _shouldAutoSend = MutableStateFlow(false)
-    override val shouldAutoSend = _shouldAutoSend.asStateFlow()
-
     private val _currentContext = MutableStateFlow<VoiceContext?>(null)
     override val currentContext = _currentContext.asStateFlow()
+
+    // Escopo próprio para o timer de detecção de pausa (estilo Gemini).
+    private val recognizerScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var silenceJob: Job? = null
 
     // Use pt-BR locale — it has broader speech recognition support than pt-PT.
     // Falls back to device locale if pt-BR recognizer is unavailable.
@@ -71,8 +78,7 @@ class IosVoiceRecognizer : VoiceRecognizer {
             return
         }
 
-        // Reset auto-send flag and set context
-        _shouldAutoSend.value = false
+        // Set context for this listening session
         _currentContext.value = context
 
         // Guard: microphone permission
@@ -134,8 +140,13 @@ class IosVoiceRecognizer : VoiceRecognizer {
         recognitionTask = speechRecognizer.recognitionTaskWithRequest(request) { result, taskError ->
             if (result != null) {
                 _results.value = result.bestTranscription.formattedString
+                // Detecção de pausa (estilo Gemini): se não chegar nenhum resultado
+                // novo por 1.8s, encerra a escuta automaticamente para que a
+                // mensagem seja enviada assim que o utilizador terminar de falar.
+                scheduleSilenceTimer()
             }
             if (taskError != null || result?.isFinal() == true) {
+                silenceJob?.cancel()
                 if (audioEngine.isRunning()) audioEngine.stop()
                 if (tapInstalled) {
                     inputNode.removeTapOnBus(0u)
@@ -183,17 +194,30 @@ class IosVoiceRecognizer : VoiceRecognizer {
     }
 
     override fun stopListening() {
+        // Mantém o currentContext: quem observa isListening precisa saber em
+        // qual tela o microfone estava a ouvir para poder enviar a mensagem
+        // automaticamente. O contexto só é limpo no próximo startListening().
         cleanupSession()
-        _currentContext.value = null // Clear context when stopping
     }
 
     override fun clearResults() {
         _results.value = ""
-        _shouldAutoSend.value = false
+    }
+
+    private fun scheduleSilenceTimer() {
+        silenceJob?.cancel()
+        silenceJob = recognizerScope.launch {
+            delay(1800)
+            if (_isListening.value) {
+                stopListening()
+            }
+        }
     }
 
     /** Stops everything and returns to a clean idle state. */
     private fun cleanupSession() {
+        silenceJob?.cancel()
+        silenceJob = null
         if (audioEngine.isRunning()) {
             audioEngine.stop()
         }
