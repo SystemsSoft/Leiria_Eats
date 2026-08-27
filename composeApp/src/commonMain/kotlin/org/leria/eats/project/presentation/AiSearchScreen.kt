@@ -1174,12 +1174,13 @@ private fun AiSemanticInputBar(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // ── Ícone de Menu (Trigger do BottomBar) ─────────────────────────
             Box(
                 modifier = Modifier
+                    .padding(bottom = 4.dp)
                     .size(48.dp)
                     .clip(CircleShape)
                     .background(AiCard)
@@ -1224,25 +1225,96 @@ private fun AiSemanticInputBar(
                             Modifier.border(1.5.dp, Brush.horizontalGradient(listOf(AiPrimary.copy(alpha = borderAlpha * 0.6f), AiSecondary.copy(alpha = borderAlpha * 0.4f))), RoundedCornerShape(28.dp))
                         }
                     )
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.Bottom
             ) {
-                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = AiPrimary.copy(alpha = 0.7f), modifier = Modifier.size(18.dp).padding(start = 4.dp))
-                Spacer(modifier = Modifier.width(4.dp))
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .padding(bottom = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = AiPrimary.copy(alpha = 0.7f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
                 TextField(
                     value = value, onValueChange = onValueChange,
                     placeholder = { Text("Ex: \"Uma pizza de calabresa\"...", color = AiTextMuted, fontSize = 14.sp) },
-                    enabled = !isLoading, singleLine = true,
-                    colors = TextFieldDefaults.colors(focusedTextColor = AiText, unfocusedTextColor = AiText, cursorColor = AiPrimary, focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent, disabledContainerColor = Color.Transparent),
-                    modifier = Modifier.weight(1f)
+                    enabled = !isLoading,
+                    singleLine = false,
+                    maxLines = 5,
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = AiText,
+                        unfocusedTextColor = AiText,
+                        cursorColor = AiPrimary,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(vertical = 4.dp)
                 )
-                AnimatedVisibility(visible = value.isNotBlank() && !isLoading) {
-                    IconButton(onClick = onSend, modifier = Modifier.size(36.dp).background(Brush.linearGradient(listOf(AiPrimary, AiSecondary)), CircleShape)) { Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar", tint = Color.White, modifier = Modifier.size(16.dp)) }
+
+                // ── Botão Enviar ─────────────────────────────────────────────
+                AnimatedVisibility(
+                    visible = value.isNotBlank() && !isLoading,
+                    enter = scaleIn() + fadeIn(),
+                    exit = scaleOut() + fadeOut()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .padding(bottom = 4.dp, end = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconButton(
+                            onClick = onSend,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .padding(bottom = 15.dp)
+                                .background(Brush.linearGradient(listOf(AiPrimary, AiSecondary)), CircleShape)
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "Enviar",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
+
                 if (value.isBlank() && isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(end = 4.dp), color = AiPrimary, strokeWidth = 2.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .padding(bottom = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = AiPrimary,
+                            strokeWidth = 2.dp
+                        )
+                    }
                 }
-                Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+
+                // ── Botão Microfone ──────────────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .padding(bottom = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     if (isListening) {
                         val infiniteMicTransition = rememberInfiniteTransition(label = "micWaves")
                         val outerScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.8f, animationSpec = infiniteRepeatable(animation = tween(1200, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "outerScale")
