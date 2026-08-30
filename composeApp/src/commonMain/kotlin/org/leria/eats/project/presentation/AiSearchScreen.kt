@@ -69,6 +69,7 @@ fun AiSearchScreen(
     onClearSearch: () -> Unit,
     onChooseProductInChat: (Product) -> Unit = {},
     onQuickPrompt: (String) -> Unit = {},
+    onRequestSuggestions: () -> Unit = {},
     onIntroClick: () -> Unit = {},
     onToggleNav: () -> Unit = {},
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
@@ -136,7 +137,8 @@ fun AiSearchScreen(
                 )
                 AiQuickActionsRow(
                     enabled = !uiState.isLoading,
-                    onQuickPrompt = onQuickPrompt
+                    onQuickPrompt = onQuickPrompt,
+                    onRequestSuggestions = onRequestSuggestions
                 )
             }
         },
@@ -290,7 +292,8 @@ private fun AiTopBar(
 @Composable
 private fun AiQuickActionsRow(
     enabled: Boolean,
-    onQuickPrompt: (String) -> Unit
+    onQuickPrompt: (String) -> Unit,
+    onRequestSuggestions: () -> Unit
 ) {
     var showSurpriseInfoDialog by remember { mutableStateOf(false) }
     var showSuggestionsInfoDialog by remember { mutableStateOf(false) }
@@ -362,7 +365,7 @@ private fun AiQuickActionsRow(
             label = "Pedir sugestões",
             enabled = enabled,
             modifier = Modifier.weight(1f),
-            onClick = { onQuickPrompt("Pode me dar sugestões do que eu poderia pedir?") },
+            onClick = onRequestSuggestions,
             onInfoClick = { showSuggestionsInfoDialog = true }
         )
     }

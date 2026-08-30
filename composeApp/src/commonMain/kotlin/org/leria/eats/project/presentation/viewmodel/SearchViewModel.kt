@@ -440,6 +440,22 @@ class SearchViewModel(
         fetchSearch(prompt)
     }
 
+    /** Pede sugestões à IA considerando a personalização alimentar salva localmente no perfil. */
+    fun requestPersonalizedSuggestions() {
+        if (_uiState.value.isLoading) return
+        val profile = _uiState.value.userProfile
+        val preferences = buildList {
+            if (profile.allergies.isNotBlank()) add("alergias/intolerâncias: ${profile.allergies}")
+            if (profile.lifestyles.isNotBlank()) add("estilo de vida: ${profile.lifestyles}")
+        }
+        val prompt = if (preferences.isNotEmpty()) {
+            "Pode me dar sugestões do que eu poderia pedir? Considere minha personalização alimentar (${preferences.joinToString("; ")})."
+        } else {
+            "Pode me dar sugestões do que eu poderia pedir?"
+        }
+        fetchSearch(prompt)
+    }
+
     private fun fetchSearch(resolvedQuery: String) {
         // Adiciona a mensagem do usuário ao chat
         addUserMessage(resolvedQuery)
