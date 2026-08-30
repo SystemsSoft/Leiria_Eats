@@ -53,7 +53,6 @@ private val AiAccent    = KomaGoldDark
 private val AiText      = KomaTextPrimary
 private val AiTextMuted = KomaTextSec
 private val AiBotBubble = KomaMintLight
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiSearchScreen(
@@ -1264,73 +1263,67 @@ private fun AiSemanticInputBar(
                         .padding(vertical = 4.dp)
                 )
 
-                // ── Botão Enviar ─────────────────────────────────────────────
-                AnimatedVisibility(
-                    visible = value.isNotBlank() && !isLoading,
-                    enter = scaleIn() + fadeIn(),
-                    exit = scaleOut() + fadeOut()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .padding(bottom = 4.dp, end = 4.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        IconButton(
-                            onClick = onSend,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .padding(bottom = 15.dp)
-                                .background(Brush.linearGradient(listOf(AiPrimary, AiSecondary)), CircleShape)
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Enviar",
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
+                // ── Botão Enviar / Microfone (mesma posição, um substitui o outro) ──
+                val trailingKey = when {
+                    isLoading -> "loading"
+                    value.isNotBlank() -> "send"
+                    else -> "mic"
                 }
-
-                if (value.isBlank() && isLoading) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .padding(bottom = 4.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = AiPrimary,
-                            strokeWidth = 2.dp
-                        )
-                    }
-                }
-
-                // ── Botão Microfone ──────────────────────────────────────────
                 Box(
                     modifier = Modifier
                         .size(44.dp)
                         .padding(bottom = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isListening) {
-                        val infiniteMicTransition = rememberInfiniteTransition(label = "micWaves")
-                        val outerScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.8f, animationSpec = infiniteRepeatable(animation = tween(1200, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "outerScale")
-                        val outerAlpha by infiniteMicTransition.animateFloat(initialValue = 0.6f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "outerAlpha")
-                        val middleScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.6f, animationSpec = infiniteRepeatable(animation = tween(1200, 150, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "middleScale")
-                        val middleAlpha by infiniteMicTransition.animateFloat(initialValue = 0.5f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, 150, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "middleAlpha")
-                        val innerScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.4f, animationSpec = infiniteRepeatable(animation = tween(1200, 300, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "innerScale")
-                        val innerAlpha by infiniteMicTransition.animateFloat(initialValue = 0.4f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, 300, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "innerAlpha")
-                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = outerScale; scaleY = outerScale; alpha = outerAlpha }.background(Brush.radialGradient(colors = listOf(AiAccent.copy(alpha = 0.3f), AiPrimary.copy(alpha = 0.2f), Color.Transparent)), CircleShape))
-                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = middleScale; scaleY = middleScale; alpha = middleAlpha }.background(Brush.radialGradient(colors = listOf(AiSecondary.copy(alpha = 0.4f), KomaGoldAccent.copy(alpha = 0.3f), Color.Transparent)), CircleShape))
-                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = innerScale; scaleY = innerScale; alpha = innerAlpha }.background(Brush.radialGradient(colors = listOf(AiPrimary.copy(alpha = 0.5f), AiAccent.copy(alpha = 0.4f), Color.Transparent)), CircleShape))
-                    }
-                    IconButton(onClick = onMic, enabled = !isLoading, modifier = Modifier.size(40.dp)) {
-                        val micAlpha by rememberInfiniteTransition(label = "mic").animateFloat(initialValue = if (isListening) 0.4f else 1f, targetValue = 1f, label = "micPulse", animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse))
-                        if (isListening) { Box(modifier = Modifier.size(32.dp).background(Brush.radialGradient(colors = listOf(AiAccent.copy(alpha = 0.3f), Color.Transparent)), CircleShape)) }
-                        Icon(imageVector = if (isListening) Icons.Default.MicOff else Icons.Default.Mic, contentDescription = "Microfone", tint = if (isListening) AiAccent.copy(alpha = micAlpha) else AiPrimary, modifier = Modifier.size(20.dp))
+                    AnimatedContent(
+                        targetState = trailingKey,
+                        transitionSpec = { (scaleIn() + fadeIn()) togetherWith (scaleOut() + fadeOut()) },
+                        label = "trailingAction"
+                    ) { key ->
+                        when (key) {
+                            "loading" -> {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = AiPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                            "send" -> {
+                                IconButton(
+                                    onClick = onSend,
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Send,
+                                        contentDescription = "Enviar",
+                                        tint = AiAccent,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                            else -> {
+                                Box(contentAlignment = Alignment.Center) {
+                                    if (isListening) {
+                                        val infiniteMicTransition = rememberInfiniteTransition(label = "micWaves")
+                                        val outerScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.8f, animationSpec = infiniteRepeatable(animation = tween(1200, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "outerScale")
+                                        val outerAlpha by infiniteMicTransition.animateFloat(initialValue = 0.6f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "outerAlpha")
+                                        val middleScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.6f, animationSpec = infiniteRepeatable(animation = tween(1200, 150, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "middleScale")
+                                        val middleAlpha by infiniteMicTransition.animateFloat(initialValue = 0.5f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, 150, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "middleAlpha")
+                                        val innerScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.4f, animationSpec = infiniteRepeatable(animation = tween(1200, 300, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "innerScale")
+                                        val innerAlpha by infiniteMicTransition.animateFloat(initialValue = 0.4f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, 300, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "innerAlpha")
+                                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = outerScale; scaleY = outerScale; alpha = outerAlpha }.background(Brush.radialGradient(colors = listOf(AiAccent.copy(alpha = 0.3f), AiPrimary.copy(alpha = 0.2f), Color.Transparent)), CircleShape))
+                                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = middleScale; scaleY = middleScale; alpha = middleAlpha }.background(Brush.radialGradient(colors = listOf(AiSecondary.copy(alpha = 0.4f), KomaGoldAccent.copy(alpha = 0.3f), Color.Transparent)), CircleShape))
+                                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = innerScale; scaleY = innerScale; alpha = innerAlpha }.background(Brush.radialGradient(colors = listOf(AiPrimary.copy(alpha = 0.5f), AiAccent.copy(alpha = 0.4f), Color.Transparent)), CircleShape))
+                                    }
+                                    IconButton(onClick = onMic, enabled = !isLoading, modifier = Modifier.size(40.dp)) {
+                                        val micAlpha by rememberInfiniteTransition(label = "mic").animateFloat(initialValue = if (isListening) 0.4f else 1f, targetValue = 1f, label = "micPulse", animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse))
+                                        if (isListening) { Box(modifier = Modifier.size(32.dp).background(Brush.radialGradient(colors = listOf(AiAccent.copy(alpha = 0.3f), Color.Transparent)), CircleShape)) }
+                                        Icon(imageVector = if (isListening) Icons.Default.MicOff else Icons.Default.Mic, contentDescription = "Microfone", tint = if (isListening) AiAccent.copy(alpha = micAlpha) else AiPrimary, modifier = Modifier.size(20.dp))
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
