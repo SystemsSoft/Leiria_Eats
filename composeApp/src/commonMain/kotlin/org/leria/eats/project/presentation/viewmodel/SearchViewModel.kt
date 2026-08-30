@@ -428,6 +428,12 @@ class SearchViewModel(
         fetchSearch(resolvedQuery)
     }
 
+    /** Envia ao chat da IA a escolha de um produto sugerido, como se o usuário tivesse digitado. */
+    fun chooseProductInChat(product: Product) {
+        if (_uiState.value.isLoading) return
+        fetchSearch("Quero ${product.name}")
+    }
+
     private fun fetchSearch(resolvedQuery: String) {
         // Adiciona a mensagem do usuário ao chat
         addUserMessage(resolvedQuery)

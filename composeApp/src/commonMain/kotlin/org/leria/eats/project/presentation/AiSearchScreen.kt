@@ -67,6 +67,7 @@ fun AiSearchScreen(
     onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     onViewCart: () -> Unit,
     onClearSearch: () -> Unit,
+    onChooseProductInChat: (Product) -> Unit = {},
     onIntroClick: () -> Unit = {},
     onToggleNav: () -> Unit = {},
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
@@ -163,6 +164,7 @@ fun AiSearchScreen(
                     isStreaming = uiState.isStreaming,
                     onAddToCart = onAddToCart,
                     onProductClick = { product -> selectedProduct = product },
+                    onChooseInChat = onChooseProductInChat,
                     modifier = Modifier.fillMaxSize()
                 )
 
@@ -285,6 +287,7 @@ private fun ChatMessagesView(
     isStreaming: Boolean,
     onAddToCart: (Product) -> Unit,
     onProductClick: (Product) -> Unit = {},
+    onChooseInChat: (Product) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -315,7 +318,8 @@ private fun ChatMessagesView(
                     message = message,
                     isTyping = isLastMessage && isStreaming,
                     onAddToCart = onAddToCart,
-                    onProductClick = onProductClick
+                    onProductClick = onProductClick,
+                    onChooseInChat = onChooseInChat
                 )
             }
         }
@@ -485,7 +489,8 @@ private fun AiMessageBubble(
     message: ChatMessage,
     isTyping: Boolean = false,
     onAddToCart: (Product) -> Unit,
-    onProductClick: (Product) -> Unit = {}
+    onProductClick: (Product) -> Unit = {},
+    onChooseInChat: (Product) -> Unit = {}
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -518,7 +523,12 @@ private fun AiMessageBubble(
 
             if (message.products.isNotEmpty()) {
                 message.products.forEach { product ->
-                    ProductChatCard(product = product, onAddToCart = { onAddToCart(product) }, onClick = { onProductClick(product) })
+                    ProductChatCard(
+                        product = product,
+                        onAddToCart = { onAddToCart(product) },
+                        onClick = { onProductClick(product) },
+                        onChooseInChat = { onChooseInChat(product) }
+                    )
                 }
             }
         }
@@ -1057,7 +1067,8 @@ private fun AiCartChatSection(
 private fun ProductChatCard(
     product: Product,
     onAddToCart: () -> Unit,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onChooseInChat: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -1096,6 +1107,19 @@ private fun ProductChatCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = product.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = AiText)
                 Text(text = "${product.price} €", style = MaterialTheme.typography.bodyMedium, color = AiSecondary, fontWeight = FontWeight.Bold)
+            }
+
+            IconButton(
+                onClick = onChooseInChat,
+                modifier = Modifier
+                    .size(36.dp)
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Escolher ${product.name}",
+                    tint = AiSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
