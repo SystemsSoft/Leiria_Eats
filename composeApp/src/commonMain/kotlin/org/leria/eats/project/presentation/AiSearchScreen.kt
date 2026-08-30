@@ -68,6 +68,7 @@ fun AiSearchScreen(
     onViewCart: () -> Unit,
     onClearSearch: () -> Unit,
     onChooseProductInChat: (Product) -> Unit = {},
+    onQuickPrompt: (String) -> Unit = {},
     onIntroClick: () -> Unit = {},
     onToggleNav: () -> Unit = {},
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
@@ -120,18 +121,24 @@ fun AiSearchScreen(
 
     Scaffold(
         topBar = {
-            AiTopBar(
-                glowAlpha = glowAlpha,
-                isListening = isListening,
-                showClearButton = uiState.chatMessages.size > 1,
-                onClearChat = {
-                    if (uiState.cartItems.isNotEmpty()) {
-                        showClearConfirmDialog = true
-                    } else {
-                        onClearSearch()
+            Column {
+                AiTopBar(
+                    glowAlpha = glowAlpha,
+                    isListening = isListening,
+                    showClearButton = uiState.chatMessages.size > 1,
+                    onClearChat = {
+                        if (uiState.cartItems.isNotEmpty()) {
+                            showClearConfirmDialog = true
+                        } else {
+                            onClearSearch()
+                        }
                     }
-                }
-            )
+                )
+                AiQuickActionsRow(
+                    enabled = !uiState.isLoading,
+                    onQuickPrompt = onQuickPrompt
+                )
+            }
         },
         bottomBar = {
             AiSemanticInputBar(
@@ -278,6 +285,70 @@ private fun AiTopBar(
             titleContentColor = AiText
         )
     )
+}
+
+@Composable
+private fun AiQuickActionsRow(
+    enabled: Boolean,
+    onQuickPrompt: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AiSurface)
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        AiQuickActionChip(
+            emoji = "🎁",
+            label = "Caixa Surpresa",
+            enabled = enabled,
+            modifier = Modifier.weight(1f),
+            onClick = { onQuickPrompt("Me surpreenda! Escolha algo saboroso para mim.") }
+        )
+        AiQuickActionChip(
+            emoji = "💡",
+            label = "Pedir sugestões",
+            enabled = enabled,
+            modifier = Modifier.weight(1f),
+            onClick = { onQuickPrompt("Pode me dar sugestões do que eu poderia pedir?") }
+        )
+    }
+}
+
+@Composable
+private fun AiQuickActionChip(
+    emoji: String,
+    label: String,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(50.dp))
+            .background(AiCard)
+            .border(
+                width = 1.dp,
+                brush = Brush.horizontalGradient(listOf(AiPrimary.copy(alpha = 0.5f), AiSecondary.copy(alpha = 0.3f))),
+                shape = RoundedCornerShape(50.dp)
+            )
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(emoji, fontSize = 14.sp)
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = if (enabled) AiText else AiTextMuted,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }
 
 @Composable

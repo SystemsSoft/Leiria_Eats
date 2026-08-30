@@ -434,6 +434,12 @@ class SearchViewModel(
         fetchSearch("Quero ${product.name}")
     }
 
+    /** Envia um prompt pré-definido ao chat da IA (ex.: atalhos rápidos como "Caixa Surpresa"). */
+    fun sendQuickPrompt(prompt: String) {
+        if (_uiState.value.isLoading) return
+        fetchSearch(prompt)
+    }
+
     private fun fetchSearch(resolvedQuery: String) {
         // Adiciona a mensagem do usuário ao chat
         addUserMessage(resolvedQuery)
