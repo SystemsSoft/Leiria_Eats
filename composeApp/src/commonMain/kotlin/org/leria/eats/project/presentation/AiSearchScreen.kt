@@ -40,6 +40,7 @@ import org.leria.eats.project.data.DeliveryFeeResponse
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
+import org.leria.eats.project.presentation.util.buildChargedFeesMap
 import org.leria.eats.project.presentation.util.formatCurrency
 import org.leria.eats.project.theme.*
 
@@ -750,7 +751,12 @@ private fun AiCartChatBubble(
     
     val cartTotal = cartItems.sumOf { it.price * it.quantity }
     val serviceFee = (cartTotal * 0.05).coerceIn(0.49, 1.99)
-    val totalDeliveryFee = if (isPickup) 0.0 else deliveryFeesMap.values.sumOf { it.delivery_fee }
+    // Primeiro restaurante da rota cobra a taxa de entrega normal; 2º e 3º cobram a taxa de
+    // recolha (valor fixo por distância até o primeiro), em vez de somar todas as taxas.
+    val chargedFeesMap: Map<String, Double> = remember(cartRestaurants, deliveryFeesMap, isPickup) {
+        if (isPickup) emptyMap() else buildChargedFeesMap(cartRestaurants, deliveryFeesMap)
+    }
+    val totalDeliveryFee = if (isPickup) 0.0 else chargedFeesMap.values.sum()
     val grandTotal = cartTotal + serviceFee + totalDeliveryFee
     
     val groupedItems = remember(cartItems) { cartItems.groupBy { it.restaurant_gid } }
@@ -929,6 +935,19 @@ private fun AiCartChatBubble(
                     .padding(16.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!isPickup && cartRestaurants.size > 1) {
+                        cartRestaurants.forEachIndexed { index, restaurant ->
+                            val fee = chargedFeesMap[restaurant.gid]
+                            val label = if (index == 0) "Entrega" else "Recolha"
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("$label ${restaurant.name}", fontSize = 11.sp, color = AiTextMuted)
+                                if (feesLoading) CircularProgressIndicator(modifier = Modifier.size(10.dp), strokeWidth = 2.dp, color = AiPrimary)
+                                else Text(formatCurrency(fee ?: 0.0), fontSize = 11.sp, color = AiText)
+                            }
+                        }
+                        HorizontalDivider(color = AiTextMuted.copy(alpha = 0.1f))
+                    }
+
                     SummaryRowIntegrated("Produtos", formatCurrency(cartTotal))
                     if (!isPickup) SummaryRowIntegrated("Total Entrega", formatCurrency(totalDeliveryFee))
                     SummaryRowIntegrated("Taxa de Serviço", formatCurrency(serviceFee))
@@ -943,15 +962,14 @@ private fun AiCartChatBubble(
                         Text("Total a pagar", fontWeight = FontWeight.Bold, color = AiText, fontSize = 15.sp)
                         Text(formatCurrency(grandTotal), fontWeight = FontWeight.ExtraBold, color = AiSecondary, fontSize = 20.sp)
                     }
-                    
+
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    val canConfirm = selectedAddress != null && !feesLoading && (isPickup || deliveryFeesMap.size == cartRestaurants.size)
-                    
+                    val canConfirm = selectedAddress != null && !feesLoading && (isPickup || chargedFeesMap.size == cartRestaurants.size)
+
                     Button(
-                        onClick = { 
-                            val finalFeesMap = if (isPickup) emptyMap() else deliveryFeesMap.mapValues { it.value.delivery_fee }
-                            onCheckout(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType, finalFeesMap) 
+                        onClick = {
+                            onCheckout(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType, chargedFeesMap)
                         },
                         enabled = canConfirm,
                         modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -1078,10 +1096,11 @@ private fun AiCartChatBubble(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (!isPickup && cartRestaurants.size > 1) {
-                            cartRestaurants.forEach { restaurant ->
-                                val fee = deliveryFeesMap[restaurant.gid]?.delivery_fee
+                            cartRestaurants.forEachIndexed { index, restaurant ->
+                                val fee = chargedFeesMap[restaurant.gid]
+                                val label = if (index == 0) "Entrega" else "Recolha"
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text("Entrega ${restaurant.name}", fontSize = 11.sp, color = AiTextMuted)
+                                    Text("$label ${restaurant.name}", fontSize = 11.sp, color = AiTextMuted)
                                     if (feesLoading) CircularProgressIndicator(modifier = Modifier.size(10.dp), strokeWidth = 2.dp, color = AiPrimary)
                                     else Text(formatCurrency(fee ?: 0.0), fontSize = 11.sp, color = AiText)
                                 }
@@ -1106,12 +1125,11 @@ private fun AiCartChatBubble(
                         
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        val canConfirm = selectedAddress != null && !feesLoading && (isPickup || deliveryFeesMap.size == cartRestaurants.size)
+                        val canConfirm = selectedAddress != null && !feesLoading && (isPickup || chargedFeesMap.size == cartRestaurants.size)
                         
                         Button(
                             onClick = { 
-                                val finalFeesMap = if (isPickup) emptyMap() else deliveryFeesMap.mapValues { it.value.delivery_fee }
-                                onCheckout(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType, finalFeesMap) 
+                                onCheckout(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType, chargedFeesMap)
                             },
                             enabled = canConfirm,
                             modifier = Modifier.fillMaxWidth().height(48.dp),
