@@ -292,6 +292,55 @@ private fun AiQuickActionsRow(
     enabled: Boolean,
     onQuickPrompt: (String) -> Unit
 ) {
+    var showSurpriseInfoDialog by remember { mutableStateOf(false) }
+    var showSuggestionsInfoDialog by remember { mutableStateOf(false) }
+
+    if (showSurpriseInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showSurpriseInfoDialog = false },
+            containerColor = AiCard,
+            titleContentColor = AiText,
+            textContentColor = AiTextMuted,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("🎁 ", fontSize = 20.sp)
+                    Text("Caixa Surpresa", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Text("A IA busca, para você, restaurantes que oferecem caixa surpresa disponíveis para agendamento — uma seleção de itens do dia por um preço especial, com data e horário marcados para retirada ou entrega.")
+            },
+            confirmButton = {
+                TextButton(onClick = { showSurpriseInfoDialog = false }) {
+                    Text("Entendi", color = AiPrimary, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    if (showSuggestionsInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showSuggestionsInfoDialog = false },
+            containerColor = AiCard,
+            titleContentColor = AiText,
+            textContentColor = AiTextMuted,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("💡 ", fontSize = 20.sp)
+                    Text("Pedir sugestões", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Text("Baseada na personalização alimentar do seu perfil, a IA irá buscar as melhores sugestões para você.")
+            },
+            confirmButton = {
+                TextButton(onClick = { showSuggestionsInfoDialog = false }) {
+                    Text("Entendi", color = AiPrimary, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -305,14 +354,16 @@ private fun AiQuickActionsRow(
             label = "Caixa Surpresa",
             enabled = enabled,
             modifier = Modifier.weight(1f),
-            onClick = { onQuickPrompt("Me surpreenda! Escolha algo saboroso para mim.") }
+            onClick = { onQuickPrompt("Me surpreenda! Escolha algo saboroso para mim.") },
+            onInfoClick = { showSurpriseInfoDialog = true }
         )
         AiQuickActionChip(
             emoji = "💡",
             label = "Pedir sugestões",
             enabled = enabled,
             modifier = Modifier.weight(1f),
-            onClick = { onQuickPrompt("Pode me dar sugestões do que eu poderia pedir?") }
+            onClick = { onQuickPrompt("Pode me dar sugestões do que eu poderia pedir?") },
+            onInfoClick = { showSuggestionsInfoDialog = true }
         )
     }
 }
@@ -323,7 +374,8 @@ private fun AiQuickActionChip(
     label: String,
     enabled: Boolean,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onInfoClick: (() -> Unit)? = null
 ) {
     Row(
         modifier = modifier
@@ -335,7 +387,7 @@ private fun AiQuickActionChip(
                 shape = RoundedCornerShape(50.dp)
             )
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(start = 14.dp, end = if (onInfoClick != null) 6.dp else 14.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
@@ -346,8 +398,22 @@ private fun AiQuickActionChip(
             color = if (enabled) AiText else AiTextMuted,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false)
         )
+        if (onInfoClick != null) {
+            IconButton(
+                onClick = onInfoClick,
+                modifier = Modifier.size(20.dp)
+            ) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = "Saber mais sobre $label",
+                    tint = AiPrimary.copy(alpha = if (enabled) 0.8f else 0.4f),
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        }
     }
 }
 
