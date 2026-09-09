@@ -40,6 +40,7 @@ import org.leria.eats.project.data.DeliveryFeeResponse
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
+import org.leria.eats.project.presentation.util.buildChargedFeesMap
 import org.leria.eats.project.presentation.util.formatCurrency
 import org.leria.eats.project.theme.*
 
@@ -53,7 +54,6 @@ private val AiAccent    = KomaGoldDark
 private val AiText      = KomaTextPrimary
 private val AiTextMuted = KomaTextSec
 private val AiBotBubble = KomaMintLight
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiSearchScreen(
@@ -68,6 +68,9 @@ fun AiSearchScreen(
     onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     onViewCart: () -> Unit,
     onClearSearch: () -> Unit,
+    onChooseProductInChat: (Product) -> Unit = {},
+    onQuickPrompt: (String) -> Unit = {},
+    onRequestSuggestions: () -> Unit = {},
     onIntroClick: () -> Unit = {},
     onToggleNav: () -> Unit = {},
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
@@ -120,18 +123,25 @@ fun AiSearchScreen(
 
     Scaffold(
         topBar = {
-            AiTopBar(
-                glowAlpha = glowAlpha,
-                isListening = isListening,
-                showClearButton = uiState.chatMessages.size > 1,
-                onClearChat = {
-                    if (uiState.cartItems.isNotEmpty()) {
-                        showClearConfirmDialog = true
-                    } else {
-                        onClearSearch()
+            Column {
+                AiTopBar(
+                    glowAlpha = glowAlpha,
+                    isListening = isListening,
+                    showClearButton = uiState.chatMessages.size > 1,
+                    onClearChat = {
+                        if (uiState.cartItems.isNotEmpty()) {
+                            showClearConfirmDialog = true
+                        } else {
+                            onClearSearch()
+                        }
                     }
-                }
-            )
+                )
+                AiQuickActionsRow(
+                    enabled = !uiState.isLoading,
+                    onQuickPrompt = onQuickPrompt,
+                    onRequestSuggestions = onRequestSuggestions
+                )
+            }
         },
         bottomBar = {
             AiSemanticInputBar(
@@ -164,6 +174,7 @@ fun AiSearchScreen(
                     isStreaming = uiState.isStreaming,
                     onAddToCart = onAddToCart,
                     onProductClick = { product -> selectedProduct = product },
+                    onChooseInChat = onChooseProductInChat,
                     modifier = Modifier.fillMaxSize()
                 )
 
@@ -280,12 +291,144 @@ private fun AiTopBar(
 }
 
 @Composable
+private fun AiQuickActionsRow(
+    enabled: Boolean,
+    onQuickPrompt: (String) -> Unit,
+    onRequestSuggestions: () -> Unit
+) {
+    var showSurpriseInfoDialog by remember { mutableStateOf(false) }
+    var showSuggestionsInfoDialog by remember { mutableStateOf(false) }
+
+    if (showSurpriseInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showSurpriseInfoDialog = false },
+            containerColor = AiCard,
+            titleContentColor = AiText,
+            textContentColor = AiTextMuted,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("🎁 ", fontSize = 20.sp)
+                    Text("Caixa Surpresa", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Text("A IA busca, para você, restaurantes que oferecem caixa surpresa disponíveis para agendamento — uma seleção de itens do dia por um preço especial, com data e horário marcados para retirada ou entrega.")
+            },
+            confirmButton = {
+                TextButton(onClick = { showSurpriseInfoDialog = false }) {
+                    Text("Entendi", color = AiPrimary, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    if (showSuggestionsInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showSuggestionsInfoDialog = false },
+            containerColor = AiCard,
+            titleContentColor = AiText,
+            textContentColor = AiTextMuted,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("💡 ", fontSize = 20.sp)
+                    Text("Pedir sugestões", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Text("Baseada na personalização alimentar do seu perfil, a IA irá buscar as melhores sugestões para você.")
+            },
+            confirmButton = {
+                TextButton(onClick = { showSuggestionsInfoDialog = false }) {
+                    Text("Entendi", color = AiPrimary, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AiSurface)
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        AiQuickActionChip(
+            emoji = "🎁",
+            label = "Caixa Surpresa",
+            enabled = enabled,
+            modifier = Modifier.weight(1f),
+            onClick = { onQuickPrompt("Me surpreenda! Escolha algo saboroso para mim.") },
+            onInfoClick = { showSurpriseInfoDialog = true }
+        )
+        AiQuickActionChip(
+            emoji = "💡",
+            label = "Pedir sugestões",
+            enabled = enabled,
+            modifier = Modifier.weight(1f),
+            onClick = onRequestSuggestions,
+            onInfoClick = { showSuggestionsInfoDialog = true }
+        )
+    }
+}
+
+@Composable
+private fun AiQuickActionChip(
+    emoji: String,
+    label: String,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    onInfoClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(50.dp))
+            .background(AiCard)
+            .border(
+                width = 1.dp,
+                brush = Brush.horizontalGradient(listOf(AiPrimary.copy(alpha = 0.5f), AiSecondary.copy(alpha = 0.3f))),
+                shape = RoundedCornerShape(50.dp)
+            )
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(start = 14.dp, end = if (onInfoClick != null) 6.dp else 14.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(emoji, fontSize = 14.sp)
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = if (enabled) AiText else AiTextMuted,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false)
+        )
+        if (onInfoClick != null) {
+            IconButton(
+                onClick = onInfoClick,
+                modifier = Modifier.size(20.dp)
+            ) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = "Saber mais sobre $label",
+                    tint = AiPrimary.copy(alpha = if (enabled) 0.8f else 0.4f),
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun ChatMessagesView(
     messages: List<ChatMessage>,
     isLoading: Boolean,
     isStreaming: Boolean,
     onAddToCart: (Product) -> Unit,
     onProductClick: (Product) -> Unit = {},
+    onChooseInChat: (Product) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -316,7 +459,8 @@ private fun ChatMessagesView(
                     message = message,
                     isTyping = isLastMessage && isStreaming,
                     onAddToCart = onAddToCart,
-                    onProductClick = onProductClick
+                    onProductClick = onProductClick,
+                    onChooseInChat = onChooseInChat
                 )
             }
         }
@@ -486,7 +630,8 @@ private fun AiMessageBubble(
     message: ChatMessage,
     isTyping: Boolean = false,
     onAddToCart: (Product) -> Unit,
-    onProductClick: (Product) -> Unit = {}
+    onProductClick: (Product) -> Unit = {},
+    onChooseInChat: (Product) -> Unit = {}
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -519,7 +664,12 @@ private fun AiMessageBubble(
 
             if (message.products.isNotEmpty()) {
                 message.products.forEach { product ->
-                    ProductChatCard(product = product, onAddToCart = { onAddToCart(product) }, onClick = { onProductClick(product) })
+                    ProductChatCard(
+                        product = product,
+                        onAddToCart = { onAddToCart(product) },
+                        onClick = { onProductClick(product) },
+                        onChooseInChat = { onChooseInChat(product) }
+                    )
                 }
             }
         }
@@ -601,7 +751,12 @@ private fun AiCartChatBubble(
     
     val cartTotal = cartItems.sumOf { it.price * it.quantity }
     val serviceFee = (cartTotal * 0.05).coerceIn(0.49, 1.99)
-    val totalDeliveryFee = if (isPickup) 0.0 else deliveryFeesMap.values.sumOf { it.delivery_fee }
+    // Primeiro restaurante da rota cobra a taxa de entrega normal; 2º e 3º cobram a taxa de
+    // recolha (valor fixo por distância até o primeiro), em vez de somar todas as taxas.
+    val chargedFeesMap: Map<String, Double> = remember(cartRestaurants, deliveryFeesMap, isPickup) {
+        if (isPickup) emptyMap() else buildChargedFeesMap(cartRestaurants, deliveryFeesMap)
+    }
+    val totalDeliveryFee = if (isPickup) 0.0 else chargedFeesMap.values.sum()
     val grandTotal = cartTotal + serviceFee + totalDeliveryFee
     
     val groupedItems = remember(cartItems) { cartItems.groupBy { it.restaurant_gid } }
@@ -780,6 +935,19 @@ private fun AiCartChatBubble(
                     .padding(16.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!isPickup && cartRestaurants.size > 1) {
+                        cartRestaurants.forEachIndexed { index, restaurant ->
+                            val fee = chargedFeesMap[restaurant.gid]
+                            val label = if (index == 0) "Entrega" else "Recolha"
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("$label ${restaurant.name}", fontSize = 11.sp, color = AiTextMuted)
+                                if (feesLoading) CircularProgressIndicator(modifier = Modifier.size(10.dp), strokeWidth = 2.dp, color = AiPrimary)
+                                else Text(formatCurrency(fee ?: 0.0), fontSize = 11.sp, color = AiText)
+                            }
+                        }
+                        HorizontalDivider(color = AiTextMuted.copy(alpha = 0.1f))
+                    }
+
                     SummaryRowIntegrated("Produtos", formatCurrency(cartTotal))
                     if (!isPickup) SummaryRowIntegrated("Total Entrega", formatCurrency(totalDeliveryFee))
                     SummaryRowIntegrated("Taxa de Serviço", formatCurrency(serviceFee))
@@ -794,15 +962,14 @@ private fun AiCartChatBubble(
                         Text("Total a pagar", fontWeight = FontWeight.Bold, color = AiText, fontSize = 15.sp)
                         Text(formatCurrency(grandTotal), fontWeight = FontWeight.ExtraBold, color = AiSecondary, fontSize = 20.sp)
                     }
-                    
+
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    val canConfirm = selectedAddress != null && !feesLoading && (isPickup || deliveryFeesMap.size == cartRestaurants.size)
-                    
+                    val canConfirm = selectedAddress != null && !feesLoading && (isPickup || chargedFeesMap.size == cartRestaurants.size)
+
                     Button(
-                        onClick = { 
-                            val finalFeesMap = if (isPickup) emptyMap() else deliveryFeesMap.mapValues { it.value.delivery_fee }
-                            onCheckout(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType, finalFeesMap) 
+                        onClick = {
+                            onCheckout(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType, chargedFeesMap)
                         },
                         enabled = canConfirm,
                         modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -929,10 +1096,11 @@ private fun AiCartChatBubble(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (!isPickup && cartRestaurants.size > 1) {
-                            cartRestaurants.forEach { restaurant ->
-                                val fee = deliveryFeesMap[restaurant.gid]?.delivery_fee
+                            cartRestaurants.forEachIndexed { index, restaurant ->
+                                val fee = chargedFeesMap[restaurant.gid]
+                                val label = if (index == 0) "Entrega" else "Recolha"
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text("Entrega ${restaurant.name}", fontSize = 11.sp, color = AiTextMuted)
+                                    Text("$label ${restaurant.name}", fontSize = 11.sp, color = AiTextMuted)
                                     if (feesLoading) CircularProgressIndicator(modifier = Modifier.size(10.dp), strokeWidth = 2.dp, color = AiPrimary)
                                     else Text(formatCurrency(fee ?: 0.0), fontSize = 11.sp, color = AiText)
                                 }
@@ -957,12 +1125,11 @@ private fun AiCartChatBubble(
                         
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        val canConfirm = selectedAddress != null && !feesLoading && (isPickup || deliveryFeesMap.size == cartRestaurants.size)
+                        val canConfirm = selectedAddress != null && !feesLoading && (isPickup || chargedFeesMap.size == cartRestaurants.size)
                         
                         Button(
                             onClick = { 
-                                val finalFeesMap = if (isPickup) emptyMap() else deliveryFeesMap.mapValues { it.value.delivery_fee }
-                                onCheckout(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType, finalFeesMap) 
+                                onCheckout(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType, chargedFeesMap)
                             },
                             enabled = canConfirm,
                             modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -1058,7 +1225,8 @@ private fun AiCartChatSection(
 private fun ProductChatCard(
     product: Product,
     onAddToCart: () -> Unit,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onChooseInChat: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -1097,6 +1265,19 @@ private fun ProductChatCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = product.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = AiText)
                 Text(text = "${product.price} €", style = MaterialTheme.typography.bodyMedium, color = AiSecondary, fontWeight = FontWeight.Bold)
+            }
+
+            IconButton(
+                onClick = onChooseInChat,
+                modifier = Modifier
+                    .size(36.dp)
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Escolher ${product.name}",
+                    tint = AiSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }
@@ -1264,73 +1445,67 @@ private fun AiSemanticInputBar(
                         .padding(vertical = 4.dp)
                 )
 
-                // ── Botão Enviar ─────────────────────────────────────────────
-                AnimatedVisibility(
-                    visible = value.isNotBlank() && !isLoading,
-                    enter = scaleIn() + fadeIn(),
-                    exit = scaleOut() + fadeOut()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .padding(bottom = 4.dp, end = 4.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        IconButton(
-                            onClick = onSend,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .padding(bottom = 15.dp)
-                                .background(Brush.linearGradient(listOf(AiPrimary, AiSecondary)), CircleShape)
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Enviar",
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
+                // ── Botão Enviar / Microfone (mesma posição, um substitui o outro) ──
+                val trailingKey = when {
+                    isLoading -> "loading"
+                    value.isNotBlank() -> "send"
+                    else -> "mic"
                 }
-
-                if (value.isBlank() && isLoading) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .padding(bottom = 4.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = AiPrimary,
-                            strokeWidth = 2.dp
-                        )
-                    }
-                }
-
-                // ── Botão Microfone ──────────────────────────────────────────
                 Box(
                     modifier = Modifier
                         .size(44.dp)
                         .padding(bottom = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isListening) {
-                        val infiniteMicTransition = rememberInfiniteTransition(label = "micWaves")
-                        val outerScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.8f, animationSpec = infiniteRepeatable(animation = tween(1200, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "outerScale")
-                        val outerAlpha by infiniteMicTransition.animateFloat(initialValue = 0.6f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "outerAlpha")
-                        val middleScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.6f, animationSpec = infiniteRepeatable(animation = tween(1200, 150, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "middleScale")
-                        val middleAlpha by infiniteMicTransition.animateFloat(initialValue = 0.5f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, 150, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "middleAlpha")
-                        val innerScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.4f, animationSpec = infiniteRepeatable(animation = tween(1200, 300, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "innerScale")
-                        val innerAlpha by infiniteMicTransition.animateFloat(initialValue = 0.4f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, 300, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "innerAlpha")
-                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = outerScale; scaleY = outerScale; alpha = outerAlpha }.background(Brush.radialGradient(colors = listOf(AiAccent.copy(alpha = 0.3f), AiPrimary.copy(alpha = 0.2f), Color.Transparent)), CircleShape))
-                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = middleScale; scaleY = middleScale; alpha = middleAlpha }.background(Brush.radialGradient(colors = listOf(AiSecondary.copy(alpha = 0.4f), KomaGoldAccent.copy(alpha = 0.3f), Color.Transparent)), CircleShape))
-                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = innerScale; scaleY = innerScale; alpha = innerAlpha }.background(Brush.radialGradient(colors = listOf(AiPrimary.copy(alpha = 0.5f), AiAccent.copy(alpha = 0.4f), Color.Transparent)), CircleShape))
-                    }
-                    IconButton(onClick = onMic, enabled = !isLoading, modifier = Modifier.size(40.dp)) {
-                        val micAlpha by rememberInfiniteTransition(label = "mic").animateFloat(initialValue = if (isListening) 0.4f else 1f, targetValue = 1f, label = "micPulse", animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse))
-                        if (isListening) { Box(modifier = Modifier.size(32.dp).background(Brush.radialGradient(colors = listOf(AiAccent.copy(alpha = 0.3f), Color.Transparent)), CircleShape)) }
-                        Icon(imageVector = if (isListening) Icons.Default.MicOff else Icons.Default.Mic, contentDescription = "Microfone", tint = if (isListening) AiAccent.copy(alpha = micAlpha) else AiPrimary, modifier = Modifier.size(20.dp))
+                    AnimatedContent(
+                        targetState = trailingKey,
+                        transitionSpec = { (scaleIn() + fadeIn()) togetherWith (scaleOut() + fadeOut()) },
+                        label = "trailingAction"
+                    ) { key ->
+                        when (key) {
+                            "loading" -> {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = AiPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                            "send" -> {
+                                IconButton(
+                                    onClick = onSend,
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Send,
+                                        contentDescription = "Enviar",
+                                        tint = AiAccent,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                            else -> {
+                                Box(contentAlignment = Alignment.Center) {
+                                    if (isListening) {
+                                        val infiniteMicTransition = rememberInfiniteTransition(label = "micWaves")
+                                        val outerScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.8f, animationSpec = infiniteRepeatable(animation = tween(1200, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "outerScale")
+                                        val outerAlpha by infiniteMicTransition.animateFloat(initialValue = 0.6f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "outerAlpha")
+                                        val middleScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.6f, animationSpec = infiniteRepeatable(animation = tween(1200, 150, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "middleScale")
+                                        val middleAlpha by infiniteMicTransition.animateFloat(initialValue = 0.5f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, 150, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "middleAlpha")
+                                        val innerScale by infiniteMicTransition.animateFloat(initialValue = 1f, targetValue = 1.4f, animationSpec = infiniteRepeatable(animation = tween(1200, 300, easing = EaseOutQuad), repeatMode = RepeatMode.Restart), label = "innerScale")
+                                        val innerAlpha by infiniteMicTransition.animateFloat(initialValue = 0.4f, targetValue = 0f, animationSpec = infiniteRepeatable(animation = tween(1200, 300, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "innerAlpha")
+                                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = outerScale; scaleY = outerScale; alpha = outerAlpha }.background(Brush.radialGradient(colors = listOf(AiAccent.copy(alpha = 0.3f), AiPrimary.copy(alpha = 0.2f), Color.Transparent)), CircleShape))
+                                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = middleScale; scaleY = middleScale; alpha = middleAlpha }.background(Brush.radialGradient(colors = listOf(AiSecondary.copy(alpha = 0.4f), KomaGoldAccent.copy(alpha = 0.3f), Color.Transparent)), CircleShape))
+                                        Box(modifier = Modifier.size(40.dp).graphicsLayer { scaleX = innerScale; scaleY = innerScale; alpha = innerAlpha }.background(Brush.radialGradient(colors = listOf(AiPrimary.copy(alpha = 0.5f), AiAccent.copy(alpha = 0.4f), Color.Transparent)), CircleShape))
+                                    }
+                                    IconButton(onClick = onMic, enabled = !isLoading, modifier = Modifier.size(40.dp)) {
+                                        val micAlpha by rememberInfiniteTransition(label = "mic").animateFloat(initialValue = if (isListening) 0.4f else 1f, targetValue = 1f, label = "micPulse", animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse))
+                                        if (isListening) { Box(modifier = Modifier.size(32.dp).background(Brush.radialGradient(colors = listOf(AiAccent.copy(alpha = 0.3f), Color.Transparent)), CircleShape)) }
+                                        Icon(imageVector = if (isListening) Icons.Default.MicOff else Icons.Default.Mic, contentDescription = "Microfone", tint = if (isListening) AiAccent.copy(alpha = micAlpha) else AiPrimary, modifier = Modifier.size(20.dp))
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

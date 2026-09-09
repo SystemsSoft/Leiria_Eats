@@ -35,7 +35,10 @@ import org.leria.eats.project.data.Address
 import org.leria.eats.project.data.DeliveryFeeResponse
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
+import org.leria.eats.project.presentation.util.buildChargedFeesMap
 import org.leria.eats.project.presentation.util.formatCurrency
+import org.leria.eats.project.presentation.util.haversineDistanceKm
+import org.leria.eats.project.presentation.util.recolhaExtraFee
 import org.leria.eats.project.theme.*
 
 // ─── Aliases locais → paleta central ─────────────────────────────────────────
@@ -76,6 +79,45 @@ fun AiCartScreen(
     // Group items by restaurant_gid
     val groupedItems = remember(cartItems) {
         cartItems.groupBy { it.restaurant_gid }
+    }
+
+    // Prévia das taxas por restaurante nos cards da sacola (só relevante com múltiplas lojas).
+    // Usa o endereço padrão do usuário como referência; o valor final e autoritativo é
+    // recalculado no bottom sheet de checkout com o endereço realmente selecionado.
+    var previewFeesLoading by remember { mutableStateOf(false) }
+    var previewDeliveryFeesMap by remember { mutableStateOf<Map<String, DeliveryFeeResponse>>(emptyMap()) }
+
+    LaunchedEffect(cartRestaurants, userAddresses) {
+        val addr = userAddresses.firstOrNull()
+        if (cartRestaurants.size > 1 && addr?.latitude != null && addr.longitude != null && onGetDeliveryFee != null) {
+            previewFeesLoading = true
+            try {
+                val results = cartRestaurants.filter { it.latitude != null && it.longitude != null }.map { restaurant ->
+                    async {
+                        try {
+                            val feeRes = onGetDeliveryFee(
+                                addr.latitude, addr.longitude,
+                                restaurant.latitude!!, restaurant.longitude!!,
+                                restaurant.gid
+                            )
+                            restaurant.gid to feeRes
+                        } catch (e: Exception) {
+                            restaurant.gid to null
+                        }
+                    }
+                }.awaitAll()
+                previewDeliveryFeesMap = results.mapNotNull { (gid, feeRes) -> feeRes?.let { gid to it } }.toMap()
+            } catch (e: Exception) {
+                previewDeliveryFeesMap = emptyMap()
+            }
+            previewFeesLoading = false
+        } else {
+            previewDeliveryFeesMap = emptyMap()
+        }
+    }
+
+    val previewChargedFeesMap: Map<String, Double> = remember(cartRestaurants, previewDeliveryFeesMap) {
+        buildChargedFeesMap(cartRestaurants, previewDeliveryFeesMap)
     }
 
     if (showUndoConfirmDialog) {
@@ -244,12 +286,26 @@ fun AiCartScreen(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    val isMultiRestaurant = cartRestaurants.size > 1
                     groupedItems.forEach { (restaurantGid, products) ->
                         val restaurant = cartRestaurants.find { it.gid == restaurantGid }
-                        
+                        val isFirstRestaurant = restaurantGid != null && restaurantGid == cartRestaurants.firstOrNull()?.gid
+                        // Primeiro restaurante da rota cobra a taxa de entrega normal;
+                        // 2º e 3º restaurantes cobram a taxa de recolha (valor fixo por distância).
+                        val feeLabel = if (isFirstRestaurant) "Taxa de entrega" else "Taxa de recolha"
+                        val feeValue = previewChargedFeesMap[restaurantGid]
+
                         // Header do Restaurante
                         item(key = "header_$restaurantGid") {
-                            AiCartRestaurantHeader(restaurant, restaurantGid, products.sumOf { it.price * it.quantity })
+                            AiCartRestaurantHeader(
+                                restaurant = restaurant,
+                                restaurantGid = restaurantGid,
+                                subtotal = products.sumOf { it.price * it.quantity },
+                                showFees = isMultiRestaurant,
+                                feeLabel = feeLabel,
+                                feeValue = feeValue,
+                                feeLoading = isMultiRestaurant && previewFeesLoading && feeValue == null
+                            )
                         }
                         
                         // Itens deste restaurante
@@ -306,62 +362,94 @@ fun AiCartScreen(
 }
 
 @Composable
-fun AiCartRestaurantHeader(restaurant: Restaurant?, restaurantGid: String?, subtotal: Double) {
-    Row(
+fun AiCartRestaurantHeader(
+    restaurant: Restaurant?,
+    restaurantGid: String?,
+    subtotal: Double,
+    showFees: Boolean = false,
+    feeLabel: String = "Taxa de entrega",
+    feeValue: Double? = null,
+    feeLoading: Boolean = false
+) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(CartCard.copy(alpha = 0.5f))
-            .padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(8.dp)
     ) {
-        if (restaurant != null) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(CartSurface)
-            ) {
-                restaurant.image_url?.let {
-                    KamelImage(
-                        resource = asyncPainterResource(it),
-                        contentDescription = restaurant.name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (restaurant != null) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(CartSurface)
+                ) {
+                    restaurant.image_url?.let {
+                        KamelImage(
+                            resource = asyncPainterResource(it),
+                            contentDescription = restaurant.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = restaurant.name,
+                        color = CartText,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = restaurant.category,
+                        color = CartMuted,
+                        fontSize = 11.sp
                     )
                 }
-            }
-            Spacer(modifier = Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
+            } else {
+                Icon(Icons.Default.Store, contentDescription = null, tint = CartMuted, modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = restaurant.name,
+                    if (restaurantGid != null) "Loja #$restaurantGid" else "Loja Desconhecida",
                     color = CartText,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = restaurant.category,
-                    color = CartMuted,
-                    fontSize = 11.sp
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.weight(1f)
                 )
             }
-        } else {
-            Icon(Icons.Default.Store, contentDescription = null, tint = CartMuted, modifier = Modifier.size(24.dp))
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                if (restaurantGid != null) "Loja #$restaurantGid" else "Loja Desconhecida", 
-                color = CartText, 
-                fontWeight = FontWeight.ExtraBold, 
-                fontSize = 16.sp,
-                modifier = Modifier.weight(1f)
-            )
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text("Subtotal", color = CartMuted, fontSize = 10.sp)
+                Text(formatCurrency(subtotal), color = CartPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
         }
-        
-        Column(horizontalAlignment = Alignment.End) {
-            Text("Subtotal", color = CartMuted, fontSize = 10.sp)
-            Text(formatCurrency(subtotal), color = CartPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+
+        if (showFees) {
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(color = CartMuted.copy(alpha = 0.15f))
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                FeeInfoColumn(label = feeLabel, value = feeValue, loading = feeLoading)
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeeInfoColumn(label: String, value: Double?, loading: Boolean) {
+    Column {
+        Text(label, color = CartMuted, fontSize = 10.sp)
+        if (loading) {
+            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp, color = CartPrimary)
+        } else if (value != null) {
+            Text(formatCurrency(value), color = CartSecondary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        } else {
+            Text("—", color = CartMuted, fontSize = 13.sp)
         }
     }
 }
@@ -419,7 +507,15 @@ fun AiServiceFeeBottomSheet(
     // Estado para restaurantes fora da área
     var outOfAreaRestaurant by remember { mutableStateOf<Restaurant?>(null) }
 
-    val totalDeliveryFee = if (isPickup) 0.0 else deliveryFeesMap.values.sumOf { it.delivery_fee }
+    // Lógica de taxa de recolha para pedidos multi-restaurante:
+    // o primeiro restaurante da rota (restaurants.first()) cobra a taxa de entrega normal
+    // (retornada pela API), e cada restaurante adicional cobra apenas uma taxa fixa de
+    // recolha extra (custo de desvio), calculada pela distância até o primeiro restaurante.
+    val chargedFeesMap: Map<String, Double> = remember(restaurants, deliveryFeesMap, isPickup) {
+        if (isPickup) emptyMap() else buildChargedFeesMap(restaurants, deliveryFeesMap)
+    }
+
+    val totalDeliveryFee = if (isPickup) 0.0 else chargedFeesMap.values.sum()
     val grandTotal = cartTotal + serviceFee + totalDeliveryFee
 
     if (outOfAreaRestaurant != null) {
@@ -729,18 +825,23 @@ fun AiServiceFeeBottomSheet(
                             .padding(16.dp)
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            restaurants.forEach { restaurant ->
-                                val feeRes = deliveryFeesMap[restaurant.gid]
+                            restaurants.forEachIndexed { index, restaurant ->
+                                val chargedFee = chargedFeesMap[restaurant.gid]
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(restaurant.name, fontSize = 13.sp, color = CartText, modifier = Modifier.weight(1f))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(restaurant.name, fontSize = 13.sp, color = CartText)
+                                        if (index > 0) {
+                                            Text("Taxa de recolha", fontSize = 10.sp, color = CartMuted)
+                                        }
+                                    }
                                     if (feesLoading) {
                                         CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = CartPrimary)
-                                    } else if (feeRes != null) {
-                                        Text(formatCurrency(feeRes.delivery_fee), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = CartPrimary)
+                                    } else if (chargedFee != null) {
+                                        Text(formatCurrency(chargedFee), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = CartPrimary)
                                     } else {
                                         Text("—", fontSize = 13.sp, color = CartMuted)
                                     }
@@ -786,7 +887,7 @@ fun AiServiceFeeBottomSheet(
                 Spacer(modifier = Modifier.height(28.dp))
 
                 // ── Confirm button ────────────────────────────────────────────
-                val canConfirm = selectedAddress != null && !feesLoading && (isPickup || deliveryFeesMap.size == restaurants.size)
+                val canConfirm = selectedAddress != null && !feesLoading && (isPickup || chargedFeesMap.size == restaurants.size)
                 
                 Box(
                     modifier = Modifier
@@ -795,8 +896,7 @@ fun AiServiceFeeBottomSheet(
                         .clip(RoundedCornerShape(14.dp))
                         .background(if (canConfirm) Brush.horizontalGradient(listOf(CartPrimary, KomaOrangeEnd)) else SolidColor(CartMuted.copy(alpha = 0.3f)))
                         .then(if (canConfirm) Modifier.clickable { 
-                            val finalFeesMap = if (isPickup) emptyMap() else deliveryFeesMap.mapValues { it.value.delivery_fee }
-                            onConfirm(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType, finalFeesMap) 
+                            onConfirm(selectedAddress!!, totalDeliveryFee, serviceFee, selectedDeliveryType, chargedFeesMap)
                         } else Modifier),
                     contentAlignment = Alignment.Center
                 ) {

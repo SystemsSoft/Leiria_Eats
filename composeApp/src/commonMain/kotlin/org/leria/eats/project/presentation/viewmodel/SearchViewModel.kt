@@ -428,6 +428,34 @@ class SearchViewModel(
         fetchSearch(resolvedQuery)
     }
 
+    /** Envia ao chat da IA a escolha de um produto sugerido, como se o usuário tivesse digitado. */
+    fun chooseProductInChat(product: Product) {
+        if (_uiState.value.isLoading) return
+        fetchSearch("Quero ${product.name}")
+    }
+
+    /** Envia um prompt pré-definido ao chat da IA (ex.: atalhos rápidos como "Caixa Surpresa"). */
+    fun sendQuickPrompt(prompt: String) {
+        if (_uiState.value.isLoading) return
+        fetchSearch(prompt)
+    }
+
+    /** Pede sugestões à IA considerando a personalização alimentar salva localmente no perfil. */
+    fun requestPersonalizedSuggestions() {
+        if (_uiState.value.isLoading) return
+        val profile = _uiState.value.userProfile
+        val preferences = buildList {
+            if (profile.allergies.isNotBlank()) add("alergias/intolerâncias: ${profile.allergies}")
+            if (profile.lifestyles.isNotBlank()) add("estilo de vida: ${profile.lifestyles}")
+        }
+        val prompt = if (preferences.isNotEmpty()) {
+            "Pode me dar sugestões do que eu poderia pedir? Considere minha personalização alimentar (${preferences.joinToString("; ")})."
+        } else {
+            "Pode me dar sugestões do que eu poderia pedir?"
+        }
+        fetchSearch(prompt)
+    }
+
     private fun fetchSearch(resolvedQuery: String) {
         // Adiciona a mensagem do usuário ao chat
         addUserMessage(resolvedQuery)
