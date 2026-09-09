@@ -629,9 +629,31 @@ class SearchViewModel(
     }
 
     fun addToCart(product: Product) {
+        val currentCart = _uiState.value.cartItems
+        val existing = currentCart.find { it.gid == product.gid }
+
+        // Exclusividade da Caixa Surpresa — mesma regra aplicada no backend
+        // (HybridAIService._bloqueado_por_caixa_surpresa_exclusiva). Só bloqueia um
+        // produto NOVO (aumentar a quantidade do próprio item já no carrinho continua
+        // permitido). O gate que não pode ser contornado é o do checkout no servidor;
+        // esta checagem aqui é só UX, para o cliente já ver o aviso antes de tentar.
+        if (existing == null && currentCart.isNotEmpty()) {
+            val carrinhoTemCaixaSurpresa = currentCart.any { it.isSurpriseBox }
+            if (carrinhoTemCaixaSurpresa || product.isSurpriseBox) {
+                _uiState.update {
+                    it.copy(
+                        cartError = "Um pedido com Caixa Surpresa é exclusivo — não é possível " +
+                            "adicionar outro produto. Finalize este pedido ou remova o item de " +
+                            "Caixa Surpresa para continuar a comprar."
+                    )
+                }
+                return
+            }
+        }
+
         _uiState.update { currentState ->
-            val existing = currentState.cartItems.find { it.gid == product.gid }
-            val updatedCart = if (existing != null) {
+            val existingInState = currentState.cartItems.find { it.gid == product.gid }
+            val updatedCart = if (existingInState != null) {
                 currentState.cartItems.map {
                     if (it.gid == product.gid) it.copy(quantity = it.quantity + product.quantity)
                     else it
