@@ -313,7 +313,7 @@ private fun AiQuickActionsRow(
                 }
             },
             text = {
-                Text("A IA busca, para você, restaurantes que oferecem caixa surpresa disponíveis para agendamento — uma seleção de itens do dia por um preço especial, com data e horário marcados para retirada ou entrega.")
+                Text("A IA busca, para você, restaurantes que oferecem caixa surpresa disponíveis para agendamento — uma seleção de itens do dia por um preço especial, com data e horário marcados para retirada.")
             },
             confirmButton = {
                 TextButton(onClick = { showSurpriseInfoDialog = false }) {
