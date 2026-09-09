@@ -37,7 +37,13 @@ data class Product(
     @SerialName("preparation_time")
     val preparationTime: String = "",
     val quantity: Int = 1,
-    val rating: Double? = null
+    val rating: Double? = null,
+    @SerialName("is_surprise_box")
+    val isSurpriseBox: Boolean = false,
+    @SerialName("surprise_box_pickup_start")
+    val surpriseBoxPickupStart: String? = null,
+    @SerialName("surprise_box_pickup_end")
+    val surpriseBoxPickupEnd: String? = null
 )
 
 @Serializable

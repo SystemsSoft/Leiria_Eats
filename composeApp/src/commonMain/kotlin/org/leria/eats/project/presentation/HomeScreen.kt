@@ -54,6 +54,7 @@ private val AiSecondary = KomaBrandGreen
 private val AiText      = KomaTextPrimary
 private val AiTextMuted = KomaTextSec
 private val AiBotBubble = KomaMintLight
+private val AiSurpriseBox = KomaSurpriseBox
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -515,6 +516,20 @@ private fun CompactHomeProductItem(
                 },
                 onFailure = { Box(Modifier.fillMaxSize().background(AiSurface)) }
             )
+
+            if (product.isSurpriseBox) {
+                Surface(
+                    modifier = Modifier.align(Alignment.TopStart).padding(4.dp),
+                    shape = RoundedCornerShape(6.dp),
+                    color = AiSurpriseBox.copy(alpha = 0.92f)
+                ) {
+                    Text(
+                        text = "🎁",
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                }
+            }
         }
 
         Column(

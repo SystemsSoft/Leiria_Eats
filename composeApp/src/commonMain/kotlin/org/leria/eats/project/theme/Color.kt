@@ -46,6 +46,10 @@ val KomaGoldAccent    = Color(0xFFFFD54F)  // Âmbar claro (badge IA gradiente)
 val KomaLimeGreen     = Color(0xFF84CC16)  // Verde lima (gradiente botão Adicionar)
 val KomaSoftRed       = Color(0xFFF87171)  // Vermelho suave (erros inline, delete)
 
+// ── Caixa Surpresa ────────────────────────────────────────────────────────────
+val KomaSurpriseBox     = Color(0xFF7C3AED)  // Badge "Caixa Surpresa" — roxo, distinto do dourado SMART
+val KomaSurpriseBoxDark = Color(0xFF5B21B6)  // Gradiente escuro do badge Caixa Surpresa
+
 // ── Status de pedidos ─────────────────────────────────────────────────────────
 val KomaStatusPendente  = Color(0xFFFFC107)  // Pendente — amarelo
 val KomaStatusPreparo   = Color(0xFF60A5FA)  // Em Preparo — azul

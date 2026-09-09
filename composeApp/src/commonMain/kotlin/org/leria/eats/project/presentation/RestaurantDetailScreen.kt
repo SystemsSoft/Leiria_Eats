@@ -51,6 +51,7 @@ private val RdSecondary = KomaBrandGreen
 private val RdAccent    = KomaGoldDark
 private val RdText      = KomaTextPrimary
 private val RdMuted     = KomaTextSec
+private val RdSurpriseBox = KomaSurpriseBox
 
 @Composable
 fun RestaurantDetailScreen(
@@ -356,6 +357,20 @@ fun CompactProductItem(
                 onFailure = { Box(Modifier.fillMaxSize().background(RdSurface)) }
             )
 
+            if (product.isSurpriseBox) {
+                Surface(
+                    modifier = Modifier.align(Alignment.TopStart).padding(4.dp),
+                    shape = RoundedCornerShape(6.dp),
+                    color = RdSurpriseBox.copy(alpha = 0.92f)
+                ) {
+                    Text(
+                        text = "🎁",
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
             if (hasItems) {
                 Box(
                     modifier = Modifier
@@ -496,6 +511,27 @@ private fun ExpandedProductDetailsModal(
                     color = RdSecondary,
                     fontSize = 20.sp
                 )
+            }
+
+            if (product.isSurpriseBox) {
+                Spacer(modifier = Modifier.height(10.dp))
+                val start = product.surpriseBoxPickupStart
+                val end = product.surpriseBoxPickupEnd
+                Surface(shape = RoundedCornerShape(8.dp), color = RdSurpriseBox.copy(alpha = 0.12f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                        Text(text = "🎁 ", fontSize = 13.sp)
+                        Text(
+                            text = if (!start.isNullOrBlank() && !end.isNullOrBlank()) {
+                                "Caixa Surpresa — recolha entre $start e $end"
+                            } else {
+                                "Caixa Surpresa — restaurante ainda não definiu o horário de recolha"
+                            },
+                            color = RdSurpriseBox,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

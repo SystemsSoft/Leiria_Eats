@@ -54,6 +54,7 @@ private val AiAccent    = KomaGoldDark
 private val AiText      = KomaTextPrimary
 private val AiTextMuted = KomaTextSec
 private val AiBotBubble = KomaMintLight
+private val AiSurpriseBox = KomaSurpriseBox
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiSearchScreen(
@@ -1260,11 +1261,35 @@ private fun ProductChatCard(
                 } else {
                     Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(AiSecondary.copy(alpha = 0.2f), Color.Transparent))), contentAlignment = Alignment.Center) { Text("🍕", fontSize = 24.sp) }
                 }
+
+                if (product.isSurpriseBox) {
+                    Surface(
+                        modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
+                        shape = RoundedCornerShape(4.dp),
+                        color = AiSurpriseBox.copy(alpha = 0.92f)
+                    ) {
+                        Text(text = "🎁", fontSize = 8.sp, modifier = Modifier.padding(horizontal = 2.dp))
+                    }
+                }
             }
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = product.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = AiText)
                 Text(text = "${product.price} €", style = MaterialTheme.typography.bodyMedium, color = AiSecondary, fontWeight = FontWeight.Bold)
+                if (product.isSurpriseBox) {
+                    val start = product.surpriseBoxPickupStart
+                    val end = product.surpriseBoxPickupEnd
+                    Text(
+                        text = if (!start.isNullOrBlank() && !end.isNullOrBlank()) {
+                            "🎁 Recolha $start–$end"
+                        } else {
+                            "🎁 Caixa Surpresa"
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AiSurpriseBox,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             IconButton(
@@ -1534,6 +1559,26 @@ private fun ProductDetailBottomSheet(
         Text(text = product.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = AiText, textAlign = TextAlign.Center)
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = "${product.price} €", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = AiSecondary)
+        if (product.isSurpriseBox) {
+            Spacer(modifier = Modifier.height(10.dp))
+            val start = product.surpriseBoxPickupStart
+            val end = product.surpriseBoxPickupEnd
+            Surface(shape = RoundedCornerShape(8.dp), color = AiSurpriseBox.copy(alpha = 0.12f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    Text(text = "🎁 ", fontSize = 13.sp)
+                    Text(
+                        text = if (!start.isNullOrBlank() && !end.isNullOrBlank()) {
+                            "Caixa Surpresa — recolha entre $start e $end"
+                        } else {
+                            "Caixa Surpresa — restaurante ainda não definiu o horário de recolha"
+                        },
+                        color = AiSurpriseBox,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(16.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             if (product.rating != null && product.rating > 0) { Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) { Text("⭐", fontSize = 16.sp); Text(text = product.rating.toString(), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = AiText) } }
