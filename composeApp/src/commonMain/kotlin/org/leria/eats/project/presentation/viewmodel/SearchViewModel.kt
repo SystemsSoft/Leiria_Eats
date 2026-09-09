@@ -1434,7 +1434,18 @@ class SearchViewModel(
     private fun updateAiCart(products: List<Product>) {
         val filteredProducts = products.filter { it.quantity > 0 }
         if (filteredProducts.isEmpty()) return
-        
+
+        // Defesa em profundidade: o backend já garante que cartProducts nunca mistura
+        // um item de Caixa Surpresa com outro produto (ver
+        // HybridAIService._bloqueado_por_caixa_surpresa_exclusiva) — isso aqui não deve
+        // disparar em uso normal. Só avisa no log para facilitar diagnóstico caso a
+        // API alguma vez devolva essa combinação inesperada; não filtra nada sozinho
+        // para não mascarar um estado que precisa ser investigado no servidor.
+        if (filteredProducts.size > 1 && filteredProducts.any { it.isSurpriseBox }) {
+            println("⚠️ [Cart] Sacola da IA veio com item de Caixa Surpresa + outro(s) produto(s) — " +
+                "esperado apenas 1 item exclusivo. products=${filteredProducts.map { it.name }}")
+        }
+
         _uiState.update { currentState ->
             currentState.copy(
                 cartItems = filteredProducts,

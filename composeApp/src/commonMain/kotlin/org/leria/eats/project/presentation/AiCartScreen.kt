@@ -165,6 +165,7 @@ fun AiCartScreen(
             onGetAddressFromMap = onGetAddressFromMap,
             restaurants = cartRestaurants,
             onGetDeliveryFee = onGetDeliveryFee,
+            forcePickupOnly = cartItems.any { it.isSurpriseBox },
             onDismiss = { showServiceFeeSheet = false },
             onConfirm = { address, deliveryFee, serviceFee, deliveryType, feesMap ->
                 showServiceFeeSheet = false
@@ -466,14 +467,18 @@ fun AiServiceFeeBottomSheet(
     onConfirm: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     restaurants: List<Restaurant>,
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
-    onRemoveRestaurant: (String) -> Unit = {}
+    onRemoveRestaurant: (String) -> Unit = {},
+    // Um pedido com item de Caixa Surpresa é exclusivo e só pode ser recolhido no
+    // restaurante — mesma regra aplicada no backend (gate em order_routes.py) e em
+    // ServiceFeeBottomSheet (CartScreen.kt).
+    forcePickupOnly: Boolean = false
 ) {
     val serviceFee = (cartTotal * 0.05).coerceIn(0.49, 1.99)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedAddress by remember { mutableStateOf(userAddresses.firstOrNull()) }
     var showAddressPicker by remember { mutableStateOf(false) }
     var showMapDialog by remember { mutableStateOf(false) }
-    var selectedDeliveryType by remember { mutableStateOf("delivery") }
+    var selectedDeliveryType by remember { mutableStateOf(if (forcePickupOnly) "pickup" else "delivery") }
     val isPickup = selectedDeliveryType == "pickup"
 
     // Pending map coordinates waiting for geocoding
@@ -658,6 +663,36 @@ fun AiServiceFeeBottomSheet(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // ── Delivery type selector ────────────────────────────────────
+                if (forcePickupOnly) {
+                    // Caixa Surpresa é exclusiva e só pode ser recolhida no restaurante —
+                    // sem opção de escolher, para não dar a entender que entrega é possível.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Brush.verticalGradient(listOf(CartSecondary.copy(alpha = 0.16f), CartSecondary.copy(alpha = 0.06f))))
+                            .border(1.dp, CartSecondary.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                            .padding(16.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Icon(
+                                imageVector = Icons.Default.StoreMallDirectory,
+                                contentDescription = null,
+                                tint = CartSecondary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Column {
+                                Text("Recolha no restaurante", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = CartSecondary)
+                                Text(
+                                    "🎁 Pedidos com Caixa Surpresa são exclusivos e só podem ser recolhidos no restaurante.",
+                                    fontSize = 12.sp,
+                                    color = CartMuted,
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
+                    }
+                } else {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -738,6 +773,7 @@ fun AiServiceFeeBottomSheet(
                             )
                         }
                     }
+                }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))

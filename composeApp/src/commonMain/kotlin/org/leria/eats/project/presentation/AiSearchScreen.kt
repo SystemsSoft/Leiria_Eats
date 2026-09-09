@@ -740,7 +740,11 @@ private fun AiCartChatBubble(
     scrollState: ScrollState = rememberScrollState()
 ) {
     var selectedAddress by remember { mutableStateOf(userAddresses.firstOrNull()) }
-    var selectedDeliveryType by remember { mutableStateOf("delivery") }
+    // Um pedido com item de Caixa Surpresa é exclusivo e só pode ser recolhido no
+    // restaurante — mesma regra aplicada no backend (gate em order_routes.py) e nos
+    // demais checkouts do app (ServiceFeeBottomSheet, AiServiceFeeBottomSheet).
+    val forcePickupOnly = cartItems.any { it.isSurpriseBox }
+    var selectedDeliveryType by remember(forcePickupOnly) { mutableStateOf(if (forcePickupOnly) "pickup" else "delivery") }
     val isPickup = selectedDeliveryType == "pickup"
     
     var deliveryFeesMap by remember { mutableStateOf<Map<String, DeliveryFeeResponse>>(emptyMap()) }
@@ -883,7 +887,9 @@ private fun AiCartChatBubble(
                             .background(AiCard)
                             .padding(4.dp)
                     ) {
-                        listOf("delivery" to "Entrega", "pickup" to "Recolha").forEach { (type, label) ->
+                        val deliveryTypeOptions = if (forcePickupOnly) listOf("pickup" to "Recolha")
+                            else listOf("delivery" to "Entrega", "pickup" to "Recolha")
+                        deliveryTypeOptions.forEach { (type, label) ->
                             val isSelected = selectedDeliveryType == type
                             Box(
                                 modifier = Modifier
@@ -1043,7 +1049,9 @@ private fun AiCartChatBubble(
                                 .background(AiSurface)
                                 .padding(4.dp)
                         ) {
-                            listOf("delivery" to "Entrega", "pickup" to "Recolha").forEach { (type, label) ->
+                            val deliveryTypeOptions = if (forcePickupOnly) listOf("pickup" to "Recolha")
+                            else listOf("delivery" to "Entrega", "pickup" to "Recolha")
+                        deliveryTypeOptions.forEach { (type, label) ->
                                 val isSelected = selectedDeliveryType == type
                                 Box(
                                     modifier = Modifier
