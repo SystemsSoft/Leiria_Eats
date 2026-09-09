@@ -358,7 +358,7 @@ private fun AiQuickActionsRow(
             label = "Caixa Surpresa",
             enabled = enabled,
             modifier = Modifier.weight(1f),
-            onClick = { onQuickPrompt("Me surpreenda! Escolha algo saboroso para mim.") },
+            onClick = { onQuickPrompt("Quero ver as opções de Caixa Surpresa disponíveis hoje.") },
             onInfoClick = { showSurpriseInfoDialog = true }
         )
         AiQuickActionChip(
