@@ -77,9 +77,6 @@ data class OnboardingMessage(
 
 @Composable
 fun OnboardingChatScreen(
-    isListening: Boolean,
-    recognizedText: String,
-    onMicClick: () -> Unit,
     onComplete: (name: String, email: String, phone: String, address: Address?) -> Unit,
     onGetAddressFromMap: (Double, Double) -> String?,
     tts: TextToSpeechService,
@@ -97,7 +94,6 @@ fun OnboardingChatScreen(
 
     var showMapDialog by remember { mutableStateOf(false) }
     var isProcessing by remember { mutableStateOf(false) }
-    var lastProcessedVoiceText by remember { mutableStateOf("") }
 
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
@@ -125,39 +121,6 @@ fun OnboardingChatScreen(
             tts = tts,
             isMuted = isMuted
         )
-    }
-
-    // Handle voice input - mostrar em tempo real e enviar quando parar
-    LaunchedEffect(recognizedText, isListening) {
-        if (recognizedText.isNotEmpty()) {
-            // Atualiza o campo de texto em tempo real enquanto fala
-            inputText = recognizedText
-            
-            // Quando parar de falar, envia automaticamente após um delay
-            if (!isListening && recognizedText.isNotBlank() && recognizedText != lastProcessedVoiceText) {
-                delay(300) // Pequeno delay para garantir que capturou tudo
-                lastProcessedVoiceText = recognizedText // Marca como processado
-                // Envia automaticamente
-                scope.launch {
-                    processUserInput(
-                        input = recognizedText,
-                        currentStep = currentStep,
-                        messages = messages,
-                        onUpdateMessages = { messages = it },
-                        onUpdateStep = { currentStep = it },
-                        onUpdateName = { userName = it },
-                        onUpdateEmail = { userEmail = it },
-                        onUpdatePhone = { userPhone = it },
-                        onUpdateAddress = { userAddress = it },
-                        onComplete = { onComplete(userName, userEmail, userPhone, userAddress) },
-                        tts = tts,
-                        isMuted = isMuted,
-                        onProcessing = { isProcessing = it }
-                    )
-                    inputText = "" // Limpa o campo após enviar
-                }
-            }
-        }
     }
 
     // Auto-scroll to bottom when new messages arrive
@@ -292,16 +255,9 @@ fun OnboardingChatScreen(
                 inputText = inputText,
                 onInputChange = {
                     inputText = it
-                    // Se o usuário começar a digitar manualmente, limpa a flag
-                    if (it != recognizedText) {
-                        lastProcessedVoiceText = ""
-                    }
                 },
-                isListening = isListening,
-                onMicClick = onMicClick,
                 onSendClick = {
                     if (inputText.isNotBlank()) {
-                        lastProcessedVoiceText = "" // Reset flag ao enviar manualmente
                         scope.launch {
                             processUserInput(
                                 input = inputText,
@@ -590,8 +546,6 @@ private fun AiTypingIndicator() {
 private fun OnboardingInputArea(
     inputText: String,
     onInputChange: (String) -> Unit,
-    isListening: Boolean,
-    onMicClick: () -> Unit,
     onSendClick: () -> Unit,
     currentStep: OnboardingStep,
     modifier: Modifier = Modifier
@@ -641,33 +595,6 @@ private fun OnboardingInputArea(
                         unfocusedIndicatorColor = Color.Transparent
                     ),
                     modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            // Mic button
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .then(
-                        if (isListening)
-                            Modifier.background(Brush.linearGradient(listOf(OGold, KomaOrangeEnd)))
-                        else
-                            Modifier.background(OCard)
-                    )
-                    .border(
-                        1.dp,
-                        if (isListening) Color.Transparent else OGold.copy(alpha = 0.3f),
-                        CircleShape
-                    )
-                    .clickable { onMicClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Default.Mic,
-                    contentDescription = "Microfone",
-                    tint = if (isListening) KomaGoldOnDark else OGold,
-                    modifier = Modifier.size(22.dp)
                 )
             }
 

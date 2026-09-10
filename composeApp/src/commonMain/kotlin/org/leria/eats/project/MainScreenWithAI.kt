@@ -303,7 +303,8 @@ fun MainScreenWithAI(
             Scaffold(
                 snackbarHost = { SnackbarHost(snackbarHostState) },
                 bottomBar = {
-                    val showBottomBar = if (uiState.currentTab == MainTab.AI) {
+                    val isOnboarding = uiState.currentTab == MainTab.PROFILE && uiState.userProfile.name.isBlank()
+                    val showBottomBar = !isOnboarding && if (uiState.currentTab == MainTab.AI) {
                         uiState.isBottomNavVisible
                     } else {
                         !(uiState.currentTab == MainTab.HOME && uiState.selectedRestaurant != null)
@@ -689,16 +690,6 @@ fun MainScreenWithAI(
                                 if (uiState.userProfile.name.isEmpty()) {
                                     // Onboarding: usuário novo sem perfil
                                     OnboardingChatScreen(
-                                        isListening = isListening && voiceContext == VoiceContext.ONBOARDING,
-                                        recognizedText = if (voiceContext == VoiceContext.ONBOARDING) voiceText else "",
-                                        onMicClick = {
-                                            if (permissionStatus == PermissionStatus.GRANTED) {
-                                                if (!isListening) voiceRecognizer.startListening(VoiceContext.ONBOARDING)
-                                                else voiceRecognizer.stopListening()
-                                            } else {
-                                                permissionManager.askForPermission()
-                                            }
-                                        },
                                         onComplete = { name: String, email: String, phone: String, address: Address? ->
                                             // Salvar perfil do usuário e redirecionar para a tela de IA
                                             val addresses: List<Address> = if (address != null) listOf(address) else emptyList()
