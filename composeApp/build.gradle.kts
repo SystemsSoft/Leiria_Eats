@@ -41,6 +41,10 @@ kotlin {
 
             // ZXing para geração de QR codes localmente
             implementation("com.google.zxing:core:3.5.3")
+
+            // Media3 ExoPlayer para reprodução do vídeo da splash screen
+            implementation("androidx.media3:media3-exoplayer:1.11.1")
+            implementation("androidx.media3:media3-ui:1.11.1")
         }
 
         iosMain.dependencies {

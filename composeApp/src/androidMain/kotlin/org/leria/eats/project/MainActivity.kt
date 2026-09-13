@@ -4,9 +4,14 @@ import App
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import org.koin.android.ext.android.inject
 import org.leria.eats.project.data.initAndroidDataStore
 import org.leria.eats.project.payment.StripePaymentManager
+import org.leria.eats.project.presentation.VideoSplashScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -22,7 +27,13 @@ class MainActivity : ComponentActivity() {
         stripePaymentManager.register(this)
 
         setContent {
-            App()
+            var showSplash by remember { mutableStateOf(true) }
+
+            if (showSplash) {
+                VideoSplashScreen(onFinished = { showSplash = false })
+            } else {
+                App()
+            }
         }
     }
 
