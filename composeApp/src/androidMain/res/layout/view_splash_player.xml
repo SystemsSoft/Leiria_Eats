@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    surface_type="texture_view" é essencial: o PlayerView usa SurfaceView por padrão,
+    que ignora animações de alpha do Compose (renderiza numa camada separada da
+    hierarquia de views). TextureView é uma View normal e respeita fade/alpha.
+-->
+<androidx.media3.ui.PlayerView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/splash_player_view"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    app:surface_type="texture_view"
+    app:use_controller="false" />

@@ -1,6 +1,7 @@
 package org.leria.eats.project.presentation
 
 import android.net.Uri
+import android.view.LayoutInflater
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -60,8 +61,8 @@ fun VideoSplashScreen(onFinished: () -> Unit) {
     ) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
-            factory = {
-                PlayerView(context).apply {
+            factory = { ctx ->
+                (LayoutInflater.from(ctx).inflate(R.layout.view_splash_player, null) as PlayerView).apply {
                     player = exoPlayer
                     useController = false
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
