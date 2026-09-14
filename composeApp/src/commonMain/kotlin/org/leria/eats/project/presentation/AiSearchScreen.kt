@@ -393,7 +393,7 @@ private fun AiQuickActionChip(
     onClick: () -> Unit,
     onInfoClick: (() -> Unit)? = null
 ) {
-    Row(
+    Box(
         modifier = modifier
             .clip(RoundedCornerShape(50.dp))
             .background(AiCard)
@@ -403,30 +403,41 @@ private fun AiQuickActionChip(
                 shape = RoundedCornerShape(50.dp)
             )
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(start = 14.dp, end = if (onInfoClick != null) 6.dp else 14.dp, top = 10.dp, bottom = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Text(emoji, fontSize = 14.sp)
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = if (enabled) AiText else AiTextMuted,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false)
-        )
+        Row(
+            modifier = Modifier.padding(
+                start = 14.dp,
+                end = if (onInfoClick != null) 34.dp else 14.dp,
+                top = 10.dp,
+                bottom = 10.dp
+            ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(emoji, fontSize = 14.sp)
+            Text(
+                text = label,
+                fontSize = 14.sp,
+                color = if (enabled) AiText else AiTextMuted,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+        }
         if (onInfoClick != null) {
             IconButton(
                 onClick = onInfoClick,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 2.dp)
+                    .size(26.dp)
             ) {
                 Icon(
                     Icons.Default.Info,
                     contentDescription = "Saber mais sobre $label",
                     tint = AiPrimary.copy(alpha = if (enabled) 0.8f else 0.4f),
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
