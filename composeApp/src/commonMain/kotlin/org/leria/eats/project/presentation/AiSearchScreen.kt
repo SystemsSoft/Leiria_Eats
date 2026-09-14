@@ -718,10 +718,13 @@ private fun AiSuggestionSections(
     onChooseInChat: (Product) -> Unit
 ) {
     val melhoresSugestoes = remember(products, restaurants) {
-        products.filter { resolvePlan(it, restaurants)?.uppercase() == "ESSENCE" }.take(6)
+        products.filter { resolvePlan(it, restaurants)?.uppercase() == "ESSENCE" }
+            .sortedByDescending { it.rating ?: -1.0 }
+            .take(6)
     }
     val outrasSugestoes = remember(products, restaurants) {
         products.filter { resolvePlan(it, restaurants)?.uppercase() == "SMART" }
+            .sortedByDescending { it.rating ?: -1.0 }
     }
 
     Column(
