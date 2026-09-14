@@ -428,10 +428,14 @@ class SearchViewModel(
         fetchSearch(resolvedQuery)
     }
 
-    /** Envia ao chat da IA a escolha de um produto sugerido, como se o usuário tivesse digitado. */
+    /**
+     * Envia ao chat da IA a escolha de um produto sugerido, como se o usuário tivesse digitado.
+     * A quantidade vem explícita na mensagem para a IA adicionar direto ao carrinho (1 unidade),
+     * sem perguntar de novo — ver regra "Exceção" em gemini_sales_service.py.
+     */
     fun chooseProductInChat(product: Product) {
         if (_uiState.value.isLoading) return
-        fetchSearch("Quero ${product.name}")
+        fetchSearch("Adicionar 1 ${product.name} ao meu carrinho.")
     }
 
     /** Envia um prompt pré-definido ao chat da IA (ex.: atalhos rápidos como "Caixa Surpresa"). */
