@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.launch
+import org.koin.compose.viewmodel.koinViewModel
+import org.leria.eats.project.presentation.viewmodel.SearchViewModel
 
 /**
  * Reproduz [VideoSplashScreen] e, ao terminar, funde para [content]: um flash de brilho
@@ -24,6 +26,14 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun SplashTransitionHost(content: @Composable () -> Unit) {
+    // Obter o SearchViewModel aqui (mesmo sem usá-lo nesta tela) já dispara seu `init` —
+    // que carrega restaurantes/produtos do Explorar — em paralelo com o vídeo de splash,
+    // em vez de só começar depois que o vídeo termina e MainScreenWithAI é composta.
+    // Como o Koin escopa o ViewModel ao mesmo ViewModelStoreOwner (a Activity), a
+    // instância criada aqui é reaproveitada, não duplicada, quando `content()` pedir o
+    // mesmo SearchViewModel mais tarde.
+    koinViewModel<SearchViewModel>()
+
     var videoFinished by remember { mutableStateOf(false) }
     val splashAlpha = remember { Animatable(1f) }
     val glowAlpha = remember { Animatable(0f) }
