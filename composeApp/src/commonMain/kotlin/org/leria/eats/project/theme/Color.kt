@@ -52,7 +52,7 @@ val KomaSurpriseBoxDark = Color(0xFF5B21B6)  // Gradiente escuro do badge Caixa 
 
 // ── Top bar IA — verde gradiente escuro (AiSearchScreen) ─────────────────────
 val KomaTopBarGreenStart = Color(0xFF0F3D2E)  // Topo do gradiente — verde bem escuro
-val KomaTopBarGreenEnd   = Color(0xFF1E6B50)  // Base do gradiente — verde escuro, tom de KomaBrandGreen
+val KomaTopBarGreenEnd   = Color(0xFF207659)  // Base do gradiente — verde escuro, tom de KomaBrandGreen
 
 // ── Status de pedidos ─────────────────────────────────────────────────────────
 val KomaStatusPendente  = Color(0xFFFFC107)  // Pendente — amarelo

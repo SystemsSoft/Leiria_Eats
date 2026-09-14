@@ -3,11 +3,15 @@ package org.leria.eats.project
 import App
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.ui.graphics.toArgb
 import org.koin.android.ext.android.inject
 import org.leria.eats.project.data.initAndroidDataStore
 import org.leria.eats.project.payment.StripePaymentManager
 import org.leria.eats.project.presentation.SplashTransitionHost
+import org.leria.eats.project.theme.KomaTopBarGreenStart
 
 class MainActivity : ComponentActivity() {
 
@@ -15,6 +19,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(KomaTopBarGreenStart.toArgb())
+        )
+
         ActivityHolder.activity = this
         initAndroidDataStore(applicationContext)
         org.leria.eats.project.data.setApplicationContext(applicationContext)

@@ -40,6 +40,7 @@ import org.leria.eats.project.data.DeliveryFeeResponse
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
+import org.leria.eats.project.presentation.util.StatusBarLightIcons
 import org.leria.eats.project.presentation.util.buildChargedFeesMap
 import org.leria.eats.project.presentation.util.formatCurrency
 import org.leria.eats.project.theme.*
@@ -83,6 +84,9 @@ fun AiSearchScreen(
     var selectedProduct by remember { mutableStateOf<Product?>(null) }
     var isCartExpanded by remember { mutableStateOf(false) }
     var showClearConfirmDialog by remember { mutableStateOf(false) }
+
+    // Ícones claros na status bar enquanto a barra verde escura desta tela estiver visível
+    StatusBarLightIcons(enabled = true)
 
     // ── Dialog de Confirmação para Limpar Chat e Sacola ──────────────────────
     if (showClearConfirmDialog) {
