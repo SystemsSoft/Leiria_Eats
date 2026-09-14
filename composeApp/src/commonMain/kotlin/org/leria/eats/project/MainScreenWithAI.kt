@@ -91,6 +91,9 @@ private val KomaDeepBg = KomaBg
 private val KomaNavGold  = KomaGold
 private val KomaNavGreen = KomaBrandGreen
 private val KomaMuted    = KomaTextSec
+private val NavBarGradient = Brush.verticalGradient(
+    colors = listOf(KomaTopBarGreenStart, KomaTopBarGreenEnd)
+)
 
 @Composable
 fun MainScreenWithAI(
@@ -329,7 +332,7 @@ fun MainScreenWithAI(
                             contentAlignment = Alignment.Center
                         ) {
                             Surface(
-                                color = KomaDeepBg.copy(alpha = 0.85f),
+                                color = Color.Transparent,
                                 shape = RoundedCornerShape(28.dp),
                                 modifier = Modifier
                                     .widthIn(max = 500.dp)
@@ -337,9 +340,9 @@ fun MainScreenWithAI(
                                         width = 1.dp,
                                         brush = Brush.horizontalGradient(
                                             listOf(
-                                                KomaNavGold.copy(alpha = 0.1f), 
-                                                KomaNavGold.copy(alpha = 0.5f), 
-                                                KomaNavGreen.copy(alpha = 0.4f), 
+                                                KomaNavGold.copy(alpha = 0.1f),
+                                                KomaNavGold.copy(alpha = 0.5f),
+                                                KomaNavGreen.copy(alpha = 0.4f),
                                                 KomaNavGold.copy(alpha = 0.1f)
                                             )
                                         ),
@@ -349,6 +352,7 @@ fun MainScreenWithAI(
                             ) {
                                 Row(
                                     modifier = Modifier
+                                        .background(NavBarGradient)
                                         .fillMaxWidth()
                                         .height(72.dp) // Altura ideal para conter ícone + texto sem corte
                                         .padding(horizontal = 8.dp),
@@ -381,7 +385,7 @@ fun MainScreenWithAI(
                                                 modifier = Modifier.padding(top = 2.dp)
                                             ) {
                                                 val contentColor by animateColorAsState(
-                                                    targetValue = if (isSelected) KomaNavGold else KomaMuted.copy(alpha = 0.5f),
+                                                    targetValue = if (isSelected) KomaNavGold else Color.White.copy(alpha = 0.55f),
                                                     label = "color"
                                                 )
                                                 val scale by animateFloatAsState(
