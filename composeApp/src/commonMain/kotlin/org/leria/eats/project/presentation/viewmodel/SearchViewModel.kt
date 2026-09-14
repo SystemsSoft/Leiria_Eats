@@ -67,13 +67,20 @@ class SearchViewModel(
 
     private var initialRestaurantsLoaded = false
 
-    /** Carrega todos os restaurantes e guarda em [SearchUiState.allRestaurants] para o Home. */
+    /**
+     * Carrega todos os restaurantes e guarda em [SearchUiState.allRestaurants] para o Home.
+     * Só marca [initialRestaurantsLoaded] em caso de sucesso — se a chamada falhar (rede
+     * instável, servidor reiniciando, etc.), a próxima tentativa (ex.: reabrir a aba
+     * Explorar via [onTabSelected]) tenta de novo, em vez de deixar a lista vazia pro
+     * resto da sessão do app.
+     */
     private fun loadAllRestaurantsForHome() {
         viewModelScope.launch {
             try {
                 val restaurants = apiClient.getAllRestaurants()
                 if (restaurants.isNotEmpty()) {
                     _uiState.update { it.copy(allRestaurants = restaurants) }
+                    initialRestaurantsLoaded = true
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -93,7 +100,6 @@ class SearchViewModel(
                     _uiState.update { it.copy(userProfile = profile, aiReply = greeting) }
                     // Load all restaurants automatically on first open
                     if (!initialRestaurantsLoaded) {
-                        initialRestaurantsLoaded = true
                         loadAllRestaurantsForHome()
                     }
                 } else {
@@ -822,6 +828,9 @@ class SearchViewModel(
             if (userId.isNotBlank()) {
                 viewModelScope.launch { refreshOrdersInternal() }
             }
+        }
+        if (tab == MainTab.HOME && !initialRestaurantsLoaded) {
+            loadAllRestaurantsForHome()
         }
     }
 

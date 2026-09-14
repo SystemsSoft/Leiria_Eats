@@ -50,13 +50,13 @@ data class Product(
 
 @Serializable
 data class Restaurant(
-    val gid: String, // MUDOU: id: Int -> gid: String
-    val name: String,
-    val category: String,
+    val gid: String = "", // MUDOU: id: Int -> gid: String
+    val name: String = "",
+    val category: String = "",
     val rating: Double? = null,
     @SerialName("is_closed")
     val isClosed: Boolean? = null,
-    val image_url: String?,
+    val image_url: String? = null,
     val products: List<Product> = emptyList(),
     val latitude: Double? = null,
     val longitude: Double? = null,
@@ -93,13 +93,13 @@ data class SearchResponse(
 
 @Serializable
 data class CompanyResponse(
-    val gid: String, // MUDOU: id: Int -> gid: String
-    val name: String,
-    val category: String,
+    val gid: String = "", // MUDOU: id: Int -> gid: String
+    val name: String = "",
+    val category: String = "",
     @SerialName("image_url")
-    val imageUrl: String,
+    val imageUrl: String? = null,
     val products: List<Product> = emptyList(),
-    val plan: String,
+    val plan: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null
 )

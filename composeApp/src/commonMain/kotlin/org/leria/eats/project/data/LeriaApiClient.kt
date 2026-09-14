@@ -36,6 +36,12 @@ class LeriaApiClient {
         prettyPrint = true
         isLenient = true
         ignoreUnknownKeys = true
+        // O backend legitimamente manda null em vários campos opcionais (ex.: produto
+        // sem preparation_time, restaurante sem image_url) — sem isso, um único campo
+        // nulo derruba a desserialização da lista inteira (ver incidente do Explorar
+        // vazio). Com coerceInputValues, um null onde o tipo é não-nulo usa o valor
+        // padrão declarado na classe, em vez de lançar exceção.
+        coerceInputValues = true
     }
 
     private val client = HttpClient {
