@@ -656,17 +656,18 @@ private fun AiMessageBubble(
     onProductClick: (Product) -> Unit = {},
     onChooseInChat: (Product) -> Unit = {}
 ) {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Start
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Column(
-            modifier = Modifier.widthIn(max = 320.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            if (message.text.isNotBlank()) {
+        if (message.text.isNotBlank()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start
+            ) {
                 Box(
                     modifier = Modifier
+                        .widthIn(max = 320.dp)
                         .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp))
                         .background(Brush.horizontalGradient(listOf(AiBotBubble, AiCard)))
                         .border(1.dp, AiPrimary.copy(alpha = 0.2f), RoundedCornerShape(topStart = 4.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 20.dp))
@@ -674,8 +675,8 @@ private fun AiMessageBubble(
                 ) {
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
-                            text = message.text, 
-                            style = MaterialTheme.typography.bodyMedium, 
+                            text = message.text,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = AiText
                         )
                         if (isTyping) {
@@ -684,16 +685,168 @@ private fun AiMessageBubble(
                     }
                 }
             }
+        }
 
-            if (message.products.isNotEmpty()) {
-                message.products.forEach { product ->
-                    ProductChatCard(
+        if (message.products.isNotEmpty()) {
+            AiProductGrid(
+                products = message.products,
+                restaurants = message.restaurants,
+                onProductClick = onProductClick,
+                onChooseInChat = onChooseInChat
+            )
+        }
+    }
+}
+
+// ── Grid de produtos (mesmo padrão visual do Explorar: fileiras de 3, com
+//    imagem quadrada, nome, restaurante e avaliação) ──────────────────────────
+@Composable
+private fun AiProductGrid(
+    products: List<Product>,
+    restaurants: List<Restaurant>,
+    onProductClick: (Product) -> Unit,
+    onChooseInChat: (Product) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        products.chunked(3).forEach { rowProducts ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                rowProducts.forEach { product ->
+                    AiProductGridCard(
                         product = product,
-                        onAddToCart = { onAddToCart(product) },
+                        restaurantName = product.restaurantName?.takeIf { it.isNotBlank() }
+                            ?: restaurants.find { it.gid == product.restaurant_gid }?.name,
                         onClick = { onProductClick(product) },
-                        onChooseInChat = { onChooseInChat(product) }
+                        onChooseInChat = { onChooseInChat(product) },
+                        modifier = Modifier.weight(1f)
                     )
                 }
+                repeat(3 - rowProducts.size) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AiProductGridCard(
+    product: Product,
+    restaurantName: String?,
+    onClick: () -> Unit,
+    onChooseInChat: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(AiCard)
+            .border(1.dp, AiSecondary.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+            .clickable { onClick() },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+        ) {
+            if (!product.image_url.isNullOrBlank()) {
+                KamelImage(
+                    resource = asyncPainterResource(data = product.image_url),
+                    contentDescription = product.name,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    onLoading = { Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = AiPrimary) } },
+                    onFailure = { Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) { Text("🍕", fontSize = 22.sp) } }
+                )
+            } else {
+                Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) { Text("🍕", fontSize = 22.sp) }
+            }
+
+            if (product.isSurpriseBox) {
+                Surface(
+                    modifier = Modifier.align(Alignment.TopStart).padding(4.dp),
+                    shape = RoundedCornerShape(6.dp),
+                    color = AiSurpriseBox.copy(alpha = 0.92f)
+                ) {
+                    Text(text = "🎁", fontSize = 10.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                }
+            }
+
+            IconButton(
+                onClick = onChooseInChat,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(4.dp)
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .background(AiCard.copy(alpha = 0.92f))
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Escolher ${product.name}",
+                    tint = AiSecondary,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier.padding(6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = product.name,
+                fontWeight = FontWeight.Bold,
+                color = AiText,
+                fontSize = 10.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            if (!restaurantName.isNullOrBlank()) {
+                Text(
+                    text = restaurantName,
+                    color = AiTextMuted,
+                    fontSize = 9.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
+            }
+            if (product.rating != null && product.rating > 0) {
+                Spacer(modifier = Modifier.height(1.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("⭐", fontSize = 9.sp)
+                    Text(text = product.rating.toString(), color = AiTextMuted, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = formatCurrency(product.price),
+                color = AiSecondary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center
+            )
+            if (product.isSurpriseBox) {
+                val start = product.surpriseBoxPickupStart
+                val end = product.surpriseBoxPickupEnd
+                Text(
+                    text = if (!start.isNullOrBlank() && !end.isNullOrBlank()) "🎁 $start–$end" else "🎁 Caixa Surpresa",
+                    color = AiSurpriseBox,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
@@ -1247,92 +1400,6 @@ private fun AiCartChatSection(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(formatCurrency(product.price * product.quantity), color = AiSecondary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProductChatCard(
-    product: Product,
-    onAddToCart: () -> Unit,
-    onClick: () -> Unit = {},
-    onChooseInChat: () -> Unit = {}
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .clickable { onClick() }
-            .background(AiCard)
-            .border(1.dp, AiSecondary.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
-            .padding(12.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(1.dp, AiSecondary.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                if (!product.image_url.isNullOrBlank()) {
-                    KamelImage(
-                        resource = asyncPainterResource(data = product.image_url),
-                        contentDescription = product.name,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        onLoading = { Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(AiSecondary.copy(alpha = 0.2f), Color.Transparent))), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = AiSecondary) } },
-                        onFailure = { Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(AiSecondary.copy(alpha = 0.2f), Color.Transparent))), contentAlignment = Alignment.Center) { Text("🍕", fontSize = 24.sp) } }
-                    )
-                } else {
-                    Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(AiSecondary.copy(alpha = 0.2f), Color.Transparent))), contentAlignment = Alignment.Center) { Text("🍕", fontSize = 24.sp) }
-                }
-
-                if (product.isSurpriseBox) {
-                    Surface(
-                        modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
-                        shape = RoundedCornerShape(4.dp),
-                        color = AiSurpriseBox.copy(alpha = 0.92f)
-                    ) {
-                        Text(text = "🎁", fontSize = 8.sp, modifier = Modifier.padding(horizontal = 2.dp))
-                    }
-                }
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = product.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = AiText)
-                Text(text = "${product.price} €", style = MaterialTheme.typography.bodyMedium, color = AiSecondary, fontWeight = FontWeight.Bold)
-                if (product.isSurpriseBox) {
-                    val start = product.surpriseBoxPickupStart
-                    val end = product.surpriseBoxPickupEnd
-                    Text(
-                        text = if (!start.isNullOrBlank() && !end.isNullOrBlank()) {
-                            "🎁 Recolha $start–$end"
-                        } else {
-                            "🎁 Caixa Surpresa"
-                        },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = AiSurpriseBox,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            IconButton(
-                onClick = onChooseInChat,
-                modifier = Modifier
-                    .size(36.dp)
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Escolher ${product.name}",
-                    tint = AiSecondary,
-                    modifier = Modifier.size(16.dp)
-                )
             }
         }
     }

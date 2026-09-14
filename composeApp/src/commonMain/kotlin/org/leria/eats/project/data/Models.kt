@@ -33,6 +33,8 @@ data class Product(
     val image_url: String? = null,
     @SerialName("restaurant_gid")
     val restaurant_gid: String? = null, // Permite nulo para evitar erro de desserialização
+    @SerialName("restaurant_name")
+    val restaurantName: String? = null,
     val category: String = "",
     @SerialName("preparation_time")
     val preparationTime: String = "",
