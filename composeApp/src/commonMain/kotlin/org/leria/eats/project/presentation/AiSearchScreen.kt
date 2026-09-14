@@ -55,6 +55,9 @@ private val AiText      = KomaTextPrimary
 private val AiTextMuted = KomaTextSec
 private val AiBotBubble = KomaMintLight
 private val AiSurpriseBox = KomaSurpriseBox
+private val AiTopBarGradient = Brush.verticalGradient(
+    colors = listOf(KomaTopBarGreenStart, KomaTopBarGreenEnd)
+)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiSearchScreen(
@@ -124,7 +127,12 @@ fun AiSearchScreen(
 
     Scaffold(
         topBar = {
-            Column {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+                    .background(AiTopBarGradient)
+            ) {
                 AiTopBar(
                     glowAlpha = glowAlpha,
                     isListening = isListening,
@@ -278,14 +286,14 @@ private fun AiTopBar(
                     Text(
                         text = "Limpar",
                         fontSize = 12.sp,
-                        color = AiTextMuted,
+                        color = Color.White.copy(alpha = 0.85f),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = AiSurface,
+            containerColor = Color.Transparent,
             titleContentColor = AiText
         )
     )
@@ -349,9 +357,8 @@ private fun AiQuickActionsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(AiSurface)
             .padding(horizontal = 16.dp)
-            .padding(bottom = 12.dp),
+            .padding(bottom = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         AiQuickActionChip(
