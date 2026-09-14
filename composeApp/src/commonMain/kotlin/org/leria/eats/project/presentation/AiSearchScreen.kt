@@ -692,12 +692,76 @@ private fun AiMessageBubble(
         }
 
         if (message.products.isNotEmpty()) {
-            AiProductGrid(
+            AiSuggestionSections(
                 products = message.products,
                 restaurants = message.restaurants,
                 onProductClick = onProductClick,
                 onChooseInChat = onChooseInChat
             )
+        }
+    }
+}
+
+private fun resolvePlan(product: Product, restaurants: List<Restaurant>): String? {
+    return product.restaurantPlan?.takeIf { it.isNotBlank() }
+        ?: restaurants.find { it.gid == product.restaurant_gid }?.plan
+}
+
+// ── Separa as sugestões em dois blocos por plano do restaurante: os 6 primeiros
+//    produtos ESSENCE em "Melhores sugestões" (destaque), e os produtos SMART
+//    em "Outras sugestões", com cards um pouco menores.
+@Composable
+private fun AiSuggestionSections(
+    products: List<Product>,
+    restaurants: List<Restaurant>,
+    onProductClick: (Product) -> Unit,
+    onChooseInChat: (Product) -> Unit
+) {
+    val melhoresSugestoes = remember(products, restaurants) {
+        products.filter { resolvePlan(it, restaurants)?.uppercase() == "ESSENCE" }.take(6)
+    }
+    val outrasSugestoes = remember(products, restaurants) {
+        products.filter { resolvePlan(it, restaurants)?.uppercase() == "SMART" }
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        if (melhoresSugestoes.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Melhores sugestões",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AiText
+                )
+                AiProductGrid(
+                    products = melhoresSugestoes,
+                    restaurants = restaurants,
+                    onProductClick = onProductClick,
+                    onChooseInChat = onChooseInChat,
+                    compact = false
+                )
+            }
+        }
+
+        if (outrasSugestoes.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Outras sugestões",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AiText
+                )
+                AiProductGrid(
+                    products = outrasSugestoes,
+                    restaurants = restaurants,
+                    onProductClick = onProductClick,
+                    onChooseInChat = onChooseInChat,
+                    compact = true
+                )
+            }
         }
     }
 }
@@ -709,7 +773,8 @@ private fun AiProductGrid(
     products: List<Product>,
     restaurants: List<Restaurant>,
     onProductClick: (Product) -> Unit,
-    onChooseInChat: (Product) -> Unit
+    onChooseInChat: (Product) -> Unit,
+    compact: Boolean = false
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -727,6 +792,7 @@ private fun AiProductGrid(
                             ?: restaurants.find { it.gid == product.restaurant_gid }?.name,
                         onClick = { onProductClick(product) },
                         onChooseInChat = { onChooseInChat(product) },
+                        compact = compact,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -744,6 +810,7 @@ private fun AiProductGridCard(
     restaurantName: String?,
     onClick: () -> Unit,
     onChooseInChat: () -> Unit,
+    compact: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -754,13 +821,27 @@ private fun AiProductGridCard(
         label = "cardPressScale"
     )
 
+    // "Outras sugestões" (SMART) usa cards um pouco menores que "Melhores sugestões" (ESSENCE).
+    val cornerRadius = if (compact) 12.dp else 14.dp
+    val nameSize = if (compact) 9.sp else 10.sp
+    val restaurantSize = if (compact) 8.sp else 9.sp
+    val ratingSize = if (compact) 8.sp else 9.sp
+    val priceSize = if (compact) 9.sp else 10.sp
+    val surpriseSize = if (compact) 7.sp else 8.sp
+    val textPadding = if (compact) 5.dp else 6.dp
+    val fallbackEmojiSize = if (compact) 18.sp else 22.sp
+    val sendButtonSize = if (compact) 22.dp else 26.dp
+    val sendIconSize = if (compact) 12.dp else 14.dp
+    val detailBadgeSize = if (compact) 18.dp else 20.dp
+    val detailIconSize = if (compact) 11.dp else 13.dp
+
     Box(
         modifier = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .shadow(elevation = if (isPressed) 1.dp else 5.dp, shape = RoundedCornerShape(14.dp), clip = false)
-            .clip(RoundedCornerShape(14.dp))
+            .shadow(elevation = if (isPressed) 1.dp else 5.dp, shape = RoundedCornerShape(cornerRadius), clip = false)
+            .clip(RoundedCornerShape(cornerRadius))
             .background(AiCard)
-            .border(1.dp, AiSecondary.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
+            .border(1.dp, AiSecondary.copy(alpha = 0.15f), RoundedCornerShape(cornerRadius))
             .clickable(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
@@ -772,7 +853,7 @@ private fun AiProductGridCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
+                    .clip(RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius))
             ) {
                 if (!product.image_url.isNullOrBlank()) {
                     KamelImage(
@@ -781,10 +862,10 @@ private fun AiProductGridCard(
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         onLoading = { Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = AiPrimary) } },
-                        onFailure = { Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) { Text("🍕", fontSize = 22.sp) } }
+                        onFailure = { Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) { Text("🍕", fontSize = fallbackEmojiSize) } }
                     )
                 } else {
-                    Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) { Text("🍕", fontSize = 22.sp) }
+                    Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) { Text("🍕", fontSize = fallbackEmojiSize) }
                 }
 
                 if (product.isSurpriseBox) {
@@ -802,7 +883,7 @@ private fun AiProductGridCard(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(4.dp)
-                        .size(26.dp)
+                        .size(sendButtonSize)
                         .clip(CircleShape)
                         .background(AiCard.copy(alpha = 0.92f))
                 ) {
@@ -810,20 +891,20 @@ private fun AiProductGridCard(
                         Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Escolher ${product.name}",
                         tint = AiSecondary,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(sendIconSize)
                     )
                 }
             }
 
             Column(
-                modifier = Modifier.padding(6.dp),
+                modifier = Modifier.padding(textPadding),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = product.name,
                     fontWeight = FontWeight.Bold,
                     color = AiText,
-                    fontSize = 10.sp,
+                    fontSize = nameSize,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center
@@ -832,7 +913,7 @@ private fun AiProductGridCard(
                     Text(
                         text = restaurantName,
                         color = AiTextMuted,
-                        fontSize = 9.sp,
+                        fontSize = restaurantSize,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center
@@ -841,15 +922,15 @@ private fun AiProductGridCard(
                 if (product.rating != null && product.rating > 0) {
                     Spacer(modifier = Modifier.height(1.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("⭐", fontSize = 9.sp)
-                        Text(text = product.rating.toString(), color = AiTextMuted, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                        Text("⭐", fontSize = ratingSize)
+                        Text(text = product.rating.toString(), color = AiTextMuted, fontSize = ratingSize, fontWeight = FontWeight.SemiBold)
                     }
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = formatCurrency(product.price),
                     color = AiSecondary,
-                    fontSize = 10.sp,
+                    fontSize = priceSize,
                     fontWeight = FontWeight.ExtraBold,
                     textAlign = TextAlign.Center
                 )
@@ -859,7 +940,7 @@ private fun AiProductGridCard(
                     Text(
                         text = if (!start.isNullOrBlank() && !end.isNullOrBlank()) "🎁 $start–$end" else "🎁 Caixa Surpresa",
                         color = AiSurpriseBox,
-                        fontSize = 8.sp,
+                        fontSize = surpriseSize,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -875,7 +956,7 @@ private fun AiProductGridCard(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(6.dp)
-                .size(20.dp)
+                .size(detailBadgeSize)
                 .clip(CircleShape)
                 .background(AiPrimary),
             contentAlignment = Alignment.Center
@@ -884,7 +965,7 @@ private fun AiProductGridCard(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "Abrir descrição de ${product.name}",
                 tint = Color.White,
-                modifier = Modifier.size(13.dp)
+                modifier = Modifier.size(detailIconSize)
             )
         }
     }
