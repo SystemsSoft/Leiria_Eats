@@ -3,6 +3,8 @@ package org.leria.eats.project.presentation
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +12,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -17,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -742,112 +746,146 @@ private fun AiProductGridCard(
     onChooseInChat: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(AiCard)
-            .border(1.dp, AiSecondary.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-            .clickable { onClick() },
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-        ) {
-            if (!product.image_url.isNullOrBlank()) {
-                KamelImage(
-                    resource = asyncPainterResource(data = product.image_url),
-                    contentDescription = product.name,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    onLoading = { Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = AiPrimary) } },
-                    onFailure = { Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) { Text("🍕", fontSize = 22.sp) } }
-                )
-            } else {
-                Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) { Text("🍕", fontSize = 22.sp) }
-            }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "cardPressScale"
+    )
 
-            if (product.isSurpriseBox) {
-                Surface(
-                    modifier = Modifier.align(Alignment.TopStart).padding(4.dp),
-                    shape = RoundedCornerShape(6.dp),
-                    color = AiSurpriseBox.copy(alpha = 0.92f)
+    Box(
+        modifier = modifier
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .shadow(elevation = if (isPressed) 1.dp else 5.dp, shape = RoundedCornerShape(14.dp), clip = false)
+            .clip(RoundedCornerShape(14.dp))
+            .background(AiCard)
+            .border(1.dp, AiSecondary.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                onClick = onClick
+            )
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
+            ) {
+                if (!product.image_url.isNullOrBlank()) {
+                    KamelImage(
+                        resource = asyncPainterResource(data = product.image_url),
+                        contentDescription = product.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        onLoading = { Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = AiPrimary) } },
+                        onFailure = { Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) { Text("🍕", fontSize = 22.sp) } }
+                    )
+                } else {
+                    Box(Modifier.fillMaxSize().background(AiSurface), contentAlignment = Alignment.Center) { Text("🍕", fontSize = 22.sp) }
+                }
+
+                if (product.isSurpriseBox) {
+                    Surface(
+                        modifier = Modifier.align(Alignment.TopStart).padding(4.dp),
+                        shape = RoundedCornerShape(6.dp),
+                        color = AiSurpriseBox.copy(alpha = 0.92f)
+                    ) {
+                        Text(text = "🎁", fontSize = 10.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                    }
+                }
+
+                IconButton(
+                    onClick = onChooseInChat,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(4.dp)
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(AiCard.copy(alpha = 0.92f))
                 ) {
-                    Text(text = "🎁", fontSize = 10.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                    Icon(
+                        Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "Escolher ${product.name}",
+                        tint = AiSecondary,
+                        modifier = Modifier.size(14.dp)
+                    )
                 }
             }
 
-            IconButton(
-                onClick = onChooseInChat,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(4.dp)
-                    .size(26.dp)
-                    .clip(CircleShape)
-                    .background(AiCard.copy(alpha = 0.92f))
+            Column(
+                modifier = Modifier.padding(6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Escolher ${product.name}",
-                    tint = AiSecondary,
-                    modifier = Modifier.size(14.dp)
+                Text(
+                    text = product.name,
+                    fontWeight = FontWeight.Bold,
+                    color = AiText,
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
                 )
+                if (!restaurantName.isNullOrBlank()) {
+                    Text(
+                        text = restaurantName,
+                        color = AiTextMuted,
+                        fontSize = 9.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                if (product.rating != null && product.rating > 0) {
+                    Spacer(modifier = Modifier.height(1.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("⭐", fontSize = 9.sp)
+                        Text(text = product.rating.toString(), color = AiTextMuted, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = formatCurrency(product.price),
+                    color = AiSecondary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    textAlign = TextAlign.Center
+                )
+                if (product.isSurpriseBox) {
+                    val start = product.surpriseBoxPickupStart
+                    val end = product.surpriseBoxPickupEnd
+                    Text(
+                        text = if (!start.isNullOrBlank() && !end.isNullOrBlank()) "🎁 $start–$end" else "🎁 Caixa Surpresa",
+                        color = AiSurpriseBox,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         }
 
-        Column(
-            modifier = Modifier.padding(6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        // Selo "abrir detalhes" — fica dentro dos limites do card (evita ser cortado
+        // pelo clip do container) e mantém a posição relativa ao tamanho do card.
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(6.dp)
+                .size(20.dp)
+                .clip(CircleShape)
+                .background(AiPrimary),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = product.name,
-                fontWeight = FontWeight.Bold,
-                color = AiText,
-                fontSize = 10.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Abrir descrição de ${product.name}",
+                tint = Color.White,
+                modifier = Modifier.size(13.dp)
             )
-            if (!restaurantName.isNullOrBlank()) {
-                Text(
-                    text = restaurantName,
-                    color = AiTextMuted,
-                    fontSize = 9.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center
-                )
-            }
-            if (product.rating != null && product.rating > 0) {
-                Spacer(modifier = Modifier.height(1.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("⭐", fontSize = 9.sp)
-                    Text(text = product.rating.toString(), color = AiTextMuted, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = formatCurrency(product.price),
-                color = AiSecondary,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.ExtraBold,
-                textAlign = TextAlign.Center
-            )
-            if (product.isSurpriseBox) {
-                val start = product.surpriseBoxPickupStart
-                val end = product.surpriseBoxPickupEnd
-                Text(
-                    text = if (!start.isNullOrBlank() && !end.isNullOrBlank()) "🎁 $start–$end" else "🎁 Caixa Surpresa",
-                    color = AiSurpriseBox,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center
-                )
-            }
         }
     }
 }
