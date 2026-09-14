@@ -42,6 +42,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
+import org.leria.eats.project.presentation.util.StatusBarLightIcons
 import org.leria.eats.project.presentation.util.formatCurrency
 import org.leria.eats.project.theme.*
 
@@ -55,6 +56,9 @@ private val AiText      = KomaTextPrimary
 private val AiTextMuted = KomaTextSec
 private val AiBotBubble = KomaMintLight
 private val AiSurpriseBox = KomaSurpriseBox
+private val AiTopBarGradient = Brush.verticalGradient(
+    colors = listOf(KomaTopBarGreenStart, KomaTopBarGreenEnd)
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,8 +98,12 @@ fun HomeScreen(
                 onViewCart = onViewCart
             )
         } else {
+            // Ícones claros na status bar enquanto a barra verde escura estiver visível
+            // (só neste ramo — some ao abrir RestaurantDetailScreen, de fundo claro).
+            StatusBarLightIcons(enabled = true)
+
             val scaffoldState = rememberBottomSheetScaffoldState()
-            
+
             val categories = remember(uiState.allRestaurants, isProductCategoryMode) {
                 if (isProductCategoryMode) {
                     uiState.allRestaurants
@@ -179,10 +187,17 @@ fun HomeScreen(
                         .padding(bottom = padding.calculateBottomPadding()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    AiTopBar(
-                        showClearButton = false,
-                        onClearChat = onClearSearch
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+                            .background(AiTopBarGradient)
+                    ) {
+                        AiTopBar(
+                            showClearButton = false,
+                            onClearChat = onClearSearch
+                        )
+                    }
 
                     Box(
                         modifier = Modifier
@@ -302,7 +317,7 @@ private fun CategoryCard(category: String, isSelected: Boolean, onClick: () -> U
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AiTopBar(showClearButton: Boolean, onClearChat: () -> Unit) {
-    TopAppBar(navigationIcon = { Box(modifier = Modifier.padding(bottom = 14.dp).size(180.dp), contentAlignment = Alignment.CenterStart) { Image(painter = painterResource(Res.drawable.logo), contentDescription = "Koma", modifier = Modifier.fillMaxHeight(), contentScale = ContentScale.Fit) } }, title = {}, actions = { if (showClearButton) { TextButton(onClick = onClearChat, modifier = Modifier.padding(end = 8.dp)) { Text(text = "Limpar", fontSize = 12.sp, color = AiTextMuted, fontWeight = FontWeight.SemiBold) } } }, colors = TopAppBarDefaults.topAppBarColors(containerColor = AiSurface, titleContentColor = AiText))
+    TopAppBar(navigationIcon = { Box(modifier = Modifier.padding(bottom = 14.dp).size(180.dp), contentAlignment = Alignment.CenterStart) { Image(painter = painterResource(Res.drawable.logo), contentDescription = "Koma", modifier = Modifier.fillMaxHeight(), contentScale = ContentScale.Fit) } }, title = {}, actions = { if (showClearButton) { TextButton(onClick = onClearChat, modifier = Modifier.padding(end = 8.dp)) { Text(text = "Limpar", fontSize = 12.sp, color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.SemiBold) } } }, colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = AiText))
 }
 
 @Composable
