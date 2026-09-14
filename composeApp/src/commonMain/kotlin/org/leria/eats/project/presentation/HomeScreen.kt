@@ -85,9 +85,35 @@ fun HomeScreen(
             .fillMaxSize()
             .background(AiDeepBg)
     ) {
-        if (uiState.selectedRestaurant != null) {
+        // Mesma transição de "arrastar para o lado" usada entre as abas: abrir o
+        // cardápio desliza da direita (avançar), voltar para a lista desliza da
+        // esquerda — dá a sensação de navegação em pilha (push/pop).
+        AnimatedContent(
+            targetState = uiState.selectedRestaurant,
+            transitionSpec = {
+                if (targetState != null && initialState == null) {
+                    (
+                        slideInHorizontally(animationSpec = tween(350, easing = EaseInOut)) { it } +
+                            fadeIn(animationSpec = tween(350))
+                        ) togetherWith (
+                        slideOutHorizontally(animationSpec = tween(350, easing = EaseInOut)) { -it / 3 } +
+                            fadeOut(animationSpec = tween(250))
+                        )
+                } else {
+                    (
+                        slideInHorizontally(animationSpec = tween(350, easing = EaseInOut)) { -it } +
+                            fadeIn(animationSpec = tween(350))
+                        ) togetherWith (
+                        slideOutHorizontally(animationSpec = tween(350, easing = EaseInOut)) { it / 3 } +
+                            fadeOut(animationSpec = tween(250))
+                        )
+                }
+            },
+            label = "restaurant_detail_transition"
+        ) { selectedRestaurant ->
+        if (selectedRestaurant != null) {
             RestaurantDetailScreen(
-                restaurant = uiState.selectedRestaurant,
+                restaurant = selectedRestaurant,
                 cartItems = uiState.cartItems,
                 selectedCategory = uiState.selectedCategory,
                 onCategorySelect = onCategorySelect,
@@ -228,6 +254,7 @@ fun HomeScreen(
                     }
                 }
             }
+        }
         }
     }
 }

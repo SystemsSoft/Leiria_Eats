@@ -440,55 +440,26 @@ fun MainScreenWithAI(
                         .fillMaxSize()
                         .padding(paddingValues)
                 ) {
-                    // Animated content transition between tabs
+                    // Animated content transition between tabs — desliza para o lado seguindo a
+                    // ordem das abas na barra inferior (IA, Explorar, Pedidos, Perfil), como um
+                    // arrastar de tela: avançar desliza da direita, voltar desliza da esquerda.
+                    val tabOrder = remember { listOf(MainTab.AI, MainTab.HOME, MainTab.ORDERS, MainTab.PROFILE) }
                     AnimatedContent(
                         targetState = uiState.currentTab,
                         transitionSpec = {
-                            when {
-                                initialState == MainTab.PROFILE && targetState == MainTab.AI -> {
-                                    fadeIn(
-                                        animationSpec = tween(
-                                            durationMillis = 800,
-                                            easing = EaseInOut
-                                        )
-                                    ) togetherWith fadeOut(
-                                        animationSpec = tween(
-                                            durationMillis = 800,
-                                            easing = EaseInOut
-                                        )
-                                    )
-                                }
-
-                                // Profile comes from the right (end of nav bar)
-                                targetState == MainTab.PROFILE && initialState != MainTab.PROFILE -> {
-                                    slideInHorizontally(
-                                        animationSpec = tween(400),
-                                        initialOffsetX = { it }
-                                    ) + fadeIn(animationSpec = tween(400)) togetherWith
-                                    slideOutHorizontally(
-                                        animationSpec = tween(400),
-                                        targetOffsetX = { -it / 3 }
-                                    ) + fadeOut(animationSpec = tween(400))
-                                }
-
-                                // Going back from Profile to other screens (except AI which is handled above)
-                                initialState == MainTab.PROFILE && targetState != MainTab.PROFILE && targetState != MainTab.AI -> {
-                                    slideInHorizontally(
-                                        animationSpec = tween(400),
-                                        initialOffsetX = { -it / 3 }
-                                    ) + fadeIn(animationSpec = tween(400)) togetherWith
-                                    slideOutHorizontally(
-                                        animationSpec = tween(400),
-                                        targetOffsetX = { it }
-                                    ) + fadeOut(animationSpec = tween(400))
-                                }
-
-                                // Default smooth fade for other tab transitions
-                                else -> {
-                                    fadeIn(animationSpec = tween(300)) togetherWith
-                                    fadeOut(animationSpec = tween(300))
-                                }
-                            }
+                            val indoAdiante = tabOrder.indexOf(targetState) >= tabOrder.indexOf(initialState)
+                            val direcao = if (indoAdiante) 1 else -1
+                            (
+                                slideInHorizontally(
+                                    animationSpec = tween(350, easing = EaseInOut),
+                                    initialOffsetX = { fullWidth -> direcao * fullWidth }
+                                ) + fadeIn(animationSpec = tween(350))
+                            ) togetherWith (
+                                slideOutHorizontally(
+                                    animationSpec = tween(350, easing = EaseInOut),
+                                    targetOffsetX = { fullWidth -> -direcao * fullWidth / 3 }
+                                ) + fadeOut(animationSpec = tween(250))
+                            )
                         },
                         label = "tab_transition"
                     ) { currentTab ->
