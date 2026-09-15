@@ -189,6 +189,7 @@ fun AiSearchScreen(
                     messages = uiState.chatMessages,
                     isLoading = uiState.isLoading,
                     isStreaming = uiState.isStreaming,
+                    cartItems = uiState.cartItems,
                     onAddToCart = onAddToCart,
                     onProductClick = { product -> selectedProduct = product },
                     onChooseInChat = onChooseProductInChat,
@@ -453,6 +454,7 @@ private fun ChatMessagesView(
     messages: List<ChatMessage>,
     isLoading: Boolean,
     isStreaming: Boolean,
+    cartItems: List<Product> = emptyList(),
     onAddToCart: (Product) -> Unit,
     onProductClick: (Product) -> Unit = {},
     onChooseInChat: (Product) -> Unit = {},
@@ -485,6 +487,7 @@ private fun ChatMessagesView(
                 ChatMessageType.AI -> AiMessageBubble(
                     message = message,
                     isTyping = isLastMessage && isStreaming,
+                    cartItems = cartItems,
                     onAddToCart = onAddToCart,
                     onProductClick = onProductClick,
                     onChooseInChat = onChooseInChat
@@ -656,6 +659,7 @@ private fun UserMessageBubble(message: ChatMessage) {
 private fun AiMessageBubble(
     message: ChatMessage,
     isTyping: Boolean = false,
+    cartItems: List<Product> = emptyList(),
     onAddToCart: (Product) -> Unit,
     onProductClick: (Product) -> Unit = {},
     onChooseInChat: (Product) -> Unit = {}
@@ -695,6 +699,7 @@ private fun AiMessageBubble(
             AiSuggestionSections(
                 products = message.products,
                 restaurants = message.restaurants,
+                cartItems = cartItems,
                 onProductClick = onProductClick,
                 onChooseInChat = onChooseInChat
             )
@@ -714,6 +719,7 @@ private fun resolvePlan(product: Product, restaurants: List<Restaurant>): String
 private fun AiSuggestionSections(
     products: List<Product>,
     restaurants: List<Restaurant>,
+    cartItems: List<Product> = emptyList(),
     onProductClick: (Product) -> Unit,
     onChooseInChat: (Product) -> Unit
 ) {
@@ -742,6 +748,7 @@ private fun AiSuggestionSections(
                 AiProductGrid(
                     products = melhoresSugestoes,
                     restaurants = restaurants,
+                    cartItems = cartItems,
                     onProductClick = onProductClick,
                     onChooseInChat = onChooseInChat,
                     compact = false
@@ -760,6 +767,7 @@ private fun AiSuggestionSections(
                 AiProductGrid(
                     products = outrasSugestoes,
                     restaurants = restaurants,
+                    cartItems = cartItems,
                     onProductClick = onProductClick,
                     onChooseInChat = onChooseInChat,
                     compact = true
@@ -775,6 +783,7 @@ private fun AiSuggestionSections(
 private fun AiProductGrid(
     products: List<Product>,
     restaurants: List<Restaurant>,
+    cartItems: List<Product> = emptyList(),
     onProductClick: (Product) -> Unit,
     onChooseInChat: (Product) -> Unit,
     compact: Boolean = false
@@ -789,10 +798,12 @@ private fun AiProductGrid(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 rowProducts.forEach { product ->
+                    val quantityInCart = cartItems.find { it.gid == product.gid }?.quantity ?: 0
                     AiProductGridCard(
                         product = product,
                         restaurantName = product.restaurantName?.takeIf { it.isNotBlank() }
                             ?: restaurants.find { it.gid == product.restaurant_gid }?.name,
+                        quantityInCart = quantityInCart,
                         onClick = { onProductClick(product) },
                         onChooseInChat = { onChooseInChat(product) },
                         compact = compact,
@@ -813,6 +824,7 @@ private fun AiProductGridCard(
     restaurantName: String?,
     onClick: () -> Unit,
     onChooseInChat: () -> Unit,
+    quantityInCart: Int = 0,
     compact: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -823,6 +835,7 @@ private fun AiProductGridCard(
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "cardPressScale"
     )
+    val isSelected = quantityInCart > 0
 
     // "Outras sugestões" (SMART) usa cards um pouco menores que "Melhores sugestões" (ESSENCE).
     val cornerRadius = if (compact) 12.dp else 14.dp
@@ -833,10 +846,9 @@ private fun AiProductGridCard(
     val surpriseSize = if (compact) 7.sp else 8.sp
     val textPadding = if (compact) 5.dp else 6.dp
     val fallbackEmojiSize = if (compact) 18.sp else 22.sp
-    val sendButtonSize = if (compact) 22.dp else 26.dp
-    val sendIconSize = if (compact) 12.dp else 14.dp
-    val detailBadgeSize = if (compact) 18.dp else 20.dp
-    val detailIconSize = if (compact) 11.dp else 13.dp
+    val addBarHeight = if (compact) 20.dp else 24.dp
+    val addIconSize = if (compact) 12.dp else 14.dp
+    val qtyBadgeSize = if (compact) 18.dp else 20.dp
 
     Box(
         modifier = modifier
@@ -881,21 +893,18 @@ private fun AiProductGridCard(
                     }
                 }
 
-                IconButton(
-                    onClick = onChooseInChat,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(4.dp)
-                        .size(sendButtonSize)
-                        .clip(CircleShape)
-                        .background(AiCard.copy(alpha = 0.92f))
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Escolher ${product.name}",
-                        tint = AiSecondary,
-                        modifier = Modifier.size(sendIconSize)
-                    )
+                // Selo de quantidade — mesmo padrão do cardápio (RestaurantDetailScreen).
+                if (isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp)
+                            .size(qtyBadgeSize)
+                            .background(AiSecondary, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("$quantityInCart", color = Color.White, fontSize = ratingSize, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
@@ -950,26 +959,31 @@ private fun AiProductGridCard(
                         textAlign = TextAlign.Center
                     )
                 }
-            }
-        }
 
-        // Selo "abrir detalhes" — fica dentro dos limites do card (evita ser cortado
-        // pelo clip do container) e mantém a posição relativa ao tamanho do card.
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(6.dp)
-                .size(detailBadgeSize)
-                .clip(CircleShape)
-                .background(AiPrimary),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Abrir descrição de ${product.name}",
-                tint = Color.White,
-                modifier = Modifier.size(detailIconSize)
-            )
+                Spacer(modifier = Modifier.height(if (compact) 3.dp else 4.dp))
+
+                // Botão de adicionar — mesmo padrão do cardápio (RestaurantDetailScreen):
+                // barra na base do card, esverdiada quando o produto já está no carrinho.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(addBarHeight)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(
+                            if (isSelected) AiSecondary.copy(alpha = 0.15f)
+                            else AiPrimary.copy(alpha = 0.1f)
+                        )
+                        .clickable { onChooseInChat() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Adicionar ${product.name}",
+                        tint = if (isSelected) AiSecondary else AiPrimary,
+                        modifier = Modifier.size(addIconSize)
+                    )
+                }
+            }
         }
     }
 }
