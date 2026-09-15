@@ -228,7 +228,11 @@ data class RatingRequest(
 
 @Serializable
 data class RatingResponse(
-    val success: Boolean,
+    // O backend (POST /orders/ratings) não manda essa chave — a resposta real é
+    // {"message": ..., "rated_products": [...]}. Sem default aqui, a desserialização
+    // sempre falhava (MissingFieldException) mesmo quando a avaliação era salva com
+    // sucesso, fazendo o client sempre logar "falha ao enviar avaliação".
+    val success: Boolean = true,
     val message: String = ""
 )
 
