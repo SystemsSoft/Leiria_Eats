@@ -201,42 +201,57 @@ fun HomeScreen(
                             .padding(horizontal = 10.dp)
                             .clip(RoundedCornerShape(topStart = 48.dp, topEnd = 24.dp))
                     ) {
-                        when {
-                            uiState.isLoading && uiState.allRestaurants.isEmpty() ->
-                                AiThinkingIndicator(modifier = Modifier.align(Alignment.Center))
-                            isProductCategoryMode -> {
-                                HomeProductList(
-                                    products = filteredProducts,
-                                    categories = productCategories,
-                                    selectedCategory = uiState.selectedCategory,
-                                    isProductMode = true,
-                                    onModeChange = {
-                                        isProductCategoryMode = it
-                                        onCategorySelect(null)
-                                    },
-                                    onCategorySelect = onCategorySelect,
-                                    onViewAllCategoriesClick = { showCategoriesSheet = true },
-                                    onProductClick = { product, restaurant ->
-                                        val catToSelect = uiState.selectedCategory ?: product.category.split(",").firstOrNull()?.trim()
-                                        onCategorySelect(catToSelect)
-                                        onRestaurantClick(restaurant)
+                        val listState = when {
+                            uiState.isLoading && uiState.allRestaurants.isEmpty() -> 0
+                            isProductCategoryMode -> 1
+                            else -> 2
+                        }
+                        
+                        Crossfade(
+                            targetState = listState,
+                            animationSpec = tween(durationMillis = 400),
+                            label = "HomeListTransition"
+                        ) { state ->
+                            when (state) {
+                                0 -> {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        AiThinkingIndicator()
                                     }
-                                )
-                            }
-                            else -> {
-                                HomeRestaurantList(
-                                    restaurants = filteredRestaurants,
-                                    categories = restaurantCategories,
-                                    selectedCategory = uiState.selectedCategory,
-                                    isProductMode = false,
-                                    onModeChange = {
-                                        isProductCategoryMode = it
-                                        onCategorySelect(null)
-                                    },
-                                    onCategorySelect = onCategorySelect,
-                                    onViewAllCategoriesClick = { showCategoriesSheet = true },
-                                    onRestaurantClick = onRestaurantClick
-                                )
+                                }
+                                1 -> {
+                                    HomeProductList(
+                                        products = filteredProducts,
+                                        categories = productCategories,
+                                        selectedCategory = uiState.selectedCategory,
+                                        isProductMode = true,
+                                        onModeChange = {
+                                            isProductCategoryMode = it
+                                            onCategorySelect(null)
+                                        },
+                                        onCategorySelect = onCategorySelect,
+                                        onViewAllCategoriesClick = { showCategoriesSheet = true },
+                                        onProductClick = { product, restaurant ->
+                                            val catToSelect = uiState.selectedCategory ?: product.category.split(",").firstOrNull()?.trim()
+                                            onCategorySelect(catToSelect)
+                                            onRestaurantClick(restaurant)
+                                        }
+                                    )
+                                }
+                                else -> {
+                                    HomeRestaurantList(
+                                        restaurants = filteredRestaurants,
+                                        categories = restaurantCategories,
+                                        selectedCategory = uiState.selectedCategory,
+                                        isProductMode = false,
+                                        onModeChange = {
+                                            isProductCategoryMode = it
+                                            onCategorySelect(null)
+                                        },
+                                        onCategorySelect = onCategorySelect,
+                                        onViewAllCategoriesClick = { showCategoriesSheet = true },
+                                        onRestaurantClick = onRestaurantClick
+                                    )
+                                }
                             }
                         }
                     }
