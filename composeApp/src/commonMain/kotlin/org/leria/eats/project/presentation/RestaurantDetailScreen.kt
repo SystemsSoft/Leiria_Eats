@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -150,41 +151,45 @@ fun RestaurantDetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(RdCard)
-                            .border(1.dp, RdPrimary.copy(alpha = 0.3f), CircleShape)
-                            .clickable {
-                                if (cartItems.isNotEmpty()) showBackDialog = true else onBack()
-                            },
-                        contentAlignment = Alignment.Center
+                    IconButton(
+                        onClick = {
+                            if (cartItems.isNotEmpty()) showBackDialog = true else onBack()
+                        },
+                        modifier = Modifier.size(48.dp)
                     ) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar", tint = RdText, modifier = Modifier.size(18.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(RdCard)
+                                .border(1.dp, RdPrimary.copy(alpha = 0.3f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = RdText, modifier = Modifier.size(18.dp))
+                        }
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = restaurant.name,
-                            style = MaterialTheme.typography.titleLarge,
+                            fontSize = 24.sp,
                             color = RdText,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = restaurant.category,
-                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 14.sp,
                                 color = RdMuted
                             )
-                            Text(" · ", color = RdMuted, fontSize = 12.sp)
-                            Icon(Icons.Default.Star, contentDescription = null, tint = KomaStarYellow, modifier = Modifier.size(12.dp))
-                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(" · ", color = RdMuted, fontSize = 14.sp)
+                            Icon(Icons.Default.Star, contentDescription = null, tint = KomaStarYellow, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "${restaurant.rating}",
-                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 14.sp,
                                 color = RdMuted
                             )
                         }

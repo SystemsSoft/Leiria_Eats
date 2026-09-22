@@ -198,38 +198,29 @@ fun CartScreen(
                             restaurantSelected?.let { onGoToRestaurant?.invoke(it) }
                         }
                     },
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(CartCard, CircleShape)
-                        .border(1.dp, CartMuted.copy(alpha = 0.2f), CircleShape)
+                    modifier = Modifier.size(48.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Voltar",
-                        tint = CartText,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            Brush.radialGradient(listOf(CartPrimary.copy(alpha = 0.3f), Color.Transparent)),
-                            CircleShape
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(CartCard, CircleShape)
+                            .border(1.dp, CartMuted.copy(alpha = 0.2f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar",
+                            tint = CartText,
+                            modifier = Modifier.size(18.dp)
                         )
-                        .border(1.dp, CartPrimary.copy(alpha = 0.4f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.ShoppingBag, contentDescription = null, tint = CartPrimary, modifier = Modifier.size(20.dp))
+                    }
                 }
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(14.dp))
                 Column {
-                    Text("Sacola", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = CartText)
+                    Text("Sacola", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = CartText)
                     Text(
                         if (cartItems.isEmpty()) "Vazia" else "${cartItems.size} ${if (cartItems.size == 1) "item" else "itens"}",
-                        fontSize = 12.sp, color = CartMuted
+                        fontSize = 14.sp, color = CartMuted
                     )
                 }
             }
