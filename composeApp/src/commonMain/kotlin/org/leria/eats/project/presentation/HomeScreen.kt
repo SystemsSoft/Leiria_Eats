@@ -246,7 +246,7 @@ fun HomeScreen(
             if (showCategoriesSheet) {
                 ModalBottomSheet(
                     onDismissRequest = { showCategoriesSheet = false },
-                    containerColor = AiSurface,
+                    containerColor = AiDeepBg,
                     contentColor = AiText,
                     dragHandle = {
                         BottomSheetDefaults.DragHandle(color = AiPrimary.copy(alpha = 0.3f))
