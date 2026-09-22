@@ -568,11 +568,15 @@ private fun ExpandedProductDetailsModal(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Quantidade", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = RdText)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(RdAccent.copy(alpha = 0.1f)).clickable { onRemove() }, contentAlignment = Alignment.Center) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically, 
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(RdAccent.copy(alpha = 0.1f)).border(1.dp, RdAccent.copy(alpha = 0.2f), RoundedCornerShape(20.dp)).padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    Box(modifier = Modifier.size(32.dp).clip(CircleShape).clickable { onRemove() }, contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Remove, null, tint = RdAccent, modifier = Modifier.size(16.dp))
                     }
-                    Text(text = "$quantity", color = RdText, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.widthIn(min = 20.dp), textAlign = TextAlign.Center)
+                    Text(text = "$quantity", color = RdText, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.widthIn(min = 24.dp), textAlign = TextAlign.Center)
                     Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(Brush.horizontalGradient(listOf(RdPrimary, RdSecondary))).clickable { onAdd() }, contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(16.dp))
                     }
