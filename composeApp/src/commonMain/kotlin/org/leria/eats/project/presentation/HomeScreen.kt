@@ -14,10 +14,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -623,21 +627,71 @@ fun CompactRestaurantItem(restaurant: Restaurant, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SmartHighlightSection(smartRestaurants: List<Restaurant>, onRestaurantClick: (Restaurant) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)) {
-            Box(modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Brush.horizontalGradient(listOf(SmartGold, SmartGoldDark))).padding(horizontal = 8.dp, vertical = 3.dp)) { Text(text = "⭐", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF5C3D00), letterSpacing = 1.sp) }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Destaques", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AiText)
-            Spacer(modifier = Modifier.width(6.dp))
-            Text("(${smartRestaurants.size})", fontSize = 11.sp, color = AiTextMuted)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, bottom = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(AiPrimary, RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Star, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Destaques", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AiText)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("(${smartRestaurants.size})", fontSize = 13.sp, color = AiTextMuted)
+            }
+            Text(
+                text = "Ver todos >",
+                fontSize = 13.sp,
+                color = AiTextMuted,
+                modifier = Modifier.clickable { }
+            )
         }
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Brush.horizontalGradient(listOf(SmartGold.copy(alpha = 0.8f), Color.Transparent))))
-        Spacer(modifier = Modifier.height(10.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
-            items(smartRestaurants) { restaurant ->
-                SmartRestaurantCard(restaurant = restaurant, onClick = { onRestaurantClick(restaurant) })
+
+        val pagerState = rememberPagerState(pageCount = { smartRestaurants.size })
+        
+        HorizontalPager(
+            state = pagerState,
+            contentPadding = PaddingValues(horizontal = 0.dp),
+            pageSpacing = 12.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) { page ->
+            val restaurant = smartRestaurants[page]
+            SmartRestaurantCard(restaurant = restaurant, onClick = { onRestaurantClick(restaurant) })
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Pager indicators
+        if (smartRestaurants.size > 1) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(smartRestaurants.size) { iteration ->
+                    val color = if (pagerState.currentPage == iteration) AiPrimary else Color.LightGray.copy(alpha = 0.8f)
+                    val size = if (pagerState.currentPage == iteration) 8.dp else 6.dp
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 4.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                            .size(size)
+                    )
+                }
             }
         }
     }
@@ -645,24 +699,98 @@ private fun SmartHighlightSection(smartRestaurants: List<Restaurant>, onRestaura
 
 @Composable
 private fun SmartRestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
-    val infiniteTransition = rememberInfiniteTransition(label = "smartGlow")
-    val glowAlpha by infiniteTransition.animateFloat(initialValue = 0.4f, targetValue = 0.9f, label = "glow", animationSpec = infiniteRepeatable(tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse))
-    Column(modifier = Modifier.width(270.dp).clip(RoundedCornerShape(16.dp)).background(SmartCardBg).border(width = 1.5.dp, brush = Brush.linearGradient(listOf(SmartGold.copy(alpha = glowAlpha), SmartGoldDark.copy(alpha = glowAlpha))), shape = RoundedCornerShape(16.dp)).clickable(enabled = restaurant.isClosed != true) { onClick() }.then(if (restaurant.isClosed == true) Modifier.alpha(0.6f) else Modifier), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(modifier = Modifier.fillMaxWidth().aspectRatio(2.8f / 1f).clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))) {
-            KamelImage(resource = asyncPainterResource(data = restaurant.image_url ?: ""), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop, onLoading = { Box(Modifier.fillMaxSize().background(AiCard), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = SmartGold) } }, onFailure = { Box(Modifier.fillMaxSize().background(AiCard)) })
-            Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)))))
-            if (restaurant.isClosed == true) { Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFB71C1C).copy(alpha = 0.90f)) { Text(text = "🔒 FECHADO", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) } } }
-        }
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = restaurant.name, fontWeight = FontWeight.Bold, color = AiText, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(text = restaurant.category, color = AiTextMuted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(enabled = restaurant.isClosed != true) { onClick() }
+            .then(if (restaurant.isClosed == true) Modifier.alpha(0.6f) else Modifier)
+    ) {
+        // Background Image
+        KamelImage(
+            resource = asyncPainterResource(data = restaurant.image_url ?: ""),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+            onLoading = { Box(Modifier.fillMaxSize().background(AiCard), contentAlignment = Alignment.Center) { CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = AiPrimary) } },
+            onFailure = { Box(Modifier.fillMaxSize().background(AiCard)) }
+        )
+        
+        // Gradient overlay (dark on the left, fading to transparent on the right)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(Color.Black.copy(alpha = 0.85f), Color.Transparent),
+                        startX = 0f,
+                        endX = 800f
+                    )
+                )
+        )
+        
+        // Content on the left
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text(
+                text = restaurant.name,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White,
+                fontSize = 24.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                Icon(Icons.Default.Star, contentDescription = null, tint = SmartGold, modifier = Modifier.size(11.dp))
-                Spacer(modifier = Modifier.width(3.dp))
-                Text(text = "${restaurant.rating ?: 5.0}", color = SmartGold, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                text = restaurant.category,
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Star, contentDescription = null, tint = AiPrimary, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "${restaurant.rating ?: 5.0}",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
+            
+            Spacer(modifier = Modifier.height(18.dp))
+            
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(AiPrimary)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Ver restaurante",
+                    color = Color(0xFF1E293B),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
+            }
+        }
+        
+        if (restaurant.isClosed == true) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)), contentAlignment = Alignment.Center) { 
+                Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFB71C1C).copy(alpha = 0.90f)) { 
+                    Text(text = "🔒 FECHADO", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) 
+                } 
+            } 
         }
     }
 }
