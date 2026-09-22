@@ -846,8 +846,8 @@ private fun AiProductGridCard(
     val surpriseSize = if (compact) 7.sp else 8.sp
     val textPadding = if (compact) 5.dp else 6.dp
     val fallbackEmojiSize = if (compact) 18.sp else 22.sp
-    val addBarHeight = if (compact) 20.dp else 24.dp
-    val addIconSize = if (compact) 12.dp else 14.dp
+    val addButtonSize = if (compact) 24.dp else 28.dp
+    val addIconSize = if (compact) 14.dp else 16.dp
     val qtyBadgeSize = if (compact) 18.dp else 20.dp
 
     Box(
@@ -909,8 +909,10 @@ private fun AiProductGridCard(
             }
 
             Column(
-                modifier = Modifier.padding(textPadding),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(textPadding),
+                horizontalAlignment = Alignment.Start
             ) {
                 Text(
                     text = product.name,
@@ -919,7 +921,7 @@ private fun AiProductGridCard(
                     fontSize = nameSize,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Start
                 )
                 if (!restaurantName.isNullOrBlank()) {
                     Text(
@@ -928,7 +930,7 @@ private fun AiProductGridCard(
                         fontSize = restaurantSize,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Start
                     )
                 }
                 if (product.rating != null && product.rating > 0) {
@@ -938,14 +940,6 @@ private fun AiProductGridCard(
                         Text(text = product.rating.toString(), color = AiTextMuted, fontSize = ratingSize, fontWeight = FontWeight.SemiBold)
                     }
                 }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = formatCurrency(product.price),
-                    color = AiSecondary,
-                    fontSize = priceSize,
-                    fontWeight = FontWeight.ExtraBold,
-                    textAlign = TextAlign.Center
-                )
                 if (product.isSurpriseBox) {
                     val start = product.surpriseBoxPickupStart
                     val end = product.surpriseBoxPickupEnd
@@ -956,32 +950,41 @@ private fun AiProductGridCard(
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Start
                     )
                 }
 
                 Spacer(modifier = Modifier.height(if (compact) 3.dp else 4.dp))
 
-                // Botão de adicionar — mesmo padrão do cardápio (RestaurantDetailScreen):
-                // barra na base do card, esverdiada quando o produto já está no carrinho.
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(addBarHeight)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(
-                            if (isSelected) AiSecondary.copy(alpha = 0.15f)
-                            else AiPrimary.copy(alpha = 0.1f)
-                        )
-                        .clickable { onChooseInChat() },
-                    contentAlignment = Alignment.Center
+                // Linha inferior com preço à esquerda e botão amarelo quadrado (+) à direita
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = "Adicionar ${product.name}",
-                        tint = if (isSelected) AiSecondary else AiPrimary,
-                        modifier = Modifier.size(addIconSize)
+                    Text(
+                        text = formatCurrency(product.price),
+                        color = AiSecondary,
+                        fontSize = priceSize,
+                        fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Start
                     )
+
+                    Box(
+                        modifier = Modifier
+                            .size(addButtonSize)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isSelected) AiSecondary else AiPrimary)
+                            .clickable { onChooseInChat() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Adicionar ${product.name}",
+                            tint = if (isSelected) Color.White else Color(0xFF1E293B),
+                            modifier = Modifier.size(addIconSize)
+                        )
+                    }
                 }
             }
         }

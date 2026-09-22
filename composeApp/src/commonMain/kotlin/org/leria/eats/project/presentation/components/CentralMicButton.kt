@@ -2,7 +2,6 @@ package org.leria.eats.project.presentation.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -77,7 +76,6 @@ fun CentralMicButton(
 fun WaveAnimation(color: Color) {
     val infiniteTransition = rememberInfiniteTransition()
     
-    // Criamos 3 barras com animações levemente defasadas para simular ondas sonoras
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
