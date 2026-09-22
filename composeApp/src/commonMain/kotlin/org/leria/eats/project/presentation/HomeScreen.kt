@@ -350,17 +350,6 @@ private fun ExpandableCategorySheet(
                 CategoryCard(category = category, isSelected = category.equals(selectedCategory, ignoreCase = true), onClick = { if (selectedCategory?.equals(category, ignoreCase = true) == true) onCategorySelect(null) else onCategorySelect(category) })
             }
         }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Button(
-            onClick = { onCategorySelect(selectedCategory) },
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = AiPrimary),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text("Ver restaurantes desta categoria", color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
-        }
     }
 }
 
