@@ -128,84 +128,54 @@ fun HomeScreen(
             // (só neste ramo — some ao abrir RestaurantDetailScreen, de fundo claro).
             StatusBarLightIcons(enabled = true)
 
-            val scaffoldState = rememberBottomSheetScaffoldState()
+            var showCategoriesSheet by remember { mutableStateOf(false) }
+            var isProductCategoryMode by remember { mutableStateOf(false) }
 
-            val categories = remember(uiState.allRestaurants, isProductCategoryMode) {
-                if (isProductCategoryMode) {
-                    uiState.allRestaurants
-                        .flatMap { it.products }
-                        .map { it.category }
-                        .flatMap { it.split(",").map { s -> s.trim() } }
-                        .filter { it.isNotBlank() }
-                        .distinct()
-                        .sorted()
-                } else {
-                    uiState.allRestaurants
-                        .map { it.category }
-                        .flatMap { it.split(",").map { s -> s.trim() } }
-                        .filter { it.isNotBlank() }
-                        .distinct()
-                        .sorted()
-                }
+            val restaurantCategories = remember(uiState.allRestaurants) {
+                uiState.allRestaurants
+                    .map { it.category }
+                    .flatMap { it.split(",").map { s -> s.trim() } }
+                    .filter { it.isNotBlank() }
+                    .distinct()
+                    .sorted()
+            }
+            
+            val productCategories = remember(uiState.allRestaurants) {
+                uiState.allRestaurants
+                    .flatMap { it.products }
+                    .map { it.category }
+                    .flatMap { it.split(",").map { s -> s.trim() } }
+                    .filter { it.isNotBlank() }
+                    .distinct()
+                    .sorted()
             }
 
-            val filteredRestaurants = remember(uiState.allRestaurants, uiState.selectedCategory, isProductCategoryMode) {
+            val filteredRestaurants = remember(uiState.allRestaurants, uiState.selectedCategory) {
                 val selected = uiState.selectedCategory
                 if (selected == null) {
                     uiState.allRestaurants
                 } else {
-                    if (isProductCategoryMode) {
-                        uiState.allRestaurants.filter { rest ->
-                            rest.products.any { product ->
-                                product.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
-                            }
-                        }
-                    } else {
-                        uiState.allRestaurants.filter {
-                            it.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
-                        }
+                    uiState.allRestaurants.filter {
+                        it.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
+                    }
+                }
+            }
+            
+            val filteredProducts = remember(uiState.allRestaurants, uiState.selectedCategory) {
+                val selected = uiState.selectedCategory
+                val allProds = uiState.allRestaurants.flatMap { r -> r.products.map { p -> p to r } }
+                if (selected == null) {
+                    allProds
+                } else {
+                    allProds.filter { (p, _) ->
+                        p.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
                     }
                 }
             }
 
-            val filteredProducts = remember(uiState.allRestaurants, uiState.selectedCategory, isProductCategoryMode) {
-                if (!isProductCategoryMode) emptyList()
-                else {
-                    val selected = uiState.selectedCategory
-                    val allProds = uiState.allRestaurants.flatMap { r -> r.products.map { p -> p to r } }
-                    if (selected == null) {
-                        allProds
-                    } else {
-                        allProds.filter { (p, _) ->
-                            p.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
-                        }
-                    }
-                }
-            }
-
-            BottomSheetScaffold(
-                scaffoldState = scaffoldState,
-                sheetPeekHeight = 150.dp,
-                sheetContainerColor = AiSurface,
-                sheetContentColor = AiText,
-                sheetDragHandle = {
-                    BottomSheetDefaults.DragHandle(color = AiPrimary.copy(alpha = 0.3f))
-                },
-                sheetShape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-                sheetContent = {
-                    ExpandableCategorySheet(
-                        categories = categories,
-                        selectedCategory = uiState.selectedCategory,
-                        isProductMode = isProductCategoryMode,
-                        onModeChange = { 
-                            isProductCategoryMode = it
-                            onCategorySelect(null) 
-                        },
-                        onCategorySelect = onCategorySelect,
-                        isExpanded = scaffoldState.bottomSheetState.currentValue == SheetValue.Expanded
-                    )
-                },
-                containerColor = AiDeepBg
+            Scaffold(
+                containerColor = AiDeepBg,
+                contentColor = AiText
             ) { padding ->
                 Column(
                     modifier = Modifier
@@ -237,6 +207,15 @@ fun HomeScreen(
                             isProductCategoryMode -> {
                                 HomeProductList(
                                     products = filteredProducts,
+                                    categories = productCategories,
+                                    selectedCategory = uiState.selectedCategory,
+                                    isProductMode = true,
+                                    onModeChange = {
+                                        isProductCategoryMode = it
+                                        onCategorySelect(null)
+                                    },
+                                    onCategorySelect = onCategorySelect,
+                                    onViewAllCategoriesClick = { showCategoriesSheet = true },
                                     onProductClick = { product, restaurant ->
                                         val catToSelect = uiState.selectedCategory ?: product.category.split(",").firstOrNull()?.trim()
                                         onCategorySelect(catToSelect)
@@ -247,11 +226,46 @@ fun HomeScreen(
                             else -> {
                                 HomeRestaurantList(
                                     restaurants = filteredRestaurants,
+                                    categories = restaurantCategories,
+                                    selectedCategory = uiState.selectedCategory,
+                                    isProductMode = false,
+                                    onModeChange = {
+                                        isProductCategoryMode = it
+                                        onCategorySelect(null)
+                                    },
+                                    onCategorySelect = onCategorySelect,
+                                    onViewAllCategoriesClick = { showCategoriesSheet = true },
                                     onRestaurantClick = onRestaurantClick
                                 )
                             }
                         }
                     }
+                }
+            }
+            
+            if (showCategoriesSheet) {
+                ModalBottomSheet(
+                    onDismissRequest = { showCategoriesSheet = false },
+                    containerColor = AiSurface,
+                    contentColor = AiText,
+                    dragHandle = {
+                        BottomSheetDefaults.DragHandle(color = AiPrimary.copy(alpha = 0.3f))
+                    },
+                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+                ) {
+                    ExpandableCategorySheet(
+                        categories = if (isProductCategoryMode) productCategories else restaurantCategories,
+                        selectedCategory = uiState.selectedCategory,
+                        isProductMode = isProductCategoryMode,
+                        onModeChange = { 
+                            isProductCategoryMode = it
+                            onCategorySelect(null) 
+                        },
+                        onCategorySelect = { 
+                            onCategorySelect(it)
+                            showCategoriesSheet = false
+                        }
+                    )
                 }
             }
         }
@@ -265,8 +279,7 @@ private fun ExpandableCategorySheet(
     selectedCategory: String?,
     isProductMode: Boolean,
     onModeChange: (Boolean) -> Unit,
-    onCategorySelect: (String?) -> Unit,
-    isExpanded: Boolean
+    onCategorySelect: (String?) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -284,60 +297,117 @@ private fun ExpandableCategorySheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .width(3.dp)
-                        .height(16.dp)
+                        .width(4.dp)
+                        .height(18.dp)
                         .background(AiPrimary, RoundedCornerShape(2.dp))
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Categorias",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = AiText
-                )
+                Column {
+                    Text(
+                        text = "Categorias",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = AiText
+                    )
+                    Text(
+                        text = "Escolha o que você quer encontrar",
+                        fontSize = 12.sp,
+                        color = AiTextMuted
+                    )
+                }
             }
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(AiCard.copy(alpha = 0.5f))
-                    .padding(2.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                ModeToggleItem(text = "Restaurantes", isSelected = !isProductMode, onClick = { onModeChange(false) })
-                ModeToggleItem(text = "Produtos", isSelected = isProductMode, onClick = { onModeChange(true) })
+            IconButton(onClick = { onCategorySelect(selectedCategory) }) {
+                Icon(Icons.Default.Close, contentDescription = "Fechar", tint = AiText)
             }
         }
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Brush.horizontalGradient(listOf(AiPrimary.copy(alpha = 0.5f), Color.Transparent))))
+        
+        Row(
+            modifier = Modifier
+                .padding(vertical = 8.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(AiCard.copy(alpha = 0.5f))
+                .padding(2.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(if (!isProductMode) AiPrimary else Color.Transparent).clickable { onModeChange(false) }.padding(horizontal = 12.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+                Text(text = "Restaurantes", color = if (!isProductMode) Color.Black else AiTextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+            Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(if (isProductMode) AiPrimary else Color.Transparent).clickable { onModeChange(true) }.padding(horizontal = 12.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+                Text(text = "Produtos", color = if (isProductMode) Color.Black else AiTextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            modifier = Modifier.fillMaxWidth().heightIn(max = 600.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            item { CategoryCard(category = "Tudo", isSelected = selectedCategory == null, onClick = { onCategorySelect(null) }) }
+            items(categories) { category ->
+                CategoryCard(category = category, isSelected = category.equals(selectedCategory, ignoreCase = true), onClick = { if (selectedCategory?.equals(category, ignoreCase = true) == true) onCategorySelect(null) else onCategorySelect(category) })
+            }
+        }
+        
         Spacer(modifier = Modifier.height(16.dp))
-        if (isExpanded) {
-            LazyVerticalGrid(columns = GridCells.Fixed(2), modifier = Modifier.fillMaxWidth().heightIn(max = 600.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                item { CategoryCard(category = "Tudo", isSelected = selectedCategory == null, onClick = { onCategorySelect(null) }) }
-                items(categories) { category ->
-                    CategoryCard(category = category, isSelected = category.equals(selectedCategory, ignoreCase = true), onClick = { if (selectedCategory?.equals(category, ignoreCase = true) == true) onCategorySelect(null) else onCategorySelect(category) })
-                }
-            }
-        } else {
-            LazyRow(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                item { CategoryCard(category = "Tudo", isSelected = selectedCategory == null, onClick = { onCategorySelect(null) }) }
-                items(categories) { category ->
-                    CategoryCard(category = category, isSelected = category.equals(selectedCategory, ignoreCase = true), onClick = { if (selectedCategory?.equals(category, ignoreCase = true) == true) onCategorySelect(null) else onCategorySelect(category) })
-                }
-            }
+        
+        Button(
+            onClick = { onCategorySelect(selectedCategory) },
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = AiPrimary),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("Ver restaurantes desta categoria", color = Color(0xFF1E293B), fontWeight = FontWeight.Bold)
         }
-    }
-}
-
-@Composable
-private fun ModeToggleItem(text: String, isSelected: Boolean, onClick: () -> Unit) {
-    Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(if (isSelected) AiPrimary else Color.Transparent).clickable { onClick() }.padding(horizontal = 10.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
-        Text(text = text, color = if (isSelected) Color.Black else AiTextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 private fun CategoryCard(category: String, isSelected: Boolean, onClick: () -> Unit) {
-    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (isSelected) Brush.horizontalGradient(listOf(AiPrimary, KomaOrangeEnd)) else Brush.linearGradient(listOf(AiCard, AiCard))).border(width = 1.dp, brush = if (isSelected) Brush.horizontalGradient(listOf(AiPrimary, KomaOrangeEnd)) else SolidColor(AiPrimary.copy(alpha = 0.2f)), shape = RoundedCornerShape(12.dp)).clickable { onClick() }.padding(horizontal = 14.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
-        Text(text = category, color = if (isSelected) Color.Black else AiText, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
+    // Mapeamento básico de emojis para as categorias
+    val icon = when (category.lowercase()) {
+        "tudo" -> "🍲"
+        "fast food" -> "🍔"
+        "pizzaria" -> "🍕"
+        "japonesa" -> "🍣"
+        "mexicana" -> "🌮"
+        "tailandesa" -> "🍜"
+        "brasileira" -> "🍛"
+        "saudável" -> "🥗"
+        "sobremesas" -> "🍰"
+        "bebidas" -> "🥤"
+        "lanches" -> "🍟"
+        "tacos" -> "🌮"
+        else -> "🍽️"
+    }
+
+    Column(
+        modifier = Modifier
+            .width(80.dp)
+            .aspectRatio(1f) // Força o formato quadrado
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (isSelected) AiPrimary else Color.White) // Fundo amarelo se selecionado, branco se não
+            .clickable { onClick() }
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = icon,
+            fontSize = 24.sp
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = category,
+            color = if (isSelected) Color(0xFF1E293B) else Color(0xFF1E293B),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -366,8 +436,87 @@ private val SmartGoldDark   = KomaSmartGoldDark
 private val SmartCardBg     = KomaSmartCardBg
 
 @Composable
+private fun CategoryHeaderWithToggle(
+    categories: List<String>,
+    selectedCategory: String?,
+    isProductMode: Boolean,
+    onModeChange: (Boolean) -> Unit,
+    onCategorySelect: (String?) -> Unit,
+    onViewAllCategoriesClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, bottom = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .height(18.dp)
+                        .background(AiPrimary, RoundedCornerShape(2.dp))
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Categorias",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = AiText
+                )
+            }
+            Text(
+                text = "Ver todos >",
+                fontSize = 13.sp,
+                color = AiTextMuted,
+                modifier = Modifier.clickable { onViewAllCategoriesClick() }
+            )
+        }
+        
+        Row(
+            modifier = Modifier
+                .padding(start = 4.dp, bottom = 12.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(AiCard.copy(alpha = 0.5f))
+                .padding(2.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(if (!isProductMode) AiPrimary else Color.Transparent).clickable { onModeChange(false) }.padding(horizontal = 10.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
+                Text(text = "Restaurantes", color = if (!isProductMode) Color.Black else AiTextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            }
+            Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(if (isProductMode) AiPrimary else Color.Transparent).clickable { onModeChange(true) }.padding(horizontal = 10.dp, vertical = 4.dp), contentAlignment = Alignment.Center) {
+                Text(text = "Produtos", color = if (isProductMode) Color.Black else AiTextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            item { CategoryCard(category = "Tudo", isSelected = selectedCategory == null, onClick = { onCategorySelect(null) }) }
+            items(categories) { category ->
+                CategoryCard(category = category, isSelected = category.equals(selectedCategory, ignoreCase = true), onClick = { if (selectedCategory?.equals(category, ignoreCase = true) == true) onCategorySelect(null) else onCategorySelect(category) })
+            }
+        }
+    }
+}
+
+@Composable
 private fun HomeRestaurantList(
     restaurants: List<Restaurant>,
+    categories: List<String>,
+    selectedCategory: String?,
+    isProductMode: Boolean,
+    onModeChange: (Boolean) -> Unit,
+    onCategorySelect: (String?) -> Unit,
+    onViewAllCategoriesClick: () -> Unit,
     onRestaurantClick: (Restaurant) -> Unit
 ) {
     if (restaurants.isEmpty()) {
@@ -395,17 +544,44 @@ private fun HomeRestaurantList(
             item(span = { GridItemSpan(3) }) {
                 SmartHighlightSection(smartRestaurants = smartRestaurants, onRestaurantClick = onRestaurantClick)
             }
-            item(span = { GridItemSpan(3) }) { Spacer(modifier = Modifier.height(20.dp)) }
+            item(span = { GridItemSpan(3) }) { Spacer(modifier = Modifier.height(8.dp)) }
         }
+
+        item(span = { GridItemSpan(3) }) {
+            CategoryHeaderWithToggle(
+                categories = categories,
+                selectedCategory = selectedCategory,
+                isProductMode = isProductMode,
+                onModeChange = onModeChange,
+                onCategorySelect = onCategorySelect,
+                onViewAllCategoriesClick = onViewAllCategoriesClick
+            )
+        }
+        
+        item(span = { GridItemSpan(3) }) { Spacer(modifier = Modifier.height(8.dp)) }
 
         if (otherRestaurants.isNotEmpty()) {
             item(span = { GridItemSpan(3) }) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)) {
-                    Box(modifier = Modifier.width(3.dp).height(16.dp).background(AiPrimary, RoundedCornerShape(2.dp)))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Todos os restaurantes", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AiText)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("(${otherRestaurants.size})", fontSize = 11.sp, color = AiTextMuted)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 4.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.width(4.dp).height(18.dp).background(AiPrimary, RoundedCornerShape(2.dp)))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Todos os restaurantes", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = AiText)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("(${otherRestaurants.size})", fontSize = 11.sp, color = AiTextMuted)
+                    }
+                    Text(
+                        text = "Ver todos >",
+                        fontSize = 13.sp,
+                        color = AiTextMuted,
+                        modifier = Modifier.clickable { }
+                    )
                 }
             }
             items(otherRestaurants) { restaurant ->
@@ -490,6 +666,12 @@ private fun SmartRestaurantCard(restaurant: Restaurant, onClick: () -> Unit) {
 @Composable
 private fun HomeProductList(
     products: List<Pair<Product, Restaurant>>,
+    categories: List<String>,
+    selectedCategory: String?,
+    isProductMode: Boolean,
+    onModeChange: (Boolean) -> Unit,
+    onCategorySelect: (String?) -> Unit,
+    onViewAllCategoriesClick: () -> Unit,
     onProductClick: (Product, Restaurant) -> Unit
 ) {
     if (products.isEmpty()) {
@@ -515,6 +697,19 @@ private fun HomeProductList(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        item(span = { GridItemSpan(3) }) {
+            CategoryHeaderWithToggle(
+                categories = categories,
+                selectedCategory = selectedCategory,
+                isProductMode = isProductMode,
+                onModeChange = onModeChange,
+                onCategorySelect = onCategorySelect,
+                onViewAllCategoriesClick = onViewAllCategoriesClick
+            )
+        }
+        
+        item(span = { GridItemSpan(3) }) { Spacer(modifier = Modifier.height(8.dp)) }
+
         items(products) { (product, restaurant) ->
             CompactHomeProductItem(
                 product = product,
