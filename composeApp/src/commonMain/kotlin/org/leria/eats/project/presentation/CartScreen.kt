@@ -190,23 +190,27 @@ fun CartScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(bottom = 20.dp)
             ) {
-                if (cartAiMessage != null) {
-                    IconButton(
-                        onClick = { showUndoConfirmDialog = true },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .background(CartCard, CircleShape)
-                            .border(1.dp, CartMuted.copy(alpha = 0.2f), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Voltar",
-                            tint = CartText,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
+                IconButton(
+                    onClick = { 
+                        if (cartAiMessage != null) {
+                            showUndoConfirmDialog = true 
+                        } else {
+                            restaurantSelected?.let { onGoToRestaurant?.invoke(it) }
+                        }
+                    },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(CartCard, CircleShape)
+                        .border(1.dp, CartMuted.copy(alpha = 0.2f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Voltar",
+                        tint = CartText,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Box(
                     modifier = Modifier
