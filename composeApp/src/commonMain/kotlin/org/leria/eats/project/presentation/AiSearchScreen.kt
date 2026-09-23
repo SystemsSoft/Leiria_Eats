@@ -137,7 +137,12 @@ fun AiSearchScreen(
         animationSpec = infiniteRepeatable(tween(2200, easing = EaseInOutSine), RepeatMode.Reverse)
     )
 
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    // Barra fixa (não recolhe ao rolar) — com "enterAlwaysScrollBehavior" a
+    // TopAppBar encolhia sua altura medida durante a rolagem, mas o Column que a
+    // envolve (fundo verde escuro + card arredondado abaixo) não acompanhava esse
+    // encolhimento no mesmo frame, deixando uma faixa sem fundo (branca) visível
+    // por trás durante a transição.
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
