@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
@@ -22,9 +23,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
@@ -98,6 +103,16 @@ fun AiSearchScreen(
     // Ícones claros na status bar enquanto a barra verde escura desta tela estiver visível
     StatusBarLightIcons(enabled = true)
 
+    // ── Conversa ao vivo: tela cheia e imersiva "Fale com o KomaAI" ──────────
+    // Só aparece ANTES da primeira resposta chegar (sem mensagens ainda) — assim
+    // que a IA responde algo, a tela normal de chat assume (topBar/bottomBar
+    // trocados mais abaixo), reaproveitando 100% do mesmo corpo (ChatMessagesView,
+    // sacola, diálogo de quantidade) que o chat por texto já usa.
+    if (uiState.isLiveConversationActive && uiState.chatMessages.isEmpty()) {
+        AiLiveListeningStage(onClose = onToggleLiveConversation)
+        return
+    }
+
     // ── Dialog de Confirmação para Limpar Chat e Sacola ──────────────────────
     if (showClearConfirmDialog) {
         AlertDialog(
@@ -149,6 +164,10 @@ fun AiSearchScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
+            if (uiState.isLiveConversationActive) {
+                AiLiveChatTopBar(onClose = onToggleLiveConversation)
+                return@Scaffold
+            }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -169,6 +188,10 @@ fun AiSearchScreen(
             }
         },
         bottomBar = {
+            if (uiState.isLiveConversationActive) {
+                AiLiveChatBottomBar(onExitToKeyboard = onToggleLiveConversation)
+                return@Scaffold
+            }
             AiSemanticInputBar(
                 value = uiState.textInput,
                 isListening = isListening,
@@ -1958,5 +1981,234 @@ private fun ProductDetailBottomSheet(
             Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(AiCard).padding(16.dp)) { Column { Text(text = "Descrição", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AiPrimary); Spacer(modifier = Modifier.height(8.dp)); Text(text = product.description, style = MaterialTheme.typography.bodyMedium, color = AiText, lineHeight = 22.sp) } }
         }
         Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Conversa ao vivo (Gemini Live API) — tela cheia estilo "modo voz" (ChatGPT).
+// Estágio 1 (AiLiveListeningStage): imersivo, escuro, antes da primeira resposta.
+// Estágio 2 (AiLiveChatTopBar/BottomBar): substitui só o topo/rodapé do MESMO
+// Scaffold do chat normal — o corpo (ChatMessagesView, sacola, diálogos) é 100%
+// reaproveitado, sem duplicar nada.
+// ═══════════════════════════════════════════════════════════════════════════
+
+private val AiLiveDeepGreenStart = Color(0xFF0F3D2E)
+private val AiLiveDeepGreenEnd = Color(0xFF08211A)
+
+@Composable
+private fun AiLiveListeningStage(
+    onClose: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(AiLiveDeepGreenStart, AiLiveDeepGreenEnd)))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onClose) {
+                Icon(Icons.Default.Close, contentDescription = "Fechar", tint = Color.White)
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Fale com o KomaAI",
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "Peça o que quiser, como se fosse uma conversa. Eu ajudo a escolher e a fazer o pedido.",
+                color = Color.White.copy(alpha = 0.72f),
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp
+            )
+
+            Spacer(modifier = Modifier.height(36.dp))
+            LiveVoiceOrb()
+            Spacer(modifier = Modifier.height(28.dp))
+            LiveWaveformBar()
+            Spacer(modifier = Modifier.height(10.dp))
+            Text("A ouvir...", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+
+            Spacer(modifier = Modifier.height(28.dp))
+            Box(
+                modifier = Modifier
+                    .size(68.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .clickable(onClick = onClose),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(KomaSoftRed)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Toque para parar", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+        }
+    }
+}
+
+@Composable
+private fun LiveVoiceOrb() {
+    val infiniteTransition = rememberInfiniteTransition(label = "liveOrb")
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0.94f, targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(tween(1400, easing = EaseInOutSine), RepeatMode.Reverse),
+        label = "pulse"
+    )
+    val glow by infiniteTransition.animateFloat(
+        initialValue = 0.35f, targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(tween(1400, easing = EaseInOutSine), RepeatMode.Reverse),
+        label = "glow"
+    )
+    Box(
+        modifier = Modifier
+            .size(200.dp)
+            .graphicsLayer { scaleX = pulse; scaleY = pulse },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.radialGradient(listOf(KomaGold.copy(alpha = glow), AiSecondary.copy(alpha = glow * 0.6f), Color.Transparent)),
+                    CircleShape
+                )
+        )
+        Box(
+            modifier = Modifier
+                .size(140.dp)
+                .background(Brush.radialGradient(listOf(Color(0xFFEFFAF3), KomaMintLight)), CircleShape)
+        )
+        // "Rosto" simples — dois arcos como olhos fechados/sorridentes.
+        Canvas(modifier = Modifier.size(140.dp)) {
+            val eyeWidth = size.width * 0.16f
+            val eyeY = size.height * 0.46f
+            val strokeW = 7.dp.toPx()
+            listOf(size.width * 0.34f, size.width * 0.66f).forEach { cx ->
+                drawArc(
+                    color = Color(0xFF123524),
+                    startAngle = 200f,
+                    sweepAngle = 140f,
+                    useCenter = false,
+                    style = Stroke(width = strokeW, cap = StrokeCap.Round),
+                    topLeft = Offset(cx - eyeWidth / 2, eyeY),
+                    size = Size(eyeWidth, eyeWidth)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LiveWaveformBar() {
+    val infiniteTransition = rememberInfiniteTransition(label = "waveform")
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        repeat(9) { index ->
+            val altura by infiniteTransition.animateFloat(
+                initialValue = 6f, targetValue = if (index % 3 == 0) 26f else 16f,
+                animationSpec = infiniteRepeatable(
+                    tween(500 + (index * 70), easing = EaseInOutSine),
+                    RepeatMode.Reverse
+                ),
+                label = "bar$index"
+            )
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(altura.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(if (index % 2 == 0) KomaGold else Color.White.copy(alpha = 0.85f))
+            )
+        }
+    }
+}
+
+@Composable
+private fun AiLiveChatTopBar(onClose: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AiTopBarGradient)
+            .statusBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onClose) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = Color.White)
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Conversando com o KomaAI", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "liveDot")
+                    val dotAlpha by infiniteTransition.animateFloat(
+                        initialValue = 0.4f, targetValue = 1f,
+                        animationSpec = infiniteRepeatable(tween(800, easing = EaseInOutSine), RepeatMode.Reverse),
+                        label = "dotAlpha"
+                    )
+                    Box(modifier = Modifier.size(6.dp).background(KomaGold.copy(alpha = dotAlpha), CircleShape))
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text("Em tempo real", color = Color.White.copy(alpha = 0.75f), fontSize = 11.sp)
+                }
+            }
+            Spacer(modifier = Modifier.width(40.dp)) // equilibra o IconButton da esquerda
+        }
+    }
+}
+
+@Composable
+private fun AiLiveChatBottomBar(onExitToKeyboard: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AiDeepBg)
+            .navigationBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onExitToKeyboard) {
+            Icon(Icons.Default.Keyboard, contentDescription = "Digitar em vez de falar", tint = AiTextMuted)
+        }
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(50.dp))
+                .background(AiCard)
+                .border(1.dp, AiSecondary.copy(alpha = 0.3f), RoundedCornerShape(50.dp))
+                .clickable(onClick = onExitToKeyboard)
+                .padding(horizontal = 20.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.GraphicEq, contentDescription = null, tint = AiSecondary, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("A ouvir...", color = AiText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        }
+        // Espaço reservado simétrico ao ícone da esquerda — sem ação por agora.
+        Box(modifier = Modifier.size(48.dp))
     }
 }
