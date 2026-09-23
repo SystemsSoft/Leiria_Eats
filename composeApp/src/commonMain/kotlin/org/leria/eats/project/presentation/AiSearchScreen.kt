@@ -6,6 +6,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -36,14 +38,12 @@ import io.kamel.image.asyncPainterResource
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
-import org.jetbrains.compose.resources.painterResource
-import komaai.composeapp.generated.resources.Res
-import komaai.composeapp.generated.resources.logo
 import org.leria.eats.project.data.Address
 import org.leria.eats.project.data.DeliveryFeeResponse
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
+import org.leria.eats.project.presentation.components.AiTopBar
 import org.leria.eats.project.presentation.util.StatusBarLightIcons
 import org.leria.eats.project.presentation.util.buildChargedFeesMap
 import org.leria.eats.project.presentation.util.formatCurrency
@@ -133,7 +133,10 @@ fun AiSearchScreen(
         animationSpec = infiniteRepeatable(tween(2200, easing = EaseInOutSine), RepeatMode.Reverse)
     )
 
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             Column(
                 modifier = Modifier
@@ -151,7 +154,8 @@ fun AiSearchScreen(
                         } else {
                             onClearSearch()
                         }
-                    }
+                    },
+                    scrollBehavior = scrollBehavior
                 )
                 AiQuickActionsRow(
                     enabled = !uiState.isLoading,
@@ -245,67 +249,6 @@ fun AiSearchScreen(
             )
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AiTopBar(
-    glowAlpha: Float,
-    isListening: Boolean,
-    showClearButton: Boolean,
-    onClearChat: () -> Unit
-) {
-    TopAppBar(
-        navigationIcon = {
-            Box(
-                modifier = Modifier
-                    .padding(bottom = 14.dp)
-                    .size(180.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            Brush.radialGradient(
-                                listOf(
-                                    AiPrimary.copy(alpha = if (isListening) glowAlpha * 0.7f else glowAlpha * 0.15f),
-                                    Color.Transparent
-                                ),
-                                radius = 200f
-                            )
-                        )
-                )
-                Image(
-                    painter = painterResource(Res.drawable.logo),
-                    contentDescription = "Koma",
-                    modifier = Modifier.size(180.dp),
-                    contentScale = ContentScale.Fit,
-                    alignment = Alignment.Center
-                )
-            }
-        },
-        title = {},
-        actions = {
-            if (showClearButton) {
-                TextButton(
-                    onClick = onClearChat,
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
-                    Text(
-                        text = "Limpar",
-                        fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Transparent,
-            titleContentColor = AiText
-        )
-    )
 }
 
 @Composable
@@ -1668,12 +1611,10 @@ private fun AiSemanticInputBar(
                         }
                     )
                     .padding(horizontal = 4.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.Bottom
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .padding(bottom = 4.dp),
+                    modifier = Modifier.size(44.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -1684,26 +1625,31 @@ private fun AiSemanticInputBar(
                     )
                 }
 
-                TextField(
-                    value = value, onValueChange = onValueChange,
-                    placeholder = { Text("Ex: \"Uma pizza de calabresa\"...", color = AiTextMuted, fontSize = 14.sp) },
+                // Nota: BasicTextField em vez de TextField — o TextField do Material3 tem
+                // padding interno pensado pra formulário (altura mínima, espaço pra label),
+                // o que desalinhava o texto verticalmente em relação aos ícones de 44dp ao
+                // lado. BasicTextField não carrega esse padding, então o texto centraliza de
+                // verdade com o Row inteiro em Alignment.CenterVertically — prática padrão
+                // pra barras de busca/chat compactas em Compose.
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
                     enabled = !isLoading,
                     singleLine = false,
                     maxLines = 5,
-                    colors = TextFieldDefaults.colors(
-                        focusedTextColor = AiText,
-                        unfocusedTextColor = AiText,
-                        cursorColor = AiPrimary,
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent,
-                        disabledContainerColor = Color.Transparent
-                    ),
+                    textStyle = LocalTextStyle.current.copy(color = AiText, fontSize = 14.sp),
+                    cursorBrush = SolidColor(AiPrimary),
                     modifier = Modifier
                         .weight(1f)
-                        .padding(vertical = 4.dp)
+                        .padding(vertical = 12.dp),
+                    decorationBox = { innerTextField ->
+                        Box(contentAlignment = Alignment.CenterStart) {
+                            if (value.isEmpty()) {
+                                Text("Ex: \"Uma pizza de calabresa\"...", color = AiTextMuted, fontSize = 14.sp)
+                            }
+                            innerTextField()
+                        }
+                    }
                 )
 
                 // ── Botão Enviar / Microfone (mesma posição, um substitui o outro) ──
@@ -1713,9 +1659,7 @@ private fun AiSemanticInputBar(
                     else -> "mic"
                 }
                 Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .padding(bottom = 4.dp),
+                    modifier = Modifier.size(44.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     AnimatedContent(

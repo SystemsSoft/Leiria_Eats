@@ -3,7 +3,6 @@ package org.leria.eats.project.presentation
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,18 +33,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
-import komaai.composeapp.generated.resources.Res
-import komaai.composeapp.generated.resources.logo
-import org.jetbrains.compose.resources.painterResource
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
+import org.leria.eats.project.presentation.components.AiTopBar
 import org.leria.eats.project.presentation.util.StatusBarLightIcons
 import org.leria.eats.project.presentation.util.formatCurrency
 import org.leria.eats.project.theme.*
@@ -177,16 +175,11 @@ fun HomeScreen(
                 }
             }
 
+            val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
             Scaffold(
-                containerColor = AiDeepBg,
-                contentColor = AiText
-            ) { padding ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = padding.calculateBottomPadding()),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+                topBar = {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -195,73 +188,77 @@ fun HomeScreen(
                     ) {
                         AiTopBar(
                             showClearButton = false,
-                            onClearChat = onClearSearch
+                            onClearChat = onClearSearch,
+                            scrollBehavior = scrollBehavior
                         )
                     }
+                },
+                containerColor = AiDeepBg,
+                contentColor = AiText
+            ) { padding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(horizontal = 10.dp)
+                        .clip(RoundedCornerShape(topStart = 48.dp, topEnd = 24.dp))
+                ) {
+                    val listState = when {
+                        uiState.isLoading && uiState.allRestaurants.isEmpty() -> 0
+                        isProductCategoryMode -> 1
+                        else -> 2
+                    }
 
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 10.dp)
-                            .clip(RoundedCornerShape(topStart = 48.dp, topEnd = 24.dp))
-                    ) {
-                        val listState = when {
-                            uiState.isLoading && uiState.allRestaurants.isEmpty() -> 0
-                            isProductCategoryMode -> 1
-                            else -> 2
-                        }
-                        
-                        Crossfade(
-                            targetState = listState,
-                            animationSpec = tween(durationMillis = 400),
-                            label = "HomeListTransition"
-                        ) { state ->
-                            when (state) {
-                                0 -> {
-                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        AiThinkingIndicator()
+                    Crossfade(
+                        targetState = listState,
+                        animationSpec = tween(durationMillis = 400),
+                        label = "HomeListTransition"
+                    ) { state ->
+                        when (state) {
+                            0 -> {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    AiThinkingIndicator()
+                                }
+                            }
+                            1 -> {
+                                HomeProductList(
+                                    products = filteredProducts,
+                                    categories = productCategories,
+                                    selectedCategory = uiState.selectedCategory,
+                                    isProductMode = true,
+                                    onModeChange = {
+                                        isProductCategoryMode = it
+                                        onCategorySelect(null)
+                                    },
+                                    onCategorySelect = onCategorySelect,
+                                    onViewAllCategoriesClick = { showCategoriesSheet = true },
+                                    onProductClick = { product, restaurant ->
+                                        val catToSelect = uiState.selectedCategory ?: product.category.split(",").firstOrNull()?.trim()
+                                        onCategorySelect(catToSelect)
+                                        onRestaurantClick(restaurant)
                                     }
-                                }
-                                1 -> {
-                                    HomeProductList(
-                                        products = filteredProducts,
-                                        categories = productCategories,
-                                        selectedCategory = uiState.selectedCategory,
-                                        isProductMode = true,
-                                        onModeChange = {
-                                            isProductCategoryMode = it
-                                            onCategorySelect(null)
-                                        },
-                                        onCategorySelect = onCategorySelect,
-                                        onViewAllCategoriesClick = { showCategoriesSheet = true },
-                                        onProductClick = { product, restaurant ->
-                                            val catToSelect = uiState.selectedCategory ?: product.category.split(",").firstOrNull()?.trim()
-                                            onCategorySelect(catToSelect)
-                                            onRestaurantClick(restaurant)
-                                        }
-                                    )
-                                }
-                                else -> {
-                                    HomeRestaurantList(
-                                        restaurants = filteredRestaurants,
-                                        categories = restaurantCategories,
-                                        selectedCategory = uiState.selectedCategory,
-                                        isProductMode = false,
-                                        onModeChange = {
-                                            isProductCategoryMode = it
-                                            onCategorySelect(null)
-                                        },
-                                        onCategorySelect = onCategorySelect,
-                                        onViewAllCategoriesClick = { showCategoriesSheet = true },
-                                        onRestaurantClick = onRestaurantClick
-                                    )
-                                }
+                                )
+                            }
+                            else -> {
+                                HomeRestaurantList(
+                                    restaurants = filteredRestaurants,
+                                    categories = restaurantCategories,
+                                    selectedCategory = uiState.selectedCategory,
+                                    isProductMode = false,
+                                    onModeChange = {
+                                        isProductCategoryMode = it
+                                        onCategorySelect(null)
+                                    },
+                                    onCategorySelect = onCategorySelect,
+                                    onViewAllCategoriesClick = { showCategoriesSheet = true },
+                                    onRestaurantClick = onRestaurantClick
+                                )
                             }
                         }
                     }
                 }
             }
-            
+
             if (showCategoriesSheet) {
                 ModalBottomSheet(
                     onDismissRequest = { showCategoriesSheet = false },
@@ -417,12 +414,6 @@ private fun CategoryCard(category: String, isSelected: Boolean, onClick: () -> U
             overflow = TextOverflow.Ellipsis
         )
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AiTopBar(showClearButton: Boolean, onClearChat: () -> Unit) {
-    TopAppBar(navigationIcon = { Box(modifier = Modifier.padding(bottom = 14.dp).size(180.dp), contentAlignment = Alignment.CenterStart) { Image(painter = painterResource(Res.drawable.logo), contentDescription = "Koma", modifier = Modifier.fillMaxHeight(), contentScale = ContentScale.Fit) } }, title = {}, actions = { if (showClearButton) { TextButton(onClick = onClearChat, modifier = Modifier.padding(end = 8.dp)) { Text(text = "Limpar", fontSize = 12.sp, color = Color.White.copy(alpha = 0.85f), fontWeight = FontWeight.SemiBold) } } }, colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = AiText))
 }
 
 @Composable
