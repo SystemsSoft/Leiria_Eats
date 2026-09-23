@@ -12,14 +12,17 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.NoFood
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -73,6 +76,47 @@ private val PGreen   = KomaBrandGreen
 private val PText    = KomaTextPrimary
 private val PMuted   = KomaTextSec
 
+// ─── Validação de Email / Telefone ───────────────────────────────────────────
+// Campo aceitava qualquer texto (ex.: "não quero te mandar") como email — sem
+// confirmação de conta/pedido válida, isso quebra o fluxo de entrega.
+private val emailRegex = Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9-]+\\.[A-Za-z]{2,}$")
+
+private fun isValidEmail(value: String): Boolean =
+    value.isBlank() || emailRegex.matches(value.trim())
+
+private fun isValidPhone(value: String): Boolean {
+    if (value.isBlank()) return true
+    val digits = value.filter { it.isDigit() }
+    return digits.length in 9..15
+}
+
+// ─── Alergias / Estilos de Vida: seleção múltipla em vez de texto livre ──────
+// Texto livre aceitava qualquer coisa (ex.: "indigna", "sal") sem estrutura que
+// a IA/filtros de cardápio pudessem usar com confiança. As opções abaixo cobrem
+// os casos mais comuns; "Outro" mantém um campo de texto livre para o resto.
+private val allergyOptions = listOf(
+    "Amendoim", "Frutos secos", "Marisco/Crustáceos", "Peixe",
+    "Ovo", "Leite/Lactose", "Glúten", "Soja", "Sésamo"
+)
+private val lifestyleOptions = listOf(
+    "Vegano", "Vegetariano", "Keto", "Sem Lactose",
+    "Sem Glúten", "Halal", "Kosher", "Low Carb"
+)
+
+// Separa uma string "Amendoim, sal, Ovo" nas opções reconhecidas (com a grafia
+// padronizada da lista) e no restante, tratado como texto livre em "Outro".
+private fun splitProfileTags(raw: String, options: List<String>): Pair<Set<String>, String> {
+    val parts = raw.split(",").map { it.trim() }.filter { it.isNotBlank() }
+    val matched = parts.mapNotNull { part -> options.firstOrNull { it.equals(part, ignoreCase = true) } }.toSet()
+    val custom = parts.filterNot { part -> options.any { it.equals(part, ignoreCase = true) } }
+    return matched to custom.joinToString(", ")
+}
+
+private fun joinProfileTags(selected: Set<String>, custom: String): String {
+    val customParts = custom.split(",").map { it.trim() }.filter { it.isNotBlank() }
+    return (selected.toList() + customParts).joinToString(", ")
+}
+
 @Composable
 fun ProfileScreen(
     userProfile: UserProfile,
@@ -85,12 +129,18 @@ fun ProfileScreen(
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var photoUrl by remember { mutableStateOf<String?>(null) }
-    var allergies by remember { mutableStateOf("") }
-    var lifestyles by remember { mutableStateOf("") }
+    var selectedAllergies by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var customAllergies by remember { mutableStateOf("") }
+    var selectedLifestyles by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var customLifestyles by remember { mutableStateOf("") }
     var addresses by remember { mutableStateOf<List<Address>>(emptyList()) }
     var showMapDialog by remember { mutableStateOf(false) }
     var showAddAddressDialog by remember { mutableStateOf(false) }
     var addressToEdit by remember { mutableStateOf<Address?>(null) }
+    var showValidationError by remember { mutableStateOf(false) }
+
+    val emailError = showValidationError && !isValidEmail(email)
+    val phoneError = showValidationError && !isValidPhone(phone)
 
     val scope = rememberCoroutineScope()
 
@@ -99,8 +149,12 @@ fun ProfileScreen(
         if (userProfile.email.isNotEmpty()) email = userProfile.email
         if (userProfile.phone.isNotEmpty()) phone = userProfile.phone
         photoUrl = userProfile.photoUrl
-        allergies = userProfile.allergies
-        lifestyles = userProfile.lifestyles
+        val (allergyMatches, allergyCustom) = splitProfileTags(userProfile.allergies, allergyOptions)
+        selectedAllergies = allergyMatches
+        customAllergies = allergyCustom
+        val (lifestyleMatches, lifestyleCustom) = splitProfileTags(userProfile.lifestyles, lifestyleOptions)
+        selectedLifestyles = lifestyleMatches
+        customLifestyles = lifestyleCustom
         if (userProfile.addresses.isNotEmpty()) addresses = userProfile.addresses
     }
 
@@ -251,11 +305,13 @@ fun ProfileScreen(
                         }
                     }
 
-                    // Botão de editar (overlay)
+                    // Botão de editar (overlay) — deslocado para fora da moldura circular do
+                    // avatar (offset), senão a borda do avatar cortava o ícone da câmera.
                     Box(
                         modifier = Modifier
-                            .size(26.dp)
+                            .size(28.dp)
                             .align(Alignment.BottomEnd)
+                            .offset(x = 4.dp, y = 4.dp)
                             .background(PGold, CircleShape)
                             .border(2.dp, PDeepBg, CircleShape),
                         contentAlignment = Alignment.Center
@@ -276,7 +332,7 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(28.dp))
 
                 // ── Section: dados ────────────────────────────────────────
-                ProfileSectionLabel(label = "Dados Pessoais")
+                ProfileSectionLabel(label = "Dados Pessoais", modifier = Modifier.fillMaxWidth())
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
@@ -293,7 +349,9 @@ fun ProfileScreen(
                     onValueChange = { email = it },
                     label = "Email",
                     icon = Icons.Default.Email,
-                    keyboardType = KeyboardType.Email
+                    keyboardType = KeyboardType.Email,
+                    isError = emailError,
+                    errorMessage = "Introduza um email válido (ex: nome@exemplo.com)"
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 ProfileTextField(
@@ -301,25 +359,35 @@ fun ProfileScreen(
                     onValueChange = { phone = it },
                     label = "Telefone / WhatsApp",
                     icon = Icons.Default.Phone,
-                    keyboardType = KeyboardType.Phone
+                    keyboardType = KeyboardType.Phone,
+                    isError = phoneError,
+                    errorMessage = "Introduza um número de telefone válido"
                 )
                 Spacer(modifier = Modifier.height(28.dp))
 
                 // ── Section: Personalização Alimentar ──────────────────────
-                ProfileSectionLabel(label = "Personalização Alimentar")
+                ProfileSectionLabel(label = "Personalização Alimentar", modifier = Modifier.fillMaxWidth())
                 Spacer(modifier = Modifier.height(12.dp))
-                ProfileTextField(
-                    value = allergies,
-                    onValueChange = { allergies = it },
+                ChipMultiSelectField(
                     label = "Alergias / Intolerâncias",
-                    icon = Icons.Default.Add
+                    icon = Icons.Default.NoFood,
+                    options = allergyOptions,
+                    selected = selectedAllergies,
+                    onSelectedChange = { selectedAllergies = it },
+                    customValue = customAllergies,
+                    onCustomValueChange = { customAllergies = it },
+                    customPlaceholder = "Outra alergia/intolerância"
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                ProfileTextField(
-                    value = lifestyles,
-                    onValueChange = { lifestyles = it },
-                    label = "Estilos de Vida (ex: Vegan, Keto)",
-                    icon = Icons.Default.Check
+                Spacer(modifier = Modifier.height(16.dp))
+                ChipMultiSelectField(
+                    label = "Estilos de Vida",
+                    icon = Icons.Default.Restaurant,
+                    options = lifestyleOptions,
+                    selected = selectedLifestyles,
+                    onSelectedChange = { selectedLifestyles = it },
+                    customValue = customLifestyles,
+                    onCustomValueChange = { customLifestyles = it },
+                    customPlaceholder = "Outro estilo de vida"
                 )
                 Spacer(modifier = Modifier.height(28.dp))
 
@@ -375,32 +443,155 @@ fun ProfileScreen(
         }
 
         // ── Save FAB ──────────────────────────────────────────────────────
-        Box(
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 20.dp)
-                .height(54.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Brush.horizontalGradient(listOf(PGold, KomaOrangeEnd)))
-                .clickable { onSave(name, email, phone, addresses, photoUrl, allergies, lifestyles) },
-            contentAlignment = Alignment.Center
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Check, contentDescription = null, tint = KomaGoldOnDark, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Guardar Perfil ✦", color = KomaGoldOnDark, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            if (showValidationError && (emailError || phoneError)) {
+                Text(
+                    "Corrija os campos destacados antes de guardar.",
+                    color = KomaSoftRed,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Brush.horizontalGradient(listOf(PGold, KomaOrangeEnd)))
+                    .clickable {
+                        if (isValidEmail(email) && isValidPhone(phone)) {
+                            showValidationError = false
+                            onSave(
+                                name, email, phone, addresses, photoUrl,
+                                joinProfileTags(selectedAllergies, customAllergies),
+                                joinProfileTags(selectedLifestyles, customLifestyles)
+                            )
+                        } else {
+                            showValidationError = true
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Check, contentDescription = null, tint = KomaGoldOnDark, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Guardar Perfil ✦", color = KomaGoldOnDark, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ProfileSectionLabel(label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+private fun ProfileSectionLabel(label: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Box(modifier = Modifier.width(3.dp).height(14.dp).background(PGold, RoundedCornerShape(2.dp)))
         Spacer(modifier = Modifier.width(8.dp))
         Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = PText)
+    }
+}
+
+// Substitui o campo de texto livre de "Alergias"/"Estilos de Vida" por chips de
+// seleção múltipla com opções padrão + "Outro" (texto livre só pro que não está
+// na lista) — dado estruturado que a IA/filtros de cardápio conseguem usar.
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun ChipMultiSelectField(
+    label: String,
+    icon: ImageVector,
+    options: List<String>,
+    selected: Set<String>,
+    onSelectedChange: (Set<String>) -> Unit,
+    customValue: String,
+    onCustomValueChange: (String) -> Unit,
+    customPlaceholder: String
+) {
+    var showCustomField by remember(customValue) { mutableStateOf(customValue.isNotBlank()) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = PMuted, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(label, fontSize = 12.sp, color = PMuted, fontWeight = FontWeight.SemiBold)
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            options.forEach { option ->
+                val isSelected = option in selected
+                SelectableChip(
+                    label = option,
+                    selected = isSelected,
+                    onClick = {
+                        onSelectedChange(if (isSelected) selected - option else selected + option)
+                    }
+                )
+            }
+            SelectableChip(
+                label = "Outro",
+                selected = showCustomField,
+                onClick = {
+                    if (showCustomField) {
+                        showCustomField = false
+                        onCustomValueChange("")
+                    } else {
+                        showCustomField = true
+                    }
+                }
+            )
+        }
+        if (showCustomField) {
+            Spacer(modifier = Modifier.height(8.dp))
+            ProfileTextField(
+                value = customValue,
+                onValueChange = onCustomValueChange,
+                label = customPlaceholder
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectableChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50.dp))
+            .background(if (selected) PGold.copy(alpha = 0.18f) else PCard)
+            .border(
+                width = 1.dp,
+                color = if (selected) PGold else PGold.copy(alpha = 0.2f),
+                shape = RoundedCornerShape(50.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) PGold else PMuted
+        )
+        if (selected) {
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(Icons.Default.Close, contentDescription = "Remover $label", tint = PGold, modifier = Modifier.size(12.dp))
+        }
     }
 }
 
@@ -539,39 +730,54 @@ fun AddressEntryDialog(
                     onValueChange = { addressValue = it },                    label = "Endereço",
                     trailingContent = {
                         Row {
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(if (!isLocating) PGold.copy(alpha = 0.15f) else PCard)
-                                    .clickable(enabled = !isLocating) {
-                                        isLocating = true
-                                        onGetLocation { foundAddress, foundLat, foundLng ->
-                                            isLocating = false
-                                            if (foundAddress.isNotEmpty()) {
-                                                addressValue = foundAddress
-                                                lat = foundLat
-                                                lng = foundLng
-                                            }
-                                        }
-                                    },
-                                contentAlignment = Alignment.Center
+                            // Ícones sem rótulo visível — tooltip explica a ação ao tocar e
+                            // segurar (ou passar o mouse, no desktop), sem precisar de texto
+                            // fixo que não caberia no espaço compacto do campo.
+                            TooltipBox(
+                                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                tooltip = { PlainTooltip { Text("Usar a minha localização atual") } },
+                                state = rememberTooltipState()
                             ) {
-                                if (isLocating)
-                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = PGold, strokeWidth = 2.dp)
-                                else
-                                    Icon(Icons.Default.Home, contentDescription = "Localização atual", tint = PGold, modifier = Modifier.size(16.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(if (!isLocating) PGold.copy(alpha = 0.15f) else PCard)
+                                        .clickable(enabled = !isLocating) {
+                                            isLocating = true
+                                            onGetLocation { foundAddress, foundLat, foundLng ->
+                                                isLocating = false
+                                                if (foundAddress.isNotEmpty()) {
+                                                    addressValue = foundAddress
+                                                    lat = foundLat
+                                                    lng = foundLng
+                                                }
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isLocating)
+                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = PGold, strokeWidth = 2.dp)
+                                    else
+                                        Icon(Icons.Default.Home, contentDescription = "Usar a minha localização atual", tint = PGold, modifier = Modifier.size(16.dp))
+                                }
                             }
                             Spacer(modifier = Modifier.width(4.dp))
-                             Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(PGreen.copy(alpha = 0.15f))
-                                    .clickable { showMapDialog = true },
-                                contentAlignment = Alignment.Center
+                            TooltipBox(
+                                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                tooltip = { PlainTooltip { Text("Selecionar no mapa") } },
+                                state = rememberTooltipState()
                             ) {
-                                Icon(Icons.Default.Map, contentDescription = "Mapa", tint = PGreen, modifier = Modifier.size(16.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(PGreen.copy(alpha = 0.15f))
+                                        .clickable { showMapDialog = true },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Map, contentDescription = "Selecionar no mapa", tint = PGreen, modifier = Modifier.size(16.dp))
+                                }
                             }
                         }
                     }
@@ -613,14 +819,16 @@ fun ProfileTextField(
     label: String,
     icon: ImageVector? = null,
     keyboardType: KeyboardType = KeyboardType.Text,
-    trailingContent: (@Composable () -> Unit)? = null
+    trailingContent: (@Composable () -> Unit)? = null,
+    isError: Boolean = false,
+    errorMessage: String? = null
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(PCard)
-            .border(1.dp, PGold.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
+            .border(1.dp, if (isError) KomaSoftRed.copy(alpha = 0.6f) else PGold.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
     ) {
         TextField(
             value = value,
@@ -630,6 +838,10 @@ fun ProfileTextField(
             trailingIcon = trailingContent,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             singleLine = true,
+            isError = isError,
+            supportingText = if (isError && errorMessage != null) {
+                { Text(errorMessage, color = KomaSoftRed, fontSize = 11.sp) }
+            } else null,
             colors = TextFieldDefaults.colors(
                 focusedTextColor = PText,
                 unfocusedTextColor = PText,
@@ -640,7 +852,12 @@ fun ProfileTextField(
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent,
                 focusedLabelColor = PGold,
-                unfocusedLabelColor = PMuted
+                unfocusedLabelColor = PMuted,
+                errorContainerColor = Color.Transparent,
+                errorIndicatorColor = Color.Transparent,
+                errorTextColor = PText,
+                errorLabelColor = KomaSoftRed,
+                errorSupportingTextColor = KomaSoftRed
             ),
             modifier = Modifier.fillMaxWidth()
         )
