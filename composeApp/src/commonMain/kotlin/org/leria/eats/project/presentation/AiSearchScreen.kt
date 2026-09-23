@@ -81,7 +81,7 @@ fun AiSearchScreen(
     onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     onViewCart: () -> Unit,
     onClearSearch: () -> Unit,
-    onChooseProductInChat: (Product) -> Unit = {},
+    onChooseProductInChat: (Product, Int) -> Unit = { _, _ -> },
     onQuickPrompt: (String) -> Unit = {},
     onRequestSuggestions: () -> Unit = {},
     onIntroClick: () -> Unit = {},
@@ -92,6 +92,7 @@ fun AiSearchScreen(
     var selectedProduct by remember { mutableStateOf<Product?>(null) }
     var isCartExpanded by remember { mutableStateOf(false) }
     var showClearConfirmDialog by remember { mutableStateOf(false) }
+    var quantityPickerProduct by remember { mutableStateOf<Product?>(null) }
 
     // Ícones claros na status bar enquanto a barra verde escura desta tela estiver visível
     StatusBarLightIcons(enabled = true)
@@ -201,7 +202,7 @@ fun AiSearchScreen(
                     cartItems = uiState.cartItems,
                     onAddToCart = onAddToCart,
                     onProductClick = { product -> selectedProduct = product },
-                    onChooseInChat = onChooseProductInChat,
+                    onChooseInChat = { product -> quantityPickerProduct = product },
                     modifier = Modifier.fillMaxSize()
                 )
 
@@ -251,6 +252,90 @@ fun AiSearchScreen(
             )
         }
     }
+
+    quantityPickerProduct?.let { product ->
+        AiQuantityPickerDialog(
+            product = product,
+            onDismiss = { quantityPickerProduct = null },
+            onConfirm = { quantity ->
+                onChooseProductInChat(product, quantity)
+                quantityPickerProduct = null
+            }
+        )
+    }
+}
+
+@Composable
+private fun AiQuantityPickerDialog(
+    product: Product,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    var quantity by remember(product.gid) { mutableStateOf(1) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = AiCard,
+        titleContentColor = AiText,
+        title = {
+            Text("Quantas unidades?", fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column {
+                Text(
+                    text = product.name,
+                    color = AiTextMuted,
+                    fontSize = 13.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { if (quantity > 1) quantity-- },
+                        enabled = quantity > 1,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(AiSurface)
+                    ) {
+                        Icon(Icons.Default.Remove, contentDescription = "Diminuir", tint = if (quantity > 1) AiText else AiTextMuted)
+                    }
+                    Text(
+                        text = "$quantity",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AiText,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.widthIn(min = 56.dp)
+                    )
+                    IconButton(
+                        onClick = { if (quantity < 99) quantity++ },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(AiPrimary)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Aumentar", tint = Color.Black)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(quantity) }) {
+                Text("Adicionar", color = AiPrimary, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = AiTextMuted)
+            }
+        }
+    )
 }
 
 @Composable

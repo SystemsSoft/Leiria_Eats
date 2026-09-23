@@ -436,12 +436,14 @@ class SearchViewModel(
 
     /**
      * Envia ao chat da IA a escolha de um produto sugerido, como se o usuário tivesse digitado.
-     * A quantidade vem explícita na mensagem para a IA adicionar direto ao carrinho (1 unidade),
-     * sem perguntar de novo — ver regra "Exceção" em gemini_sales_service.py.
+     * A quantidade vem explícita na mensagem para a IA adicionar direto ao carrinho (usuário
+     * escolhe no modal de quantidade antes de chamar isto), sem perguntar de novo — ver regra
+     * "Exceção" em gemini_sales_service.py.
      */
-    fun chooseProductInChat(product: Product) {
+    fun chooseProductInChat(product: Product, quantity: Int = 1) {
         if (_uiState.value.isLoading) return
-        fetchSearch("Adicionar 1 ${product.name} ao meu carrinho.")
+        val quantidade = quantity.coerceAtLeast(1)
+        fetchSearch("Adicionar $quantidade ${product.name} ao meu carrinho.")
     }
 
     /** Envia um prompt pré-definido ao chat da IA (ex.: atalhos rápidos como "Caixa Surpresa"). */

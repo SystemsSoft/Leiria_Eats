@@ -523,7 +523,7 @@ fun MainScreenWithAI(
                                     onTextChange = { viewModel.onQueryChange(it) },
                                     onAddToCart = { product -> viewModel.addToCart(product) },
                                     onRemoveFromCart = { product -> viewModel.removeFromCart(product) },
-                                    onChooseProductInChat = { product -> viewModel.chooseProductInChat(product) },
+                                    onChooseProductInChat = { product, quantity -> viewModel.chooseProductInChat(product, quantity) },
                                     onQuickPrompt = { prompt -> viewModel.sendQuickPrompt(prompt) },
                                     onRequestSuggestions = { viewModel.requestPersonalizedSuggestions() },
                                     onCheckout = { address, deliveryFee, serviceFee, deliveryType, feesMap ->
