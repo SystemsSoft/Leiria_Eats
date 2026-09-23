@@ -238,7 +238,7 @@ fun AiSearchScreen(
         ModalBottomSheet(
             onDismissRequest = { selectedProduct = null },
             sheetState = sheetState,
-            containerColor = AiSurface,
+            containerColor = AiDeepBg,
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             ProductDetailBottomSheet(
@@ -1800,7 +1800,7 @@ private fun ProductDetailBottomSheet(
     onDismiss: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().background(AiSurface).padding(horizontal = 24.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().background(AiDeepBg).padding(horizontal = 24.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(modifier = Modifier.width(44.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(AiTextMuted.copy(alpha = 0.3f)))
