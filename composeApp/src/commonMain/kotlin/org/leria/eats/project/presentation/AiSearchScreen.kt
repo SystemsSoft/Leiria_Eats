@@ -63,6 +63,10 @@ private val AiSurpriseBox = KomaSurpriseBox
 private val AiTopBarGradient = Brush.verticalGradient(
     colors = listOf(KomaTopBarGreenStart, KomaTopBarGreenEnd)
 )
+// Cor de fundo do Scaffold por trás do card arredondado: só aparece nos cantos
+// que a curva do card (topStart/topEnd) deixa "de fora" — precisa casar com o
+// verde escuro da base do gradiente do topo pra dar a impressão de continuidade.
+private val AiScaffoldBg = KomaTopBarGreenEnd
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiSearchScreen(
@@ -141,12 +145,10 @@ fun AiSearchScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
                     .background(AiTopBarGradient)
             ) {
                 AiTopBar(
-                    glowAlpha = glowAlpha,
-                    isListening = isListening,
+                    compact = true,
                     showClearButton = uiState.chatMessages.size > 1,
                     onClearChat = {
                         if (uiState.cartItems.isNotEmpty()) {
@@ -156,11 +158,6 @@ fun AiSearchScreen(
                         }
                     },
                     scrollBehavior = scrollBehavior
-                )
-                AiQuickActionsRow(
-                    enabled = !uiState.isLoading,
-                    onQuickPrompt = onQuickPrompt,
-                    onRequestSuggestions = onRequestSuggestions
                 )
             }
         },
@@ -173,15 +170,18 @@ fun AiSearchScreen(
                 onValueChange = onTextChange,
                 onSend = onSendClick,
                 onMic = onMicClick,
-                onToggleNav = onToggleNav
+                onToggleNav = onToggleNav,
+                modifier = Modifier.background(AiDeepBg)
             )
         },
-        containerColor = AiDeepBg
+        containerColor = AiScaffoldBg
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                .background(AiDeepBg)
         ) {
             Box(
                 modifier = Modifier
@@ -200,17 +200,14 @@ fun AiSearchScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Boas-vindas centralizado se não houver mensagens e não estiver no fluxo da Sacola IA
+                // Boas-vindas se não houver mensagens e não estiver no fluxo da Sacola IA
                 if (uiState.chatMessages.isEmpty() && !uiState.isLoading && !uiState.isAiCartFlow) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AiWelcomeButton(
-                            onClick = onIntroClick,
-                            modifier = Modifier.padding(horizontal = 32.dp)
-                        )
-                    }
+                    AiWelcomeHero(
+                        onQuickPrompt = onQuickPrompt,
+                        onRequestSuggestions = onRequestSuggestions,
+                        onIntroClick = onIntroClick,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
 
@@ -248,6 +245,79 @@ fun AiSearchScreen(
                 onDismiss = { selectedProduct = null }
             )
         }
+    }
+}
+
+@Composable
+private fun AiWelcomeHero(
+    onQuickPrompt: (String) -> Unit,
+    onRequestSuggestions: () -> Unit,
+    onIntroClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 20.dp)
+    ) {
+        Text(text = "Olá! 👋", fontSize = 20.sp)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "O que você gostaria\nde pedir hoje?",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = AiText,
+            lineHeight = 30.sp
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Fale com o KomaAI e faça seu pedido de forma simples, rápida e do seu jeito.",
+            fontSize = 13.sp,
+            color = AiTextMuted,
+            lineHeight = 18.sp
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+        AiQuickActionsRow(
+            enabled = true,
+            onQuickPrompt = onQuickPrompt,
+            onRequestSuggestions = onRequestSuggestions
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(AiBotBubble)
+                .border(1.dp, AiSecondary.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
+                .clickable(onClick = onIntroClick)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(AiCard),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("🍽️", fontSize = 20.sp)
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Seu garçom com IA", fontWeight = FontWeight.Bold, color = AiText, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Descreva o que você quer, por áudio ou texto. Eu cuido do resto! ✨",
+                    color = AiTextMuted,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
     }
 }
 
@@ -309,7 +379,6 @@ private fun AiQuickActionsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
             .padding(bottom = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -1525,7 +1594,8 @@ private fun AiSemanticInputBar(
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
     onMic: () -> Unit,
-    onToggleNav: () -> Unit
+    onToggleNav: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val borderAlpha by rememberInfiniteTransition(label = "border").animateFloat(
         initialValue = 0.3f, targetValue = 0.9f, label = "borderAlpha",
@@ -1533,7 +1603,7 @@ private fun AiSemanticInputBar(
     )
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
             .padding(bottom = 8.dp, top = 4.dp, start = 8.dp, end = 8.dp)
@@ -1769,20 +1839,5 @@ private fun ProductDetailBottomSheet(
             Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(AiCard).padding(16.dp)) { Column { Text(text = "Descrição", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = AiPrimary); Spacer(modifier = Modifier.height(8.dp)); Text(text = product.description, style = MaterialTheme.typography.bodyMedium, color = AiText, lineHeight = 22.sp) } }
         }
         Spacer(modifier = Modifier.height(24.dp))
-    }
-}
-
-@Composable
-private fun AiWelcomeButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val infiniteTransition = rememberInfiniteTransition(label = "welcome")
-    val scale by infiniteTransition.animateFloat(initialValue = 1f, targetValue = 1.05f, animationSpec = infiniteRepeatable(animation = tween(1500, easing = EaseInOutSine), repeatMode = RepeatMode.Reverse), label = "scale")
-    Box(modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale }.background(Brush.radialGradient(listOf(AiPrimary.copy(alpha = 0.2f), Color.Transparent)), RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp)).background(Brush.horizontalGradient(listOf(AiPrimary, KomaOrangeEnd))).clickable(onClick = onClick).padding(1.5.dp).clip(RoundedCornerShape(23.dp)).background(AiCard).padding(horizontal = 20.dp, vertical = 14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(modifier = Modifier.size(36.dp).background(Brush.radialGradient(listOf(AiPrimary.copy(alpha = 0.2f), Color.Transparent)), CircleShape).border(1.dp, AiPrimary.copy(alpha = 0.4f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = AiPrimary, modifier = Modifier.size(20.dp)) }
-            Column { Text(text = "Primeira vez aqui?", style = MaterialTheme.typography.labelSmall, color = AiPrimary, fontWeight = FontWeight.Bold); Text(text = "Clique para me conhecer! ✨", style = MaterialTheme.typography.bodyMedium, color = AiText, fontWeight = FontWeight.SemiBold) }
-        }
     }
 }
