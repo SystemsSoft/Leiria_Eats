@@ -61,6 +61,11 @@ private val AiSurpriseBox = KomaSurpriseBox
 private val AiTopBarGradient = Brush.verticalGradient(
     colors = listOf(KomaTopBarGreenStart, KomaTopBarGreenEnd)
 )
+// Cor de fundo do Scaffold por trás do card arredondado: só aparece nos cantos
+// que a curva do card (topStart/topEnd) deixa "de fora" — precisa casar com o
+// verde escuro da base do gradiente do topo pra dar a impressão de continuidade.
+// Mesmo padrão usado na AiSearchScreen (tela "IA").
+private val AiScaffoldBg = KomaTopBarGreenEnd
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -179,11 +184,11 @@ fun HomeScreen(
 
             Scaffold(
                 modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+                contentWindowInsets = WindowInsets(0.dp),
                 topBar = {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
                             .background(AiTopBarGradient)
                     ) {
                         AiTopBar(
@@ -193,13 +198,19 @@ fun HomeScreen(
                         )
                     }
                 },
-                containerColor = AiDeepBg,
+                containerColor = AiScaffoldBg,
                 contentColor = AiText
             ) { padding ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding)
+                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                        .background(AiDeepBg)
+                ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
                         .padding(horizontal = 10.dp)
                         .clip(RoundedCornerShape(topStart = 48.dp, topEnd = 24.dp))
                 ) {
@@ -256,6 +267,7 @@ fun HomeScreen(
                             }
                         }
                     }
+                }
                 }
             }
 
