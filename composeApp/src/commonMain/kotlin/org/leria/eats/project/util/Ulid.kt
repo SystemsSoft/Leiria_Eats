@@ -1,7 +1,8 @@
 package org.leria.eats.project.util
 
-import kotlinx.datetime.Clock
 import kotlin.random.Random
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 /**
  * Gerador de ULID (Universally Unique Lexicographically Sortable Identifier).
@@ -14,7 +15,13 @@ object Ulid {
     private const val TIME_LENGTH = 10
     private const val RANDOM_LENGTH = 16
 
+    @OptIn(ExperimentalTime::class)
     fun nextUlid(): String {
+        // kotlinx.datetime.Clock (import antigo) parou de resolver: o Compose UI
+        // força kotlinx-datetime para 0.7.1 nos alvos iOS deste projeto (0.5.0 é
+        // só o que o build.gradle.kts pede, mas o Gradle resolve pra cima), e essa
+        // versão moveu Clock para kotlin.time.Clock — bug pré-existente e alheio à
+        // conversa de voz, encontrado ao validar a Fase 2/3 no simulador iOS.
         val timestamp = Clock.System.now().toEpochMilliseconds()
         return encodeTime(timestamp) + encodeRandomness()
     }

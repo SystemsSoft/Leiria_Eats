@@ -102,6 +102,12 @@ class LeriaApiClient {
         return sessionId!!
     }
 
+    /** Exposto para a conversa de voz em tempo real (LiveConversationClient) usar a
+     * MESMA sessão do chat por texto — carrinho e histórico continuam unificados
+     * não importa se o pedido foi montado digitando, por voz transcrita ou por
+     * voz ao vivo. */
+    fun currentSessionId(): String = getOrCreateSessionId()
+
     // NOVO: Endpoint com IA Generativa (Síncrono)
     suspend fun sendChatMessage(text: String, restaurantGid: String? = null): ChatResponse {
         val response = client.post("$baseUrl/chat/sales") {

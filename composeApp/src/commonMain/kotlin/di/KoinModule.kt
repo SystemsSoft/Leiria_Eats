@@ -12,6 +12,9 @@ import org.leria.eats.project.data.ProfileRepository
 import org.leria.eats.project.data.getDataStore
 import org.leria.eats.project.payment.StripePaymentManager
 import org.leria.eats.project.presentation.viewmodel.SearchViewModel
+import org.leria.eats.project.voice.live.LiveAudioPlayer
+import org.leria.eats.project.voice.live.LiveAudioRecorder
+import org.leria.eats.project.voice.live.LiveConversationClient
 
 expect val platformModule: Module
 
@@ -21,12 +24,20 @@ val sharedModule = module {
     single { getDataStore() }
 
     single { ProfileRepository(get()) }
-    
+
     single { ChatRepository(get()) }
-    
+
     single { StripePaymentManager() }
 
-    viewModel { SearchViewModel(get(), get(), get(), get()) }
+    // Conversa de voz em tempo real (Gemini Live API) — LiveAudioRecorder/Player
+    // são "expect class" com implementação nativa por plataforma (AudioRecord/
+    // AudioTrack no Android, AVAudioEngine no iOS), resolvidas automaticamente
+    // pelo compilador; não precisam de platformModule separado.
+    single { LiveConversationClient() }
+    single { LiveAudioRecorder() }
+    single { LiveAudioPlayer() }
+
+    viewModel { SearchViewModel(get(), get(), get(), get(), get(), get(), get()) }
 
 }
 

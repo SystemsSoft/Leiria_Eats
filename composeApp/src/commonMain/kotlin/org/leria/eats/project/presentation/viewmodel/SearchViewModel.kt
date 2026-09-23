@@ -35,12 +35,20 @@ import org.leria.eats.project.util.Ulid
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.Job
+import org.leria.eats.project.voice.live.LiveAudioPlayer
+import org.leria.eats.project.voice.live.LiveAudioRecorder
+import org.leria.eats.project.voice.live.LiveConversationClient
+import org.leria.eats.project.voice.live.LiveEvent
 
 class SearchViewModel(
     private val apiClient: LeriaApiClient,
     private val profileRepository: ProfileRepository,
     private val chatRepository: ChatRepository,
-    private val stripePaymentManager: StripePaymentManager
+    private val stripePaymentManager: StripePaymentManager,
+    private val liveConversationClient: LiveConversationClient,
+    private val liveAudioRecorder: LiveAudioRecorder,
+    private val liveAudioPlayer: LiveAudioPlayer
 ) : ViewModel() {
 
     /** Gera um código de pedido numérico único com 9 dígitos */
@@ -1511,6 +1519,96 @@ class SearchViewModel(
         val uniqueRestaurantGids = products.mapNotNull { it.restaurant_gid }.distinct()
         uniqueRestaurantGids.forEach { gid ->
             fetchCompanyByGid(gid)
+        }
+    }
+
+    // ── Conversa de voz em tempo real (Gemini Live API) ──────────────────────
+    // Modo ADICIONAL ao microfone (STT) e ao campo de texto já existentes — não
+    // substitui nenhum dos dois. Usa a MESMA sessão (LeriaApiClient.currentSessionId)
+    // do chat por texto, então o carrinho/histórico continuam unificados entre os
+    // três jeitos de montar um pedido. Ver services/gemini_live_bridge.py no
+    // servidor para o protocolo de eventos (transcript/cart_updated/show_cart/
+    // audio/turn_complete/error) e o motivo das escolhas de modelo/temperatura.
+
+    private var liveConversationJob: Job? = null
+    private var liveAudioSendJob: Job? = null
+
+    fun startLiveConversation() {
+        if (_uiState.value.isLiveConversationActive) return
+        _uiState.update { it.copy(isLiveConversationActive = true) }
+
+        val sessionId = apiClient.currentSessionId()
+
+        liveConversationJob = viewModelScope.launch {
+            launch {
+                liveConversationClient.events.collect { evento -> handleLiveEvent(evento) }
+            }
+            liveConversationClient.connect(sessionId)
+        }
+
+        // Começa a mandar áudio do microfone assim que a ligação for aberta —
+        // sendAudioChunk() não faz nada sozinho enquanto a sessão não conectar
+        // (outgoing fica nulo até o LiveEvent.Connected, mas os frames anteriores
+        // a isso são só descartados, sem erro).
+        liveAudioSendJob = viewModelScope.launch {
+            liveAudioRecorder.audioChunks().collect { chunk ->
+                liveConversationClient.sendAudioChunk(chunk)
+            }
+        }
+    }
+
+    fun stopLiveConversation() {
+        liveAudioSendJob?.cancel()
+        liveAudioSendJob = null
+        liveConversationJob?.cancel()
+        liveConversationJob = null
+        liveAudioPlayer.stop()
+        _uiState.update { it.copy(isLiveConversationActive = false) }
+        viewModelScope.launch { liveConversationClient.disconnect() }
+    }
+
+    private var liveAiTranscriptBuffer = ""
+    private var liveAiMessageId: String? = null
+
+    private fun handleLiveEvent(evento: LiveEvent) {
+        when (evento) {
+            is LiveEvent.Transcript -> {
+                if (evento.role == "user") {
+                    addUserMessage(evento.text)
+                } else {
+                    // Acumula o texto da IA no MESMO padrão de streaming do chat por
+                    // texto (isStreaming = true, atualiza a última mensagem por id),
+                    // pra UI (ChatMessagesView) funcionar igual não importa a origem.
+                    liveAiTranscriptBuffer += evento.text
+                    val id = liveAiMessageId ?: "ai_live_${kotlin.random.Random.nextLong()}".also { liveAiMessageId = it }
+                    _uiState.update { state ->
+                        val messages = state.chatMessages.toMutableList()
+                        val idx = messages.indexOfFirst { it.id == id }
+                        val msg = ChatMessage(id = id, type = ChatMessageType.AI, text = liveAiTranscriptBuffer)
+                        if (idx != -1) messages[idx] = msg else messages.add(msg)
+                        state.copy(chatMessages = messages.takeLast(20), isStreaming = true, isLoading = false)
+                    }
+                }
+            }
+            is LiveEvent.CartUpdated -> updateAiCart(evento.cart)
+            is LiveEvent.ShowCart -> _uiState.update { it.copy(isAiCartFlow = true) }
+            is LiveEvent.Audio -> liveAudioPlayer.play(evento.pcm)
+            is LiveEvent.TurnComplete -> {
+                if (liveAiMessageId != null) saveChatMessages()
+                liveAiTranscriptBuffer = ""
+                liveAiMessageId = null
+                _uiState.update { it.copy(isStreaming = false) }
+            }
+            is LiveEvent.Error -> {
+                addAiMessage(text = evento.message)
+                stopLiveConversation()
+            }
+            is LiveEvent.Connected -> { /* nada a fazer — já em isLiveConversationActive */ }
+            is LiveEvent.Disconnected -> {
+                if (_uiState.value.isLiveConversationActive) {
+                    _uiState.update { it.copy(isLiveConversationActive = false) }
+                }
+            }
         }
     }
 }

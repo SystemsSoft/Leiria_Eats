@@ -510,6 +510,10 @@ fun MainScreenWithAI(
                                             PermissionStatus.GRANTED -> {
                                                 if (isListening) voiceRecognizer.stopListening()
                                                 else {
+                                                    // Mesma exclusividade de microfone do outro sentido
+                                                    // (ver onToggleLiveConversation): não dá pra ter STT e
+                                                    // conversa ao vivo usando o hardware ao mesmo tempo.
+                                                    if (uiState.isLiveConversationActive) viewModel.stopLiveConversation()
                                                     viewModel.onQueryChange("")
                                                     voiceRecognizer.startListening(VoiceContext.AI_SEARCH)
                                                 }
@@ -518,6 +522,7 @@ fun MainScreenWithAI(
                                     },
                                     onSendClick = {
                                         if (isListening) voiceRecognizer.stopListening()
+                                        if (uiState.isLiveConversationActive) viewModel.stopLiveConversation()
                                         viewModel.sendSearch()
                                     },
                                     onTextChange = { viewModel.onQueryChange(it) },
@@ -526,6 +531,22 @@ fun MainScreenWithAI(
                                     onChooseProductInChat = { product, quantity -> viewModel.chooseProductInChat(product, quantity) },
                                     onQuickPrompt = { prompt -> viewModel.sendQuickPrompt(prompt) },
                                     onRequestSuggestions = { viewModel.requestPersonalizedSuggestions() },
+                                    onToggleLiveConversation = {
+                                        if (uiState.isLiveConversationActive) {
+                                            viewModel.stopLiveConversation()
+                                        } else {
+                                            when (permissionStatus) {
+                                                PermissionStatus.IDLE -> permissionManager.askForPermission()
+                                                PermissionStatus.DENIED -> permissionManager.openSettings()
+                                                PermissionStatus.GRANTED -> {
+                                                    // O microfone (STT) e a conversa ao vivo são mutuamente
+                                                    // exclusivos — ambos usam o hardware do microfone.
+                                                    if (isListening) voiceRecognizer.stopListening()
+                                                    viewModel.startLiveConversation()
+                                                }
+                                            }
+                                        }
+                                    },
                                     onCheckout = { address, deliveryFee, serviceFee, deliveryType, feesMap ->
                                         viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType, feesMap)
                                     },

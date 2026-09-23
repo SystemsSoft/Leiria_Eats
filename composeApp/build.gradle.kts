@@ -78,6 +78,9 @@ kotlin {
             implementation("io.ktor:ktor-client-core:2.3.7")
             implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
             implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+            // WebSocket (conversa de voz em tempo real, AiSearchScreen) — engines
+            // já usadas (OkHttp/Darwin) suportam WS nativamente, sem trocar engine.
+            implementation("io.ktor:ktor-client-websockets:2.3.7")
 
             // Serialização JSON
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")

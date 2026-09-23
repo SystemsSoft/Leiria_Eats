@@ -85,7 +85,10 @@ data class SearchUiState(
     // key = orderId, value = restaurantGid
     val orderRestaurantGids: Map<String, String> = emptyMap(),
     // Lista de mensagens de chat da IA
-    val chatMessages: List<ChatMessage> = emptyList()
+    val chatMessages: List<ChatMessage> = emptyList(),
+    // Conversa de voz em tempo real (Gemini Live API via services/gemini_live_bridge.py) —
+    // modo adicional ao microfone (STT) e ao campo de texto já existentes, não substitui nenhum dos dois.
+    val isLiveConversationActive: Boolean = false
 ) {
     val cartCount: Int get() = cartItems.size
 }

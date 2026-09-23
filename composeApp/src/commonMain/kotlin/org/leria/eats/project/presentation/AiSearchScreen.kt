@@ -86,6 +86,7 @@ fun AiSearchScreen(
     onRequestSuggestions: () -> Unit = {},
     onIntroClick: () -> Unit = {},
     onToggleNav: () -> Unit = {},
+    onToggleLiveConversation: () -> Unit = {},
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
     onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null }
 ) {
@@ -173,10 +174,12 @@ fun AiSearchScreen(
                 isListening = isListening,
                 isLoading = uiState.isLoading,
                 isNavVisible = uiState.isBottomNavVisible,
+                isLiveConversationActive = uiState.isLiveConversationActive,
                 onValueChange = onTextChange,
                 onSend = onSendClick,
                 onMic = onMicClick,
                 onToggleNav = onToggleNav,
+                onToggleLiveConversation = onToggleLiveConversation,
                 modifier = Modifier.background(AiDeepBg)
             )
         },
@@ -1681,10 +1684,12 @@ private fun AiSemanticInputBar(
     isListening: Boolean,
     isLoading: Boolean,
     isNavVisible: Boolean,
+    isLiveConversationActive: Boolean,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
     onMic: () -> Unit,
     onToggleNav: () -> Unit,
+    onToggleLiveConversation: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val borderAlpha by rememberInfiniteTransition(label = "border").animateFloat(
@@ -1873,6 +1878,30 @@ private fun AiSemanticInputBar(
                         }
                     }
                 }
+            }
+
+            // ── Conversa em tempo real (Gemini Live) — modo ADICIONAL ao
+            // microfone (STT) acima e ao campo de texto; nenhum dos dois muda.
+            Box(
+                modifier = Modifier
+                    .padding(bottom = 4.dp)
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(if (isLiveConversationActive) AiSecondary else AiCard)
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.horizontalGradient(listOf(AiPrimary.copy(alpha = 0.5f), AiSecondary.copy(alpha = 0.3f))),
+                        shape = CircleShape
+                    )
+                    .clickable(enabled = !isLoading) { onToggleLiveConversation() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isLiveConversationActive) Icons.Default.CallEnd else Icons.Default.GraphicEq,
+                    contentDescription = if (isLiveConversationActive) "Terminar conversa ao vivo" else "Iniciar conversa ao vivo",
+                    tint = if (isLiveConversationActive) Color.White else AiSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
