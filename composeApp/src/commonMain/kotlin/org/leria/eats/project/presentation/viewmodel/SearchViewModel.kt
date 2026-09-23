@@ -613,10 +613,12 @@ class SearchViewModel(
                 saveChatMessages()
 
             } catch (e: Exception) {
-                val errorMessage = "Erro ao conectar: ${e.message}"
+                // Mensagem amigável em PT-PT para o utilizador — o detalhe técnico
+                // (e.message, muitas vezes em inglês/stacktrace) só vai para o log.
+                e.printStackTrace()
+                val errorMessage = "Ups! Não foi possível ligar aos nossos servidores neste momento. Verifique a sua ligação à internet e tente novamente daqui a pouco."
                 addAiMessage(text = errorMessage)
                 _uiState.update { it.copy(isLoading = false, error = errorMessage) }
-                e.printStackTrace()
             }
         }
     }
