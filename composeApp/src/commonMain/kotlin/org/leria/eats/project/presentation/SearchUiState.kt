@@ -88,7 +88,11 @@ data class SearchUiState(
     val chatMessages: List<ChatMessage> = emptyList(),
     // Conversa de voz em tempo real (Gemini Live API via services/gemini_live_bridge.py) —
     // modo adicional ao microfone (STT) e ao campo de texto já existentes, não substitui nenhum dos dois.
-    val isLiveConversationActive: Boolean = false
+    val isLiveConversationActive: Boolean = false,
+    // true quando o texto atual/último enviado veio do microfone (STT), e não de digitação.
+    // Usado para restringir a voz da IA (TTS) a apenas quando o usuário usou o microfone ou
+    // está em ligação de voz — não deve falar respostas a mensagens digitadas.
+    val lastInputWasVoice: Boolean = false
 ) {
     val cartCount: Int get() = cartItems.size
 }

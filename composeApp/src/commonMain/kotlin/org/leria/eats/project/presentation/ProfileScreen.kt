@@ -876,18 +876,10 @@ fun ProfileAiChatBubble(
     }
 
     val displayedText = remember { mutableStateOf("") }
-    val hasSpoken = remember { mutableStateOf(false) }
 
-    // Typewriter animation and TTS
+    // Typewriter animation (sem TTS: esta mensagem é proativa, não vem de interação
+    // por voz — a voz da IA fica restrita ao microfone/ligação de voz)
     LaunchedEffect(Unit) {
-        if (!isMuted && !hasSpoken.value) {
-            val textForTts = prepareTextForTts(fullMessage)
-            if (textForTts.isNotBlank()) {
-                tts.speak(textForTts)
-                hasSpoken.value = true
-            }
-        }
-
         // Typewriter effect
         for (i in fullMessage.indices) {
             displayedText.value = fullMessage.substring(0, i + 1)

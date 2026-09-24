@@ -112,9 +112,13 @@ fun MainScreenWithAI(
     val snackbarHostState = remember { SnackbarHostState() }
     var isMuted by remember { mutableStateOf(false) }
 
+    // Voz da IA (TTS): só deve falar quando o usuário usou o microfone (voz) ou
+    // está em ligação de voz ativa — nunca em resposta a mensagens digitadas.
+    val shouldUseAiVoice = uiState.lastInputWasVoice || uiState.isLiveConversationActive
+
     // Reproduz automaticamente a última mensagem da IA no chat
     LaunchedEffect(uiState.chatMessages.size) {
-        if (!isMuted && uiState.chatMessages.isNotEmpty()) {
+        if (!isMuted && shouldUseAiVoice && uiState.chatMessages.isNotEmpty()) {
             val lastMessage = uiState.chatMessages.lastOrNull()
             if (lastMessage?.type == ChatMessageType.AI && lastMessage.text.isNotBlank()) {
                 val cleanedText = prepareTextForTts(lastMessage.text)
@@ -130,8 +134,10 @@ fun MainScreenWithAI(
         if (uiState.orderJustPlaced && !isMuted) {
             delay(500)
 
-            val successMessage = "Pedido realizado com sucesso! Acompanhe agora o seu estado em Os Meus Pedidos."
-            tts.speak(successMessage)
+            if (shouldUseAiVoice) {
+                val successMessage = "Pedido realizado com sucesso! Acompanhe agora o seu estado em Os Meus Pedidos."
+                tts.speak(successMessage)
+            }
 
             delay(1000)
             viewModel.resetOrderJustPlacedFlag()

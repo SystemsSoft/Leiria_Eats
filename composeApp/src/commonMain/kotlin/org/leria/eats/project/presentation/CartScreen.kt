@@ -859,11 +859,11 @@ fun CartAiChatBubble(
         displayedText.value = ""
         tts.stop()
 
-        // Start speaking immediately, in parallel with the typewriter animation
-        // Only speak if not muted AND message hasn't been spoken before
+        // A bolha da sacola é uma sugestão proativa da IA, não uma resposta a uma
+        // interação por voz — a voz da IA fica restrita ao microfone/ligação de voz,
+        // então aqui apenas marcamos como "falada" sem chamar tts.speak().
         if (!isMuted && !alreadySpoken) {
-            tts.speak(stripEmojisForTts(message))
-            onMarkAsSpoken() // Mark as spoken after TTS starts
+            onMarkAsSpoken()
         }
 
         // Type main message

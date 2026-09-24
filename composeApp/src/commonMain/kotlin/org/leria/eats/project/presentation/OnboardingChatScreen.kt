@@ -390,12 +390,8 @@ private fun addAiMessage(
     )
     onUpdate(messages + newMessage)
 
-    if (!isMuted) {
-        val cleanedText = prepareTextForTts(text)
-        if (cleanedText.isNotBlank()) {
-            tts.speak(cleanedText)
-        }
-    }
+    // Onboarding é sempre por texto (sem microfone), então a voz da IA não é usada aqui —
+    // ver decisão de restringir o TTS a interações por voz/ligação.
 }
 
 @Composable

@@ -270,12 +270,13 @@ class SearchViewModel(
     }
 
     fun onQueryChange(text: String) {
-        _uiState.update { it.copy(textInput = text) }
+        // Digitação manual: a resposta da IA não deve ser falada.
+        _uiState.update { it.copy(textInput = text, lastInputWasVoice = false) }
     }
 
     fun updateInputFromVoice(text: String) {
         if (text.isNotBlank()) {
-            _uiState.update { it.copy(textInput = text) }
+            _uiState.update { it.copy(textInput = text, lastInputWasVoice = true) }
         }
     }
 
