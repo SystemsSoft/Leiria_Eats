@@ -12,6 +12,8 @@ import org.leria.eats.project.data.ProfileRepository
 import org.leria.eats.project.data.getDataStore
 import org.leria.eats.project.payment.StripePaymentManager
 import org.leria.eats.project.presentation.viewmodel.SearchViewModel
+import org.leria.eats.project.voice.GeminiTextToSpeechService
+import org.leria.eats.project.voice.TextToSpeechService
 import org.leria.eats.project.voice.live.LiveAudioPlayer
 import org.leria.eats.project.voice.live.LiveAudioRecorder
 import org.leria.eats.project.voice.live.LiveConversationClient
@@ -36,6 +38,11 @@ val sharedModule = module {
     single { LiveConversationClient() }
     single { LiveAudioRecorder() }
     single { LiveAudioPlayer() }
+
+    // Voz única do app inteiro (mesma da ligação ao vivo, "Aoede") — substitui as
+    // implementações nativas antigas (AndroidTextToSpeechService/
+    // IosTextToSpeechService), removidas.
+    single<TextToSpeechService> { GeminiTextToSpeechService(get(), get()) }
 
     viewModel { SearchViewModel(get(), get(), get(), get(), get(), get(), get()) }
 

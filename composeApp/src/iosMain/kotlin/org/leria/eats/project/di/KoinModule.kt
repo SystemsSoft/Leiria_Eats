@@ -5,9 +5,7 @@ import org.leria.eats.project.permissions.IosPermissionManager
 import org.leria.eats.project.permissions.PermissionManager
 import org.leria.eats.project.service.IosLocationService
 import org.leria.eats.project.service.LocationService
-import org.leria.eats.project.voice.IosTextToSpeechService
 import org.leria.eats.project.voice.IosVoiceRecognizer
-import org.leria.eats.project.voice.TextToSpeechService
 import org.leria.eats.project.voice.VoiceRecognizer
 
 actual val platformModule = module {
@@ -15,5 +13,6 @@ actual val platformModule = module {
     single<LocationService> { IosLocationService() }
     single<VoiceRecognizer> { IosVoiceRecognizer() }
 
-    single<TextToSpeechService> { IosTextToSpeechService() }
+    // TextToSpeechService: ver sharedModule (GeminiTextToSpeechService) — mesma
+    // voz da ligação ao vivo em todas as plataformas, sem implementação nativa.
 }

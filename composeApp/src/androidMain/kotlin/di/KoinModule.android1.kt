@@ -7,8 +7,6 @@ import org.leria.eats.project.permissions.PermissionManager
 import org.leria.eats.project.service.AndroidLocationService
 import org.leria.eats.project.service.LocationService
 import org.leria.eats.project.voice.AndroidVoiceRecognizer
-import org.leria.eats.project.voice.AndroidTextToSpeechService
-import org.leria.eats.project.voice.TextToSpeechService
 import org.leria.eats.project.voice.VoiceRecognizer
 
 actual val platformModule = module {
@@ -23,5 +21,6 @@ actual val platformModule = module {
 
     single<VoiceRecognizer> { AndroidVoiceRecognizer(context = get()) }
 
-    single<TextToSpeechService> { AndroidTextToSpeechService(context = androidContext()) }
+    // TextToSpeechService: ver sharedModule (GeminiTextToSpeechService) — mesma
+    // voz da ligação ao vivo em todas as plataformas, sem implementação nativa.
 }

@@ -18,6 +18,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.leria.eats.project.voice.live.fromBase64
 
 @Serializable
 data class PaymentIntentResponse(
@@ -30,6 +31,12 @@ data class PaymentIntentResponse(
     val customerId: String? = null,
     val ephemeralKey: String? = null
 )
+
+@Serializable
+private data class SpeakRequest(val text: String)
+
+@Serializable
+private data class SpeakResponse(val audio_base64: String, val mime_type: String = "audio/l16;rate=24000;channels=1")
 
 class LeriaApiClient {
     private val json = Json {
@@ -107,6 +114,24 @@ class LeriaApiClient {
      * não importa se o pedido foi montado digitando, por voz transcrita ou por
      * voz ao vivo. */
     fun currentSessionId(): String = getOrCreateSessionId()
+
+    /** Sintetiza `text` em áudio (PCM16 mono 24kHz) com a MESMA voz da ligação ao
+     * vivo — usado por GeminiTextToSpeechService pra unificar a voz do app inteiro
+     * (chat, sacola, onboarding, perfil), em vez das vozes nativas do Android/iOS.
+     * Retorna null se a síntese falhar (o chamador decide o que fazer — hoje, só
+     * não fala nada, sem travar a UI). */
+    suspend fun synthesizeSpeech(text: String): ByteArray? {
+        return try {
+            val response = client.post("$baseUrl/chat/speak") {
+                contentType(ContentType.Application.Json)
+                setBody(SpeakRequest(text = text))
+            }
+            val body: SpeakResponse = response.body()
+            body.audio_base64.fromBase64()
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     // NOVO: Endpoint com IA Generativa (Síncrono)
     suspend fun sendChatMessage(text: String, restaurantGid: String? = null): ChatResponse {
