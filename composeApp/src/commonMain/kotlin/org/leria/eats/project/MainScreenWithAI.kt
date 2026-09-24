@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -89,6 +90,11 @@ private fun prepareTextForTts(text: String): String {
         .trim()
 }
 
+// Tempo de folga em segundo plano antes de considerar o app "realmente fechado" e limpar
+// a conversa (ver DisposableEffect em MainScreenWithAI) — evita limpar por uma troca rápida
+// de app, notificação ou tela de bloqueio.
+private const val APP_FECHADO_GRACE_PERIOD_MS = 2 * 60 * 1000L
+
 // ─── Aliases locais → paleta central ─────────────────────────────────────────
 private val KomaDeepBg = KomaBg
 private val KomaNavGold  = KomaGold
@@ -115,19 +121,34 @@ fun MainScreenWithAI(
     val snackbarHostState = remember { SnackbarHostState() }
     var isMuted by remember { mutableStateOf(false) }
 
-    // Quando o app vai para segundo plano/fecha (ON_STOP é o sinal mais confiável de
-    // "fechar" disponível de forma multiplataforma — Android/iOS não garantem nenhum
-    // callback quando o processo é de fato encerrado), chama a mesma função do botão
-    // "limpar conversa": reinicia a sessão da IA no servidor e limpa o histórico local.
+    // Nem Android nem iOS garantem um callback confiável de "processo realmente encerrado"
+    // de forma multiplataforma — ON_STOP dispara todo vez que o app vai pra segundo plano
+    // (trocar de app, notificação, tela de bloqueio), não só quando é de fato fechado. Por
+    // isso não limpamos na hora: damos uma folga (GRACE_PERIOD) e só chamamos a mesma função
+    // do botão "limpar conversa" se o app continuar em segundo plano depois desse prazo — se
+    // voltar (ON_START) antes disso, foi só uma saída rápida e cancelamos a limpeza.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
+        var pendingClearJob: Job? = null
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) {
-                viewModel.clearSearch()
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    pendingClearJob?.cancel()
+                    pendingClearJob = scope.launch {
+                        delay(APP_FECHADO_GRACE_PERIOD_MS)
+                        viewModel.clearSearch()
+                    }
+                }
+                Lifecycle.Event.ON_START -> {
+                    pendingClearJob?.cancel()
+                    pendingClearJob = null
+                }
+                else -> {}
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            pendingClearJob?.cancel()
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }

@@ -587,12 +587,6 @@ private fun HomeRestaurantList(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("(${otherRestaurants.size})", fontSize = 11.sp, color = AiTextMuted)
                     }
-                    Text(
-                        text = "Ver todos >",
-                        fontSize = 13.sp,
-                        color = AiTextMuted,
-                        modifier = Modifier.clickable { }
-                    )
                 }
             }
             items(otherRestaurants) { restaurant ->
