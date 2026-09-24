@@ -92,7 +92,11 @@ data class SearchUiState(
     // true quando o texto atual/último enviado veio do microfone (STT), e não de digitação.
     // Usado para restringir a voz da IA (TTS) a apenas quando o usuário usou o microfone ou
     // está em ligação de voz — não deve falar respostas a mensagens digitadas.
-    val lastInputWasVoice: Boolean = false
+    val lastInputWasVoice: Boolean = false,
+    // Áudio (PCM16) já sintetizado para a última resposta de um turno por voz, pronto pra
+    // tocar sem espera adicional — ver fetchSearch(): sintetizamos ANTES de revelar o texto,
+    // pra mensagem e voz aparecerem juntas. Consumido (e zerado) assim que tocado.
+    val pendingVoiceAudio: ByteArray? = null
 ) {
     val cartCount: Int get() = cartItems.size
 }

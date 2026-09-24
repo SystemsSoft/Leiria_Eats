@@ -27,6 +27,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -112,20 +115,37 @@ fun MainScreenWithAI(
     val snackbarHostState = remember { SnackbarHostState() }
     var isMuted by remember { mutableStateOf(false) }
 
+    // Quando o app vai para segundo plano/fecha (ON_STOP é o sinal mais confiável de
+    // "fechar" disponível de forma multiplataforma — Android/iOS não garantem nenhum
+    // callback quando o processo é de fato encerrado), chama a mesma função do botão
+    // "limpar conversa": reinicia a sessão da IA no servidor e limpa o histórico local.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                viewModel.clearSearch()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     // Voz da IA (TTS): só deve falar quando o usuário usou o microfone (voz) ou
     // está em ligação de voz ativa — nunca em resposta a mensagens digitadas.
     val shouldUseAiVoice = uiState.lastInputWasVoice || uiState.isLiveConversationActive
 
-    // Reproduz automaticamente a última mensagem da IA no chat
-    LaunchedEffect(uiState.chatMessages.size) {
-        if (!isMuted && shouldUseAiVoice && uiState.chatMessages.isNotEmpty()) {
-            val lastMessage = uiState.chatMessages.lastOrNull()
-            if (lastMessage?.type == ChatMessageType.AI && lastMessage.text.isNotBlank()) {
-                val cleanedText = prepareTextForTts(lastMessage.text)
-                if (cleanedText.isNotBlank()) {
-                    tts.speak(cleanedText)
-                }
+    // Toca a fala da IA já pré-sintetizada para o turno por voz (ver SearchViewModel.
+    // fetchSearch: o áudio é sintetizado ANTES da mensagem ser revelada, então aqui é só
+    // reprodução local — sem espera de rede — no mesmo instante em que o texto aparece.
+    LaunchedEffect(uiState.pendingVoiceAudio) {
+        val audio = uiState.pendingVoiceAudio
+        if (audio != null) {
+            if (!isMuted && shouldUseAiVoice) {
+                tts.playAudio(audio)
             }
+            viewModel.clearPendingVoiceAudio()
         }
     }
 

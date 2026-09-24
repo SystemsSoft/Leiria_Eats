@@ -477,12 +477,44 @@ class SearchViewModel(
         fetchSearch(prompt)
     }
 
+    fun clearPendingVoiceAudio() {
+        _uiState.update { it.copy(pendingVoiceAudio = null) }
+    }
+
+    /** Limpa o texto para a síntese de voz (mesmo tratamento usado no chat de texto). */
+    private fun prepareTextForVoice(text: String): String {
+        val processed = text
+            .replace(Regex("""(\d+)[.,]([1-9]\d|0[1-9])\s*€""")) { m -> "${m.groupValues[1]} euros e ${m.groupValues[2]} cêntimos" }
+            .replace(Regex("""(\d+)(?:[.,]00)?\s*€""")) { m -> "${m.groupValues[1]} euros" }
+            .replace(Regex("""\b(\d+)[.,]00\b""")) { m -> "${m.groupValues[1]} euros" }
+
+        return processed
+            .replace("*", "")
+            .replace("_", "")
+            .replace("#", "")
+            .replace("(", " ")
+            .replace(")", " ")
+            .replace(Regex("[\\p{So}\\p{Sm}\\p{Sk}\\p{Sc}]"), "")
+            .replace(Regex("[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]"), "")
+            .replace(Regex("[☀-⟿]"), "")
+            .replace(Regex("[︀-️]"), "")
+            .replace(Regex("\\bx1\\b", RegexOption.IGNORE_CASE), "uma")
+            .replace(Regex("\\bx(\\d+)\\b", RegexOption.IGNORE_CASE), "$1 unidades de")
+            .replace(Regex("\\s{2,}"), " ")
+            .trim()
+    }
+
     private fun fetchSearch(resolvedQuery: String) {
+        // Turno por voz (microfone): não revelamos o texto aos poucos como no streaming normal —
+        // esperamos a resposta completa, sintetizamos a fala e só então mostramos a mensagem,
+        // pra ela aparecer no exato momento em que a IA começa a falar (ver bloco pós-stream).
+        val isVoiceTurn = _uiState.value.lastInputWasVoice
+
         // Adiciona a mensagem do usuário ao chat
         addUserMessage(resolvedQuery)
 
         _uiState.update { it.copy(isLoading = true, isStreaming = false, error = null, isSuggestionMode = false) }
-        
+
         viewModelScope.launch {
             try {
                 val currentAiMessageId = "ai_${kotlin.random.Random.nextLong()}"
@@ -503,39 +535,50 @@ class SearchViewModel(
                         .replace(Regex("\\n{3,}"), "\n\n")
                         .trimStart()
 
-                    _uiState.update { state ->
-                        val messages = state.chatMessages.toMutableList()
-                        val existingIndex = messages.indexOfFirst { it.id == currentAiMessageId }
-                        
-                        val updatedMessage = if (existingIndex != -1) {
-                            messages[existingIndex].copy(
-                                text = displayResponseText,
-                                restaurants = if (chunk.restaurantResults.isNotEmpty()) chunk.restaurantResults else messages[existingIndex].restaurants,
-                                products = if (chunk.products.isNotEmpty()) chunk.products else (if (chunk.productResults.isNotEmpty()) chunk.productResults else messages[existingIndex].products)
-                            )
-                        } else {
-                            ChatMessage(
-                                id = currentAiMessageId,
-                                type = ChatMessageType.AI,
-                                text = displayResponseText,
-                                restaurants = chunk.restaurantResults,
-                                products = if (chunk.products.isNotEmpty()) chunk.products else chunk.productResults
+                    if (isVoiceTurn) {
+                        // Só acompanha a sessão/streaming; a mensagem em si só é revelada
+                        // depois, junto com o áudio já sintetizado (ver pós-stream abaixo).
+                        _uiState.update { state ->
+                            state.copy(
+                                isStreaming = true,
+                                currentAiSessionId = chunk.sessionId ?: state.currentAiSessionId
                             )
                         }
+                    } else {
+                        _uiState.update { state ->
+                            val messages = state.chatMessages.toMutableList()
+                            val existingIndex = messages.indexOfFirst { it.id == currentAiMessageId }
 
-                        if (existingIndex != -1) {
-                            messages[existingIndex] = updatedMessage
-                        } else {
-                            messages.add(updatedMessage)
+                            val updatedMessage = if (existingIndex != -1) {
+                                messages[existingIndex].copy(
+                                    text = displayResponseText,
+                                    restaurants = if (chunk.restaurantResults.isNotEmpty()) chunk.restaurantResults else messages[existingIndex].restaurants,
+                                    products = if (chunk.products.isNotEmpty()) chunk.products else (if (chunk.productResults.isNotEmpty()) chunk.productResults else messages[existingIndex].products)
+                                )
+                            } else {
+                                ChatMessage(
+                                    id = currentAiMessageId,
+                                    type = ChatMessageType.AI,
+                                    text = displayResponseText,
+                                    restaurants = chunk.restaurantResults,
+                                    products = if (chunk.products.isNotEmpty()) chunk.products else chunk.productResults
+                                )
+                            }
+
+                            if (existingIndex != -1) {
+                                messages[existingIndex] = updatedMessage
+                            } else {
+                                messages.add(updatedMessage)
+                            }
+
+                            state.copy(
+                                chatMessages = messages.takeLast(20),
+                                aiReply = displayResponseText,
+                                isStreaming = true,
+                                isLoading = false, // Oculta o indicador de "pensando" assim que o texto começa a chegar
+                                currentAiSessionId = chunk.sessionId ?: state.currentAiSessionId
+                            )
                         }
-                        
-                        state.copy(
-                            chatMessages = messages.takeLast(20),
-                            aiReply = displayResponseText,
-                            isStreaming = true,
-                            isLoading = false, // Oculta o indicador de "pensando" assim que o texto começa a chegar
-                            currentAiSessionId = chunk.sessionId ?: state.currentAiSessionId
-                        )
                     }
 
                     // Se detectar sinal de mostrar sacola imediata no chunk
@@ -546,8 +589,32 @@ class SearchViewModel(
 
                 // Processamento pós-stream
                 val finalResponse = lastChunk ?: return@launch
-                
+
                 _uiState.update { it.copy(isStreaming = false) }
+
+                if (isVoiceTurn) {
+                    // Sintetiza a fala ANTES de revelar a mensagem: assim o texto só aparece
+                    // no chat no exato instante em que o áudio já está pronto pra tocar, sem
+                    // ficar visível "mudo" à espera da síntese (era essa a causa do atraso
+                    // perceptível entre mostrar a mensagem e a IA começar a falar).
+                    val textoLimpo = fullResponseText.replace(Regex("\\n{3,}"), "\n\n").trim()
+                    val textoParaFala = prepareTextForVoice(textoLimpo)
+                    val audioSintetizado = if (textoParaFala.isNotBlank()) {
+                        runCatching { apiClient.synthesizeSpeech(textoParaFala) }.getOrNull()
+                    } else null
+
+                    _uiState.update { state ->
+                        val messages = state.chatMessages.toMutableList()
+                        val idx = messages.indexOfFirst { it.id == currentAiMessageId }
+                        val msg = ChatMessage(id = currentAiMessageId, type = ChatMessageType.AI, text = textoLimpo)
+                        if (idx != -1) messages[idx] = msg else messages.add(msg)
+                        state.copy(
+                            chatMessages = messages.takeLast(20),
+                            aiReply = textoLimpo,
+                            pendingVoiceAudio = audioSintetizado
+                        )
+                    }
+                }
 
                 // Verifica se deve mostrar a sacola IA integrada (Master Final Object ou Tag)
                 if (finalResponse.showCart || fullResponseText.contains("[[CONFIRM_ORDER]]")) {
