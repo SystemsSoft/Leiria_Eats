@@ -413,24 +413,57 @@ fun CompactProductItem(
             
             Spacer(modifier = Modifier.height(4.dp))
             
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(24.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(
-                        if (hasItems) RdSecondary.copy(alpha = 0.15f) 
-                        else RdPrimary.copy(alpha = 0.1f)
-                    )
-                    .clickable { onAdd() },
-                contentAlignment = Alignment.Center
+            // "−" aparece com fade ao lado do "+" quando o produto já está na sacola, para poder
+            // diminuir a quantidade até zerar. Largura fixa: o "+" ocupa o resto da linha, então sem
+            // itens ele continua com a largura toda.
+            Row(
+                modifier = Modifier.fillMaxWidth().height(24.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    Icons.Default.Add, 
-                    null, 
-                    tint = if (hasItems) RdSecondary else RdPrimary, 
-                    modifier = Modifier.size(14.dp)
-                )
+                AnimatedVisibility(
+                    visible = hasItems,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    Row {
+                        Box(
+                            modifier = Modifier
+                                .width(30.dp)
+                                .height(24.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(RdSecondary.copy(alpha = 0.15f))
+                                .clickable { onRemove() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Remove,
+                                contentDescription = "Remover ${product.name}",
+                                tint = RdSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(24.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(
+                            if (hasItems) RdSecondary.copy(alpha = 0.15f)
+                            else RdPrimary.copy(alpha = 0.1f)
+                        )
+                        .clickable { onAdd() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Adicionar ${product.name}",
+                        tint = if (hasItems) RdSecondary else RdPrimary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
             }
         }
     }

@@ -898,7 +898,8 @@ private fun AiSuggestionSections(
     restaurants: List<Restaurant>,
     cartItems: List<Product> = emptyList(),
     onProductClick: (Product) -> Unit,
-    onChooseInChat: (Product) -> Unit
+    onChooseInChat: (Product) -> Unit,
+    showAddButton: Boolean = true
 ) {
     val melhoresSugestoes = remember(products, restaurants) {
         products.filter { resolvePlan(it, restaurants)?.uppercase() == "ESSENCE" }
@@ -928,7 +929,8 @@ private fun AiSuggestionSections(
                     cartItems = cartItems,
                     onProductClick = onProductClick,
                     onChooseInChat = onChooseInChat,
-                    compact = false
+                    compact = false,
+                    showAddButton = showAddButton
                 )
             }
         }
@@ -947,7 +949,8 @@ private fun AiSuggestionSections(
                     cartItems = cartItems,
                     onProductClick = onProductClick,
                     onChooseInChat = onChooseInChat,
-                    compact = true
+                    compact = true,
+                    showAddButton = showAddButton
                 )
             }
         }
@@ -963,7 +966,8 @@ private fun AiProductGrid(
     cartItems: List<Product> = emptyList(),
     onProductClick: (Product) -> Unit,
     onChooseInChat: (Product) -> Unit,
-    compact: Boolean = false
+    compact: Boolean = false,
+    showAddButton: Boolean = true
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -984,6 +988,7 @@ private fun AiProductGrid(
                         onClick = { onProductClick(product) },
                         onChooseInChat = { onChooseInChat(product) },
                         compact = compact,
+                        showAddButton = showAddButton,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -1003,6 +1008,7 @@ private fun AiProductGridCard(
     onChooseInChat: () -> Unit,
     quantityInCart: Int = 0,
     compact: Boolean = false,
+    showAddButton: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -1147,20 +1153,23 @@ private fun AiProductGridCard(
                         textAlign = TextAlign.Start
                     )
 
-                    Box(
-                        modifier = Modifier
-                            .size(addButtonSize)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) AiSecondary else AiPrimary)
-                            .clickable { onChooseInChat() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = "Adicionar ${product.name}",
-                            tint = if (isSelected) Color.White else Color(0xFF1E293B),
-                            modifier = Modifier.size(addIconSize)
-                        )
+                    // Na ligação de voz o botão "+" some: a IA adiciona os itens pela conversa.
+                    if (showAddButton) {
+                        Box(
+                            modifier = Modifier
+                                .size(addButtonSize)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) AiSecondary else AiPrimary)
+                                .clickable { onChooseInChat() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Adicionar ${product.name}",
+                                tint = if (isSelected) Color.White else Color(0xFF1E293B),
+                                modifier = Modifier.size(addIconSize)
+                            )
+                        }
                     }
                 }
             }
@@ -2221,7 +2230,8 @@ private fun AiLiveVoicePanel(
                 restaurants = restaurants,
                 cartItems = cartItems,
                 onProductClick = onProductClick,
-                onChooseInChat = onChooseInChat
+                onChooseInChat = onChooseInChat,
+                showAddButton = false
             )
         }
     }
