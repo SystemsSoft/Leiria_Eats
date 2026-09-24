@@ -355,10 +355,13 @@ class SearchViewModel(
     }
 
     fun clearSearch() {
+        val sessaoLigacao = if (pedidoMontadoPorLigacao) apiClient.currentSessionId() else null
+        pedidoMontadoPorLigacao = false
         val currentState = _uiState.value
         viewModelScope.launch {
             // Notifica o servidor para reiniciar a sessão se houver uma ativa
-            currentState.currentAiSessionId?.let { sessionId ->
+            // Na ligação de voz currentAiSessionId é nulo: usa a sessão da ligação (a mesma do chat).
+            (currentState.currentAiSessionId ?: sessaoLigacao)?.let { sessionId ->
                 println("🧹 Reiniciando sessão da IA no servidor: $sessionId")
                 apiClient.restartChatSession(sessionId)
             }
@@ -1007,6 +1010,9 @@ class SearchViewModel(
         }
         // Proceed directly with the type already chosen in the summary
         proceedWithDeliveryType(deliveryType)
+        // Pedido montado por voz: "confirmar e pagar" limpa a conversa (só a conversa — o carrinho
+        // continua, o checkout precisa dele).
+        if (pedidoMontadoPorLigacao) clearSearch()
     }
 
     fun dismissSavePaymentSheet() {
@@ -1112,9 +1118,15 @@ class SearchViewModel(
             return
         }
 
+        // Sessão da IA no servidor: a do chat por texto (currentAiSessionId) ou, se o pedido foi
+        // montado por ligação de voz, a sessão da ligação — currentAiSessionId só é preenchido pelo
+        // chat por texto, então na voz ficava nulo e o carrinho da IA nunca era limpo no servidor.
+        // Lido AQUI (antes do launch) porque clearSearch() zera pedidoMontadoPorLigacao logo em seguida.
+        val sessaoIa = currentState.currentAiSessionId
+            ?: if (pedidoMontadoPorLigacao) apiClient.currentSessionId() else null
         viewModelScope.launch {
             // Se o pedido veio da IA, notifica o servidor para confirmar a sessão
-            currentState.currentAiSessionId?.let { sessionId ->
+            sessaoIa?.let { sessionId ->
                 println("🚀 Confirmando sessão da IA no servidor: $sessionId")
                 apiClient.confirmOrderSession(sessionId)
             }
@@ -1598,6 +1610,10 @@ class SearchViewModel(
     // servidor para o protocolo de eventos (transcript/cart_updated/show_cart/
     // audio/turn_complete/error) e o motivo das escolhas de modelo/temperatura.
 
+    // true depois de uma ligação de voz: ao confirmar o pagamento, a conversa da ligação é limpa
+    // (mesma função do "limpar conversa" do chat). Zerado em clearSearch().
+    private var pedidoMontadoPorLigacao = false
+
     private var liveConversationJob: Job? = null
     private var liveAudioSendJob: Job? = null
 
@@ -1616,6 +1632,7 @@ class SearchViewModel(
         // alinhado ao de mídia) ANTES de o microfone abrir — o cancelamento de eco precisa do modo
         // de áudio já definido quando a captura começa. Desfeito em stopLiveConversation().
         liveAudioPlayer.startCall()
+        pedidoMontadoPorLigacao = true
 
         val sessionId = apiClient.currentSessionId()
         val nomeUsuario = _uiState.value.userProfile.name

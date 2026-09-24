@@ -99,6 +99,7 @@ fun AiSearchScreen(
     var selectedProduct by remember { mutableStateOf<Product?>(null) }
     var isCartExpanded by remember { mutableStateOf(false) }
     var showClearConfirmDialog by remember { mutableStateOf(false) }
+    var showLiveExitDialog by remember { mutableStateOf(false) }
     var quantityPickerProduct by remember { mutableStateOf<Product?>(null) }
 
     // Ícones claros na status bar enquanto a barra verde escura desta tela estiver visível
@@ -139,6 +140,42 @@ fun AiSearchScreen(
         )
     }
 
+    // ── Voltar na ligação de voz: avisa que a conversa será perdida ──────────
+    if (showLiveExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showLiveExitDialog = false },
+            containerColor = AiCard,
+            titleContentColor = AiText,
+            textContentColor = AiTextMuted,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DeleteSweep, null, tint = AiPrimary, modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("Sair da ligação?", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Text("Ao voltar, a conversa será perdida e os itens que a IA adicionou à sua sacola também serão removidos. Deseja continuar?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLiveExitDialog = false
+                        onToggleLiveConversation() // encerra a ligação
+                        onClearSearch()            // mesma limpeza do chat normal
+                    }
+                ) {
+                    Text("Sim, Voltar", color = KomaSoftRed, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLiveExitDialog = false }) {
+                    Text("Cancelar", color = AiTextMuted)
+                }
+            }
+        )
+    }
+
     // Pulsing glow animation
     val glowAlpha by rememberInfiniteTransition(label = "glow").animateFloat(
         initialValue = 0.15f, targetValue = 0.55f, label = "glowAlpha",
@@ -156,7 +193,7 @@ fun AiSearchScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             if (uiState.isLiveConversationActive) {
-                AiLiveChatTopBar(onClose = onToggleLiveConversation, isAiSpeaking = uiState.isLiveAiSpeaking, isMicMuted = uiState.isMicMuted)
+                AiLiveChatTopBar(onClose = { showLiveExitDialog = true }, isAiSpeaking = uiState.isLiveAiSpeaking, isMicMuted = uiState.isMicMuted)
                 return@Scaffold
             }
             Column(
