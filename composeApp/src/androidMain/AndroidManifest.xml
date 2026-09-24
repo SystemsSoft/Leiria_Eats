@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Permissão "normal" (concedida na instalação, sem pedir nada ao usuário). Sem ela o Android
+         IGNORA em silêncio AudioManager.setMode() e setSpeakerphoneOn() (AudioService registra "Audio
+         Settings Permission Denial" no logcat), usados pela ligação de voz (LiveAudioPlayer) — a voz da
+         IA saía pelo auricular, baixinha, e os botões de volume não a afetavam. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <queries>

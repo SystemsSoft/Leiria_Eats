@@ -1612,6 +1612,11 @@ class SearchViewModel(
             )
         }
 
+        // Prepara a saída de áudio para a chamada (caminho de comunicação, alto-falante, volume
+        // alinhado ao de mídia) ANTES de o microfone abrir — o cancelamento de eco precisa do modo
+        // de áudio já definido quando a captura começa. Desfeito em stopLiveConversation().
+        liveAudioPlayer.startCall()
+
         val sessionId = apiClient.currentSessionId()
         val nomeUsuario = _uiState.value.userProfile.name
 
@@ -1655,6 +1660,9 @@ class SearchViewModel(
         liveConversationJob?.cancel()
         liveConversationJob = null
         liveAudioPlayer.stop()
+        // Devolve ao sistema o modo de áudio/roteamento/volume da chamada — as respostas faladas do
+        // chat voltam a tocar como mídia, no volume de mídia do aparelho.
+        liveAudioPlayer.endCall()
         _uiState.update {
             it.copy(
                 isLiveConversationActive = false,
@@ -1726,8 +1734,12 @@ class SearchViewModel(
             }
             is LiveEvent.Connected -> { /* nada a fazer — já em isLiveConversationActive */ }
             is LiveEvent.Disconnected -> {
+                // A ligação acabou pelo lado do servidor (ou caiu): faz a MESMA limpeza de um
+                // "desligar". Antes só a tela era atualizada — o microfone continuava capturando e,
+                // agora que a chamada muda o modo de áudio do sistema, o aparelho ficaria em modo de
+                // comunicação (botões de volume presos no volume de chamada) até fechar o app.
                 if (_uiState.value.isLiveConversationActive) {
-                    _uiState.update { it.copy(isLiveConversationActive = false) }
+                    stopLiveConversation()
                 }
             }
         }
