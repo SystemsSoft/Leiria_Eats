@@ -92,6 +92,7 @@ fun AiSearchScreen(
     onIntroClick: () -> Unit = {},
     onToggleNav: () -> Unit = {},
     onToggleLiveConversation: () -> Unit = {},
+    onToggleMicMuted: () -> Unit = {},
     onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
     onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null }
 ) {
@@ -102,16 +103,6 @@ fun AiSearchScreen(
 
     // Ícones claros na status bar enquanto a barra verde escura desta tela estiver visível
     StatusBarLightIcons(enabled = true)
-
-    // ── Conversa ao vivo: tela cheia e imersiva "Fale com o KomaAI" ──────────
-    // Só aparece ANTES da primeira resposta chegar (sem mensagens ainda) — assim
-    // que a IA responde algo, a tela normal de chat assume (topBar/bottomBar
-    // trocados mais abaixo), reaproveitando 100% do mesmo corpo (ChatMessagesView,
-    // sacola, diálogo de quantidade) que o chat por texto já usa.
-    if (uiState.isLiveConversationActive && uiState.chatMessages.isEmpty()) {
-        AiLiveListeningStage(onClose = onToggleLiveConversation)
-        return
-    }
 
     // ── Dialog de Confirmação para Limpar Chat e Sacola ──────────────────────
     if (showClearConfirmDialog) {
@@ -165,7 +156,7 @@ fun AiSearchScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             if (uiState.isLiveConversationActive) {
-                AiLiveChatTopBar(onClose = onToggleLiveConversation)
+                AiLiveChatTopBar(onClose = onToggleLiveConversation, isAiSpeaking = uiState.isLiveAiSpeaking, isMicMuted = uiState.isMicMuted)
                 return@Scaffold
             }
             Column(
@@ -189,7 +180,12 @@ fun AiSearchScreen(
         },
         bottomBar = {
             if (uiState.isLiveConversationActive) {
-                AiLiveChatBottomBar(onExitToKeyboard = onToggleLiveConversation)
+                AiLiveChatBottomBar(
+                    onExitToKeyboard = onToggleLiveConversation,
+                    isAiSpeaking = uiState.isLiveAiSpeaking,
+                    isMicMuted = uiState.isMicMuted,
+                    onToggleMicMuted = onToggleMicMuted
+                )
                 return@Scaffold
             }
             AiSemanticInputBar(
@@ -220,26 +216,39 @@ fun AiSearchScreen(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                // ── CHAT DE MENSAGENS ──────────────────────────────────
-                ChatMessagesView(
-                    messages = uiState.chatMessages,
-                    isLoading = uiState.isLoading,
-                    isStreaming = uiState.isStreaming,
-                    cartItems = uiState.cartItems,
-                    onAddToCart = onAddToCart,
-                    onProductClick = { product -> selectedProduct = product },
-                    onChooseInChat = { product -> quantityPickerProduct = product },
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                // Boas-vindas se não houver mensagens e não estiver no fluxo da Sacola IA
-                if (uiState.chatMessages.isEmpty() && !uiState.isLoading && !uiState.isAiCartFlow) {
-                    AiWelcomeHero(
-                        onQuickPrompt = onQuickPrompt,
-                        onRequestSuggestions = onRequestSuggestions,
-                        onIntroClick = onIntroClick,
+                if (uiState.isLiveConversationActive) {
+                    // ── LIGAÇÃO DE VOZ: sem bolhas de texto, só status + produtos ──
+                    AiLiveVoicePanel(
+                        isAiSpeaking = uiState.isLiveAiSpeaking,
+                        suggestedProducts = uiState.liveSuggestedProducts,
+                        restaurants = uiState.allRestaurants,
+                        cartItems = uiState.cartItems,
+                        onProductClick = { product -> selectedProduct = product },
+                        onChooseInChat = { product -> quantityPickerProduct = product },
                         modifier = Modifier.fillMaxSize()
                     )
+                } else {
+                    // ── CHAT DE MENSAGENS ──────────────────────────────────
+                    ChatMessagesView(
+                        messages = uiState.chatMessages,
+                        isLoading = uiState.isLoading,
+                        isStreaming = uiState.isStreaming,
+                        cartItems = uiState.cartItems,
+                        onAddToCart = onAddToCart,
+                        onProductClick = { product -> selectedProduct = product },
+                        onChooseInChat = { product -> quantityPickerProduct = product },
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    // Boas-vindas se não houver mensagens e não estiver no fluxo da Sacola IA
+                    if (uiState.chatMessages.isEmpty() && !uiState.isLoading && !uiState.isAiCartFlow) {
+                        AiWelcomeHero(
+                            onQuickPrompt = onQuickPrompt,
+                            onRequestSuggestions = onRequestSuggestions,
+                            onIntroClick = onIntroClick,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
 
@@ -1985,168 +1994,14 @@ private fun ProductDetailBottomSheet(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Conversa ao vivo (Gemini Live API) — tela cheia estilo "modo voz" (ChatGPT).
-// Estágio 1 (AiLiveListeningStage): imersivo, escuro, antes da primeira resposta.
-// Estágio 2 (AiLiveChatTopBar/BottomBar): substitui só o topo/rodapé do MESMO
-// Scaffold do chat normal — o corpo (ChatMessagesView, sacola, diálogos) é 100%
-// reaproveitado, sem duplicar nada.
+// Conversa ao vivo (Gemini Live API) — a IA se apresenta e fala primeiro; a UI
+// vai direto pro mesmo Scaffold do chat normal, só com topo/rodapé trocados
+// (AiLiveChatTopBar/BottomBar) — o corpo (ChatMessagesView, sacola, diálogos)
+// é 100% reaproveitado, sem duplicar nada.
 // ═══════════════════════════════════════════════════════════════════════════
 
-private val AiLiveDeepGreenStart = Color(0xFF0F3D2E)
-private val AiLiveDeepGreenEnd = Color(0xFF08211A)
-
 @Composable
-private fun AiLiveListeningStage(
-    onClose: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(AiLiveDeepGreenStart, AiLiveDeepGreenEnd)))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onClose) {
-                Icon(Icons.Default.Close, contentDescription = "Fechar", tint = Color.White)
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "Fale com o KomaAI",
-                color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = "Peça o que quiser, como se fosse uma conversa. Eu ajudo a escolher e a fazer o pedido.",
-                color = Color.White.copy(alpha = 0.72f),
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center,
-                lineHeight = 18.sp
-            )
-
-            Spacer(modifier = Modifier.height(36.dp))
-            LiveVoiceOrb()
-            Spacer(modifier = Modifier.height(28.dp))
-            LiveWaveformBar()
-            Spacer(modifier = Modifier.height(10.dp))
-            Text("A ouvir...", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
-
-            Spacer(modifier = Modifier.height(28.dp))
-            Box(
-                modifier = Modifier
-                    .size(68.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .clickable(onClick = onClose),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(KomaSoftRed)
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Toque para parar", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
-        }
-    }
-}
-
-@Composable
-private fun LiveVoiceOrb() {
-    val infiniteTransition = rememberInfiniteTransition(label = "liveOrb")
-    val pulse by infiniteTransition.animateFloat(
-        initialValue = 0.94f, targetValue = 1.06f,
-        animationSpec = infiniteRepeatable(tween(1400, easing = EaseInOutSine), RepeatMode.Reverse),
-        label = "pulse"
-    )
-    val glow by infiniteTransition.animateFloat(
-        initialValue = 0.35f, targetValue = 0.7f,
-        animationSpec = infiniteRepeatable(tween(1400, easing = EaseInOutSine), RepeatMode.Reverse),
-        label = "glow"
-    )
-    Box(
-        modifier = Modifier
-            .size(200.dp)
-            .graphicsLayer { scaleX = pulse; scaleY = pulse },
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(listOf(KomaGold.copy(alpha = glow), AiSecondary.copy(alpha = glow * 0.6f), Color.Transparent)),
-                    CircleShape
-                )
-        )
-        Box(
-            modifier = Modifier
-                .size(140.dp)
-                .background(Brush.radialGradient(listOf(Color(0xFFEFFAF3), KomaMintLight)), CircleShape)
-        )
-        // "Rosto" simples — dois arcos como olhos fechados/sorridentes.
-        Canvas(modifier = Modifier.size(140.dp)) {
-            val eyeWidth = size.width * 0.16f
-            val eyeY = size.height * 0.46f
-            val strokeW = 7.dp.toPx()
-            listOf(size.width * 0.34f, size.width * 0.66f).forEach { cx ->
-                drawArc(
-                    color = Color(0xFF123524),
-                    startAngle = 200f,
-                    sweepAngle = 140f,
-                    useCenter = false,
-                    style = Stroke(width = strokeW, cap = StrokeCap.Round),
-                    topLeft = Offset(cx - eyeWidth / 2, eyeY),
-                    size = Size(eyeWidth, eyeWidth)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LiveWaveformBar() {
-    val infiniteTransition = rememberInfiniteTransition(label = "waveform")
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        repeat(9) { index ->
-            val altura by infiniteTransition.animateFloat(
-                initialValue = 6f, targetValue = if (index % 3 == 0) 26f else 16f,
-                animationSpec = infiniteRepeatable(
-                    tween(500 + (index * 70), easing = EaseInOutSine),
-                    RepeatMode.Reverse
-                ),
-                label = "bar$index"
-            )
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .height(altura.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(if (index % 2 == 0) KomaGold else Color.White.copy(alpha = 0.85f))
-            )
-        }
-    }
-}
-
-@Composable
-private fun AiLiveChatTopBar(onClose: () -> Unit) {
+private fun AiLiveChatTopBar(onClose: () -> Unit, isAiSpeaking: Boolean, isMicMuted: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -2173,16 +2028,39 @@ private fun AiLiveChatTopBar(onClose: () -> Unit) {
                     )
                     Box(modifier = Modifier.size(6.dp).background(KomaGold.copy(alpha = dotAlpha), CircleShape))
                     Spacer(modifier = Modifier.width(5.dp))
-                    Text("Em tempo real", color = Color.White.copy(alpha = 0.75f), fontSize = 11.sp)
+                    Text(
+                        if (isAiSpeaking) "A falar..." else "A ouvir...",
+                        color = Color.White.copy(alpha = 0.75f),
+                        fontSize = 11.sp
+                    )
                 }
             }
             Spacer(modifier = Modifier.width(40.dp)) // equilibra o IconButton da esquerda
+        }
+        if (isMicMuted) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(KomaSoftRed.copy(alpha = 0.85f))
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(Icons.Default.MicOff, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Microfone silenciado — toque no microfone para falar", color = Color.White, fontSize = 12.sp)
+            }
         }
     }
 }
 
 @Composable
-private fun AiLiveChatBottomBar(onExitToKeyboard: () -> Unit) {
+private fun AiLiveChatBottomBar(
+    onExitToKeyboard: () -> Unit,
+    isAiSpeaking: Boolean,
+    isMicMuted: Boolean,
+    onToggleMicMuted: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -2204,11 +2082,112 @@ private fun AiLiveChatBottomBar(onExitToKeyboard: () -> Unit) {
                 .padding(horizontal = 20.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.GraphicEq, contentDescription = null, tint = AiSecondary, modifier = Modifier.size(18.dp))
+            Icon(
+                when {
+                    isMicMuted -> Icons.Default.MicOff
+                    isAiSpeaking -> Icons.Default.VolumeUp
+                    else -> Icons.Default.GraphicEq
+                },
+                contentDescription = null,
+                tint = if (isMicMuted) KomaSoftRed else AiSecondary,
+                modifier = Modifier.size(18.dp)
+            )
             Spacer(modifier = Modifier.width(8.dp))
-            Text("A ouvir...", color = AiText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                when {
+                    isMicMuted -> "Mudo"
+                    isAiSpeaking -> "A falar..."
+                    else -> "A ouvir..."
+                },
+                color = AiText,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            )
         }
-        // Espaço reservado simétrico ao ícone da esquerda — sem ação por agora.
-        Box(modifier = Modifier.size(48.dp))
+        // Silenciar o microfone: a captura continua (precisa ficar ativa pro
+        // cancelamento de eco), só o envio pro servidor/IA é que para — ver
+        // SearchViewModel.toggleMicMuted().
+        IconButton(
+            onClick = onToggleMicMuted,
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(if (isMicMuted) KomaSoftRed.copy(alpha = 0.15f) else Color.Transparent)
+        ) {
+            Icon(
+                if (isMicMuted) Icons.Default.MicOff else Icons.Default.Mic,
+                contentDescription = if (isMicMuted) "Reativar microfone" else "Silenciar microfone",
+                tint = if (isMicMuted) KomaSoftRed else AiTextMuted
+            )
+        }
+    }
+}
+
+// ── Corpo da tela durante a ligação de voz: sem bolhas de chat (a conversa fica só
+// em áudio) — mostra o status ouvindo/falando (nas barras acima/abaixo) e, aqui no
+// corpo, os produtos que a IA vai sugerindo. Produtos escolhidos pelo usuário e o
+// atalho pra expandir a sacola aparecem através do AiIterativeCartOverlay já
+// existente (mesmo componente do chat por texto, ver corpo do Scaffold).
+@Composable
+private fun AiLiveVoicePanel(
+    isAiSpeaking: Boolean,
+    suggestedProducts: List<Product>,
+    restaurants: List<Restaurant>,
+    cartItems: List<Product>,
+    onProductClick: (Product) -> Unit,
+    onChooseInChat: (Product) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+            .padding(top = 24.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        val infiniteTransition = rememberInfiniteTransition(label = "liveStatusPulse")
+        val pulse by infiniteTransition.animateFloat(
+            initialValue = 0.9f, targetValue = 1.08f,
+            animationSpec = infiniteRepeatable(tween(900, easing = EaseInOutSine), RepeatMode.Reverse),
+            label = "pulse"
+        )
+        Box(
+            modifier = Modifier
+                .padding(vertical = 24.dp)
+                .size(96.dp)
+                .graphicsLayer {
+                    if (isAiSpeaking) {
+                        scaleX = pulse; scaleY = pulse
+                    }
+                }
+                .background(
+                    Brush.radialGradient(listOf(AiPrimary.copy(alpha = 0.35f), Color.Transparent)),
+                    CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                if (isAiSpeaking) Icons.Default.VolumeUp else Icons.Default.GraphicEq,
+                contentDescription = null,
+                tint = AiPrimary,
+                modifier = Modifier.size(40.dp)
+            )
+        }
+        Text(
+            if (isAiSpeaking) "A falar..." else "A ouvir, pode falar...",
+            color = AiText,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        if (suggestedProducts.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(24.dp))
+            AiSuggestionSections(
+                products = suggestedProducts,
+                restaurants = restaurants,
+                cartItems = cartItems,
+                onProductClick = onProductClick,
+                onChooseInChat = onChooseInChat
+            )
+        }
     }
 }

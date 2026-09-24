@@ -96,7 +96,18 @@ data class SearchUiState(
     // Áudio (PCM16) já sintetizado para a última resposta de um turno por voz, pronto pra
     // tocar sem espera adicional — ver fetchSearch(): sintetizamos ANTES de revelar o texto,
     // pra mensagem e voz aparecerem juntas. Consumido (e zerado) assim que tocado.
-    val pendingVoiceAudio: ByteArray? = null
+    val pendingVoiceAudio: ByteArray? = null,
+    // Status da ligação de voz ao vivo — true enquanto a IA está com áudio tocando (entre o
+    // primeiro chunk de um turno e o turn_complete), false enquanto ela aguarda o usuário
+    // falar. A tela da ligação não mostra a conversa em texto, só esse status.
+    val isLiveAiSpeaking: Boolean = false,
+    // Produtos que a IA destacou na resposta atual da ligação ao vivo (tool "sugerir_produtos"
+    // no servidor) — só usado na tela da ligação de voz, já que ali não há bolhas de chat
+    // pra mostrar os cartões de produto do jeito normal.
+    val liveSuggestedProducts: List<Product> = emptyList(),
+    // true = o áudio do microfone continua sendo capturado (necessário pro cancelamento de
+    // eco) mas NÃO é enviado ao servidor/IA — o usuário fica "mudo" na ligação sem encerrá-la.
+    val isMicMuted: Boolean = false
 ) {
     val cartCount: Int get() = cartItems.size
 }

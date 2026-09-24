@@ -13,6 +13,8 @@ fun setApplicationContext(context: Context) {
     appContext = context
 }
 
+fun getApplicationContextOrNull(): Context? = appContext
+
 actual fun getProfileImageDirectory(): String {
     return try {
         val context = appContext ?: throw IllegalStateException("ApplicationContext não inicializado")

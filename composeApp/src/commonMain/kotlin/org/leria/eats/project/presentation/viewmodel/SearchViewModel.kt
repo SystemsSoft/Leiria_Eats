@@ -1603,15 +1603,23 @@ class SearchViewModel(
 
     fun startLiveConversation() {
         if (_uiState.value.isLiveConversationActive) return
-        _uiState.update { it.copy(isLiveConversationActive = true) }
+        _uiState.update {
+            it.copy(
+                isLiveConversationActive = true,
+                isLiveAiSpeaking = false,
+                liveSuggestedProducts = emptyList(),
+                isMicMuted = true // a ligação sempre começa com o microfone mudo
+            )
+        }
 
         val sessionId = apiClient.currentSessionId()
+        val nomeUsuario = _uiState.value.userProfile.name
 
         liveConversationJob = viewModelScope.launch {
             launch {
                 liveConversationClient.events.collect { evento -> handleLiveEvent(evento) }
             }
-            liveConversationClient.connect(sessionId)
+            liveConversationClient.connect(sessionId, nomeUsuario)
         }
 
         // Começa a mandar áudio do microfone assim que a ligação for aberta —
@@ -1620,9 +1628,20 @@ class SearchViewModel(
         // a isso são só descartados, sem erro).
         liveAudioSendJob = viewModelScope.launch {
             liveAudioRecorder.audioChunks().collect { chunk ->
-                liveConversationClient.sendAudioChunk(chunk)
+                // Continua gravando (mantém o AudioRecord vivo, necessário pro
+                // cancelamento de eco), mas descarta o chunk em vez de mandar pro
+                // servidor enquanto o usuário estiver mudo — a IA simplesmente não
+                // recebe nada, sem precisar encerrar/reabrir a ligação.
+                if (!_uiState.value.isMicMuted) {
+                    liveConversationClient.sendAudioChunk(chunk)
+                }
             }
         }
+    }
+
+    fun toggleMicMuted() {
+        if (!_uiState.value.isLiveConversationActive) return
+        _uiState.update { it.copy(isMicMuted = !it.isMicMuted) }
     }
 
     fun stopLiveConversation() {
@@ -1631,7 +1650,14 @@ class SearchViewModel(
         liveConversationJob?.cancel()
         liveConversationJob = null
         liveAudioPlayer.stop()
-        _uiState.update { it.copy(isLiveConversationActive = false) }
+        _uiState.update {
+            it.copy(
+                isLiveConversationActive = false,
+                isLiveAiSpeaking = false,
+                liveSuggestedProducts = emptyList(),
+                isMicMuted = false
+            )
+        }
         viewModelScope.launch { liveConversationClient.disconnect() }
     }
 
@@ -1660,12 +1686,22 @@ class SearchViewModel(
             }
             is LiveEvent.CartUpdated -> updateAiCart(evento.cart)
             is LiveEvent.ShowCart -> _uiState.update { it.copy(isAiCartFlow = true) }
-            is LiveEvent.Audio -> liveAudioPlayer.play(evento.pcm)
+            is LiveEvent.ProductsSuggested -> _uiState.update { it.copy(liveSuggestedProducts = evento.products) }
+            is LiveEvent.Audio -> {
+                liveAudioPlayer.play(evento.pcm)
+                // Primeiro chunk de áudio de um turno = a IA começou a falar. Só volta a
+                // "ouvindo" no turn_complete abaixo — é uma aproximação (o chunk já
+                // recebido ainda leva um instante pra tocar de verdade), mas suficiente
+                // pra UI acompanhar o ritmo da conversa.
+                if (!_uiState.value.isLiveAiSpeaking) {
+                    _uiState.update { it.copy(isLiveAiSpeaking = true) }
+                }
+            }
             is LiveEvent.TurnComplete -> {
                 if (liveAiMessageId != null) saveChatMessages()
                 liveAiTranscriptBuffer = ""
                 liveAiMessageId = null
-                _uiState.update { it.copy(isStreaming = false) }
+                _uiState.update { it.copy(isStreaming = false, isLiveAiSpeaking = false) }
             }
             is LiveEvent.Error -> {
                 addAiMessage(text = evento.message)

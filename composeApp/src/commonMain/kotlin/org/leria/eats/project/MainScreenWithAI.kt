@@ -594,6 +594,7 @@ fun MainScreenWithAI(
                                             }
                                         }
                                     },
+                                    onToggleMicMuted = { viewModel.toggleMicMuted() },
                                     onCheckout = { address, deliveryFee, serviceFee, deliveryType, feesMap ->
                                         viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType, feesMap)
                                     },
