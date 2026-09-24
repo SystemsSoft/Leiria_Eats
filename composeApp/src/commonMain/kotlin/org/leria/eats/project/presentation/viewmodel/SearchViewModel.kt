@@ -1629,12 +1629,17 @@ class SearchViewModel(
         liveAudioSendJob = viewModelScope.launch {
             liveAudioRecorder.audioChunks().collect { chunk ->
                 // Continua gravando (mantém o AudioRecord vivo, necessário pro
-                // cancelamento de eco), mas descarta o chunk em vez de mandar pro
-                // servidor enquanto o usuário estiver mudo — a IA simplesmente não
-                // recebe nada, sem precisar encerrar/reabrir a ligação.
-                if (!_uiState.value.isMicMuted) {
-                    liveConversationClient.sendAudioChunk(chunk)
-                }
+                // cancelamento de eco). Mudo NÃO descarta o chunk: manda silêncio
+                // (zeros) no lugar — nenhum som real do microfone sai do aparelho, mas
+                // o fluxo de frames continua. Descartar de vez deixava o servidor sem
+                // receber NADA do app, e o watchdog dele (gemini_live_bridge.py) encerra
+                // a ligação após 45s sem nenhum frame — como a ligação começa muda, ela
+                // caía sozinha se o usuário demorasse a ativar o microfone. O silêncio
+                // também deixa o detector de fala da Gemini fechar uma frase que o
+                // usuário estava dizendo quando silenciou.
+                liveConversationClient.sendAudioChunk(
+                    if (_uiState.value.isMicMuted) ByteArray(chunk.size) else chunk
+                )
             }
         }
     }
@@ -1698,6 +1703,18 @@ class SearchViewModel(
                 }
             }
             is LiveEvent.TurnComplete -> {
+                if (liveAiMessageId != null) saveChatMessages()
+                liveAiTranscriptBuffer = ""
+                liveAiMessageId = null
+                _uiState.update { it.copy(isStreaming = false, isLiveAiSpeaking = false) }
+            }
+            is LiveEvent.Interrupted -> {
+                // O usuário falou por cima da IA: a Gemini já parou de gerar, mas o áudio
+                // que ela mandou mais rápido que o tempo real ainda está na fila do
+                // player — sem limpar, a IA continuaria falando por cima dele até a fila
+                // esvaziar. A fala cortada vira a mensagem final (mesmo fechamento do
+                // turn_complete).
+                liveAudioPlayer.stop()
                 if (liveAiMessageId != null) saveChatMessages()
                 liveAiTranscriptBuffer = ""
                 liveAiMessageId = null
