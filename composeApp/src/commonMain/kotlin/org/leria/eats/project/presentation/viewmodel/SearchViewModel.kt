@@ -1623,6 +1623,7 @@ class SearchViewModel(
             it.copy(
                 isLiveConversationActive = true,
                 isLiveAiSpeaking = false,
+                isLiveAiThinking = true, // até a saudação chegar
                 liveSuggestedProducts = emptyList(),
                 isMicMuted = true // a ligação sempre começa com o microfone mudo
             )
@@ -1684,11 +1685,17 @@ class SearchViewModel(
             it.copy(
                 isLiveConversationActive = false,
                 isLiveAiSpeaking = false,
+                isLiveAiThinking = false,
                 liveSuggestedProducts = emptyList(),
                 isMicMuted = false
             )
         }
         viewModelScope.launch { liveConversationClient.disconnect() }
+    }
+
+    /** Ferramenta da IA rodou (sacola/sugestão): se ela ainda não começou a falar, está pensando. */
+    private fun marcarIaPensando() {
+        if (!_uiState.value.isLiveAiSpeaking) _uiState.update { it.copy(isLiveAiThinking = true) }
     }
 
     private var liveAiTranscriptBuffer = ""
@@ -1699,6 +1706,8 @@ class SearchViewModel(
             is LiveEvent.Transcript -> {
                 if (evento.role == "user") {
                     addUserMessage(evento.text)
+                    // Ouviu o usuário e ainda não está falando: está processando a resposta.
+                    if (!_uiState.value.isLiveAiSpeaking) _uiState.update { it.copy(isLiveAiThinking = true) }
                 } else {
                     // Acumula o texto da IA no MESMO padrão de streaming do chat por
                     // texto (isStreaming = true, atualiza a última mensagem por id),
@@ -1714,9 +1723,18 @@ class SearchViewModel(
                     }
                 }
             }
-            is LiveEvent.CartUpdated -> updateAiCart(evento.cart)
-            is LiveEvent.ShowCart -> _uiState.update { it.copy(isAiCartFlow = true) }
-            is LiveEvent.ProductsSuggested -> _uiState.update { it.copy(liveSuggestedProducts = evento.products) }
+            is LiveEvent.CartUpdated -> {
+                updateAiCart(evento.cart)
+                marcarIaPensando() // a ferramenta rodou; a fala de resposta vem logo depois
+            }
+            is LiveEvent.ShowCart -> {
+                _uiState.update { it.copy(isAiCartFlow = true) }
+                marcarIaPensando()
+            }
+            is LiveEvent.ProductsSuggested -> {
+                _uiState.update { it.copy(liveSuggestedProducts = evento.products) }
+                marcarIaPensando()
+            }
             is LiveEvent.Audio -> {
                 liveAudioPlayer.play(evento.pcm)
                 // Primeiro chunk de áudio de um turno = a IA começou a falar. Só volta a
@@ -1724,14 +1742,14 @@ class SearchViewModel(
                 // recebido ainda leva um instante pra tocar de verdade), mas suficiente
                 // pra UI acompanhar o ritmo da conversa.
                 if (!_uiState.value.isLiveAiSpeaking) {
-                    _uiState.update { it.copy(isLiveAiSpeaking = true) }
+                    _uiState.update { it.copy(isLiveAiSpeaking = true, isLiveAiThinking = false) }
                 }
             }
             is LiveEvent.TurnComplete -> {
                 if (liveAiMessageId != null) saveChatMessages()
                 liveAiTranscriptBuffer = ""
                 liveAiMessageId = null
-                _uiState.update { it.copy(isStreaming = false, isLiveAiSpeaking = false) }
+                _uiState.update { it.copy(isStreaming = false, isLiveAiSpeaking = false, isLiveAiThinking = false) }
             }
             is LiveEvent.Interrupted -> {
                 // O usuário falou por cima da IA: a Gemini já parou de gerar, mas o áudio
@@ -1743,7 +1761,7 @@ class SearchViewModel(
                 if (liveAiMessageId != null) saveChatMessages()
                 liveAiTranscriptBuffer = ""
                 liveAiMessageId = null
-                _uiState.update { it.copy(isStreaming = false, isLiveAiSpeaking = false) }
+                _uiState.update { it.copy(isStreaming = false, isLiveAiSpeaking = false, isLiveAiThinking = false) }
             }
             is LiveEvent.Error -> {
                 addAiMessage(text = evento.message)

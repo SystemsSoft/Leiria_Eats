@@ -6,6 +6,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import org.leria.eats.project.presentation.components.KomaiGalaxiaVideo
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -193,7 +194,7 @@ fun AiSearchScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             if (uiState.isLiveConversationActive) {
-                AiLiveChatTopBar(onClose = { showLiveExitDialog = true }, isAiSpeaking = uiState.isLiveAiSpeaking, isMicMuted = uiState.isMicMuted)
+                AiLiveChatTopBar(onClose = { showLiveExitDialog = true }, isAiSpeaking = uiState.isLiveAiSpeaking, isAiThinking = uiState.isLiveAiThinking, isMicMuted = uiState.isMicMuted)
                 return@Scaffold
             }
             Column(
@@ -220,6 +221,7 @@ fun AiSearchScreen(
                 AiLiveChatBottomBar(
                     onExitToKeyboard = onToggleLiveConversation,
                     isAiSpeaking = uiState.isLiveAiSpeaking,
+                    isAiThinking = uiState.isLiveAiThinking,
                     isMicMuted = uiState.isMicMuted,
                     onToggleMicMuted = onToggleMicMuted
                 )
@@ -257,6 +259,7 @@ fun AiSearchScreen(
                     // ── LIGAÇÃO DE VOZ: sem bolhas de texto, só status + produtos ──
                     AiLiveVoicePanel(
                         isAiSpeaking = uiState.isLiveAiSpeaking,
+                        isAiThinking = uiState.isLiveAiThinking,
                         suggestedProducts = uiState.liveSuggestedProducts,
                         restaurants = uiState.allRestaurants,
                         cartItems = uiState.cartItems,
@@ -2038,7 +2041,7 @@ private fun ProductDetailBottomSheet(
 // ═══════════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun AiLiveChatTopBar(onClose: () -> Unit, isAiSpeaking: Boolean, isMicMuted: Boolean) {
+private fun AiLiveChatTopBar(onClose: () -> Unit, isAiSpeaking: Boolean, isAiThinking: Boolean, isMicMuted: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -2066,7 +2069,11 @@ private fun AiLiveChatTopBar(onClose: () -> Unit, isAiSpeaking: Boolean, isMicMu
                     Box(modifier = Modifier.size(6.dp).background(KomaGold.copy(alpha = dotAlpha), CircleShape))
                     Spacer(modifier = Modifier.width(5.dp))
                     Text(
-                        if (isAiSpeaking) "A falar..." else "A ouvir...",
+                        when {
+                            isAiThinking -> "A pensar..."
+                            isAiSpeaking -> "A falar..."
+                            else -> "A ouvir..."
+                        },
                         color = Color.White.copy(alpha = 0.75f),
                         fontSize = 11.sp
                     )
@@ -2095,6 +2102,7 @@ private fun AiLiveChatTopBar(onClose: () -> Unit, isAiSpeaking: Boolean, isMicMu
 private fun AiLiveChatBottomBar(
     onExitToKeyboard: () -> Unit,
     isAiSpeaking: Boolean,
+    isAiThinking: Boolean,
     isMicMuted: Boolean,
     onToggleMicMuted: () -> Unit
 ) {
@@ -2122,6 +2130,7 @@ private fun AiLiveChatBottomBar(
             Icon(
                 when {
                     isMicMuted -> Icons.Default.MicOff
+                    isAiThinking -> Icons.Default.Psychology
                     isAiSpeaking -> Icons.Default.VolumeUp
                     else -> Icons.Default.GraphicEq
                 },
@@ -2133,6 +2142,7 @@ private fun AiLiveChatBottomBar(
             Text(
                 when {
                     isMicMuted -> "Mudo"
+                    isAiThinking -> "A pensar..."
                     isAiSpeaking -> "A falar..."
                     else -> "A ouvir..."
                 },
@@ -2168,6 +2178,7 @@ private fun AiLiveChatBottomBar(
 @Composable
 private fun AiLiveVoicePanel(
     isAiSpeaking: Boolean,
+    isAiThinking: Boolean,
     suggestedProducts: List<Product>,
     restaurants: List<Restaurant>,
     cartItems: List<Product>,
@@ -2181,36 +2192,23 @@ private fun AiLiveVoicePanel(
             .padding(top = 24.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        val infiniteTransition = rememberInfiniteTransition(label = "liveStatusPulse")
-        val pulse by infiniteTransition.animateFloat(
-            initialValue = 0.9f, targetValue = 1.08f,
-            animationSpec = infiniteRepeatable(tween(900, easing = EaseInOutSine), RepeatMode.Reverse),
-            label = "pulse"
-        )
+        // Vídeo da galáxia com o "K" no lugar dos ícones de microfone/áudio — fica igual em todos os
+        // estados; quem muda é só o texto de status logo abaixo.
         Box(
             modifier = Modifier
-                .padding(vertical = 24.dp)
-                .size(96.dp)
-                .graphicsLayer {
-                    if (isAiSpeaking) {
-                        scaleX = pulse; scaleY = pulse
-                    }
-                }
-                .background(
-                    Brush.radialGradient(listOf(AiPrimary.copy(alpha = 0.35f), Color.Transparent)),
-                    CircleShape
-                ),
+                .padding(vertical = 16.dp)
+                .size(220.dp)
+                .clip(CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                if (isAiSpeaking) Icons.Default.VolumeUp else Icons.Default.GraphicEq,
-                contentDescription = null,
-                tint = AiPrimary,
-                modifier = Modifier.size(40.dp)
-            )
+            KomaiGalaxiaVideo(modifier = Modifier.fillMaxSize())
         }
         Text(
-            if (isAiSpeaking) "A falar..." else "A ouvir, pode falar...",
+            when {
+                isAiThinking -> "A pensar..."
+                isAiSpeaking -> "A falar..."
+                else -> "A ouvir, pode falar..."
+            },
             color = AiText,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold

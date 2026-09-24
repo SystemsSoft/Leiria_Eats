@@ -101,6 +101,9 @@ data class SearchUiState(
     // primeiro chunk de um turno e o turn_complete), false enquanto ela aguarda o usuário
     // falar. A tela da ligação não mostra a conversa em texto, só esse status.
     val isLiveAiSpeaking: Boolean = false,
+    // A IA está "a pensar" na ligação: depois de ouvir o usuário (ou de rodar uma ferramenta, como
+    // adicionar à sacola) e ANTES de o primeiro áudio da resposta chegar; também no início, até a saudação.
+    val isLiveAiThinking: Boolean = false,
     // Produtos que a IA destacou na resposta atual da ligação ao vivo (tool "sugerir_produtos"
     // no servidor) — só usado na tela da ligação de voz, já que ali não há bolhas de chat
     // pra mostrar os cartões de produto do jeito normal.
