@@ -160,6 +160,15 @@ fun MainScreenWithAI(
     // Toca a fala da IA já pré-sintetizada para o turno por voz (ver SearchViewModel.
     // fetchSearch: o áudio é sintetizado ANTES da mensagem ser revelada, então aqui é só
     // reprodução local — sem espera de rede — no mesmo instante em que o texto aparece.
+    // Depois do pagamento o app vai para "Meus pedidos": encerra a ligação de voz (microfone,
+    // áudio e tela de ligação) para que, ao voltar na aba da IA, apareça a tela inicial do chat
+    // (AiSearchScreen) e não a ligação antiga.
+    LaunchedEffect(uiState.currentTab) {
+        if (uiState.currentTab == MainTab.ORDERS && uiState.isLiveConversationActive) {
+            viewModel.stopLiveConversation()
+        }
+    }
+
     LaunchedEffect(uiState.pendingVoiceAudio) {
         val audio = uiState.pendingVoiceAudio
         if (audio != null) {
