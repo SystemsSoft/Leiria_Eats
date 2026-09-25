@@ -3,6 +3,8 @@ package org.leria.eats.project.presentation
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -660,7 +662,18 @@ private fun SmartHighlightSection(smartRestaurants: List<Restaurant>, onRestaura
         }
 
         val pagerState = rememberPagerState(pageCount = { smartRestaurants.size })
-        
+
+        // Rola sozinho para o próximo destaque a cada 4s e, no último, volta ao primeiro. Pausa enquanto o
+        // usuário arrasta (ao soltar, a contagem recomeça do zero) e não faz nada com 1 só destaque.
+        val arrastando by pagerState.interactionSource.collectIsDraggedAsState()
+        LaunchedEffect(smartRestaurants.size, arrastando) {
+            if (arrastando || smartRestaurants.size < 2) return@LaunchedEffect
+            while (true) {
+                delay(4000)
+                pagerState.animateScrollToPage((pagerState.currentPage + 1) % smartRestaurants.size)
+            }
+        }
+
         HorizontalPager(
             state = pagerState,
             contentPadding = PaddingValues(horizontal = 0.dp),
