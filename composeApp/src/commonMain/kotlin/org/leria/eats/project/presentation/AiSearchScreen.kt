@@ -1718,6 +1718,21 @@ private fun AiCartChatSection(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    // Foto do produto (miniatura) — sem imagem cadastrada, mostra um ícone no lugar
+                    Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(AiSurface)) {
+                        if (!product.image_url.isNullOrBlank()) {
+                            KamelImage(
+                                resource = asyncPainterResource(data = product.image_url),
+                                contentDescription = product.name,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                                onFailure = { Icon(Icons.Default.Restaurant, null, tint = AiTextMuted, modifier = Modifier.padding(10.dp)) }
+                            )
+                        } else {
+                            Icon(Icons.Default.Restaurant, null, tint = AiTextMuted, modifier = Modifier.padding(10.dp))
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text("x${product.quantity}", fontWeight = FontWeight.ExtraBold, color = AiPrimary, fontSize = 12.sp)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(product.name, color = AiText, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -2223,10 +2238,15 @@ private fun AiLiveVoicePanel(
             fontWeight = FontWeight.SemiBold
         )
 
-        if (suggestedProducts.isNotEmpty()) {
+        // Produto que já está na sacola não volta como sugestão (a IA cita o item ao confirmar que o
+        // adicionou, e ele reaparecia nos cards com a quantidade); a sacola mostra o que já foi pedido.
+        val sugestoesVisiveis = remember(suggestedProducts, cartItems) {
+            suggestedProducts.filter { sugerido -> cartItems.none { it.gid == sugerido.gid } }
+        }
+        if (sugestoesVisiveis.isNotEmpty()) {
             Spacer(modifier = Modifier.height(24.dp))
             AiSuggestionSections(
-                products = suggestedProducts,
+                products = sugestoesVisiveis,
                 restaurants = restaurants,
                 cartItems = cartItems,
                 onProductClick = onProductClick,
