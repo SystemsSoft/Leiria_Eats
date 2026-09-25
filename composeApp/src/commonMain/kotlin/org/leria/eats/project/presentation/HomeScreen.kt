@@ -548,20 +548,22 @@ private fun HomeRestaurantList(
     // (o dominos, por exemplo, só aparecia no carrossel "Destaques"); os SMART agora aparecem nas duas.
     val otherRestaurants = restaurants
 
+    Column(modifier = Modifier.fillMaxSize()) {
+    // "Destaques" FIXO no topo: fica fora da grade, então não rola junto com ela — só o resto da tela
+    // (categorias e "Todos os restaurantes") rola por baixo.
+    if (smartRestaurants.isNotEmpty()) {
+        Box(modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 12.dp)) {
+            SmartHighlightSection(smartRestaurants = smartRestaurants, onRestaurantClick = onRestaurantClick)
+        }
+    }
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxWidth().weight(1f),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        if (smartRestaurants.isNotEmpty()) {
-            item(span = { GridItemSpan(3) }) {
-                SmartHighlightSection(smartRestaurants = smartRestaurants, onRestaurantClick = onRestaurantClick)
-            }
-            item(span = { GridItemSpan(3) }) { Spacer(modifier = Modifier.height(8.dp)) }
-        }
-
         item(span = { GridItemSpan(3) }) {
             CategoryHeaderWithToggle(
                 categories = categories,
@@ -597,6 +599,7 @@ private fun HomeRestaurantList(
                 CompactRestaurantItem(restaurant = restaurant, onClick = { onRestaurantClick(restaurant) })
             }
         }
+    }
     }
 }
 
