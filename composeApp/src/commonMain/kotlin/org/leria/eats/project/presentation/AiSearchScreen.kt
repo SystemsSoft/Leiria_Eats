@@ -2238,15 +2238,12 @@ private fun AiLiveVoicePanel(
             fontWeight = FontWeight.SemiBold
         )
 
-        // Produto que já está na sacola não volta como sugestão (a IA cita o item ao confirmar que o
-        // adicionou, e ele reaparecia nos cards com a quantidade); a sacola mostra o que já foi pedido.
-        val sugestoesVisiveis = remember(suggestedProducts, cartItems) {
-            suggestedProducts.filter { sugerido -> cartItems.none { it.gid == sugerido.gid } }
-        }
-        if (sugestoesVisiveis.isNotEmpty()) {
+        // Os cards ficam na tela mesmo depois de escolher um deles (o card mostra a quantidade na sacola);
+        // quem decide quando trocá-los é o servidor, ao ser pedido algo fora das sugestões atuais.
+        if (suggestedProducts.isNotEmpty()) {
             Spacer(modifier = Modifier.height(24.dp))
             AiSuggestionSections(
-                products = sugestoesVisiveis,
+                products = suggestedProducts,
                 restaurants = restaurants,
                 cartItems = cartItems,
                 onProductClick = onProductClick,

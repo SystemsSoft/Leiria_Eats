@@ -40,6 +40,7 @@ import org.leria.eats.project.voice.live.LiveAudioPlayer
 import org.leria.eats.project.voice.live.LiveAudioRecorder
 import org.leria.eats.project.voice.live.LiveConversationClient
 import org.leria.eats.project.voice.live.LiveEvent
+import org.leria.eats.project.voice.live.mesclarSugestoesDaLigacao
 
 class SearchViewModel(
     private val apiClient: LeriaApiClient,
@@ -1760,7 +1761,7 @@ class SearchViewModel(
                 marcarIaPensando()
             }
             is LiveEvent.ProductsSuggested -> {
-                _uiState.update { it.copy(liveSuggestedProducts = evento.products) }
+                _uiState.update { it.copy(liveSuggestedProducts = mesclarSugestoesDaLigacao(it.liveSuggestedProducts, evento.products)) }
                 marcarIaPensando()
             }
             is LiveEvent.Audio -> {
