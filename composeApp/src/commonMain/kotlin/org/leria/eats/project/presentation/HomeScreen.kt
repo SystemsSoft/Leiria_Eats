@@ -542,7 +542,9 @@ private fun HomeRestaurantList(
     }
 
     val smartRestaurants = restaurants.filter { it.plan?.uppercase() == "SMART" }
-    val otherRestaurants = restaurants.filter { it.plan?.uppercase() != "SMART" }
+    // "Todos os restaurantes" lista TODOS, de qualquer plano. Antes só entravam os que não eram SMART
+    // (o dominos, por exemplo, só aparecia no carrossel "Destaques"); os SMART agora aparecem nas duas.
+    val otherRestaurants = restaurants
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
