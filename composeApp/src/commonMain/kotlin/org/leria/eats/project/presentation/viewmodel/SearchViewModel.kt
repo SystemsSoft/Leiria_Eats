@@ -1275,6 +1275,13 @@ class SearchViewModel(
         }
     }
 
+    /** Pagamento concluído e o app indo para "Meus pedidos": limpa o chat da IA com a MESMA função do
+     * botão de limpar conversa (clearSearch + clearCart), para voltar na aba da IA numa conversa nova. */
+    private fun limparChatAposPagamento() {
+        clearSearch()
+        clearCart()
+    }
+
     private fun finalizeOrderState(isSuccess: Boolean, checkoutUrl: String?, autoPaid: Boolean) {
         val currentState = _uiState.value
         val greeting = buildGreeting(currentState.userProfile.name)
@@ -1303,7 +1310,11 @@ class SearchViewModel(
                 isAiCartFlow = false
             )
         }
-        
+
+        // checkoutUrl == null: o app foi direto para "Pedidos" (com WebView o fim do pagamento chega em
+        // onPaymentResult, que também limpa)
+        if (isSuccess && checkoutUrl == null) limparChatAposPagamento()
+
         if (autoPaid) {
             refreshOrders()
             startBackgroundPolling(currentState.userProfile.id)
@@ -1358,6 +1369,7 @@ class SearchViewModel(
                     orderJustPlaced = true // Trigger voice feedback
                 )
             }
+            limparChatAposPagamento()
 
             // Fetch saved payment methods if user chose to save
             if (shouldFetchMethods && userId.isNotBlank()) {
@@ -1430,6 +1442,7 @@ class SearchViewModel(
                                         pendingSavePaymentMethod = false
                                     )
                                 }
+                                limparChatAposPagamento()
                                 refreshOrders()
                                 return@launch
                             }
