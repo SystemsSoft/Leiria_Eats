@@ -286,6 +286,7 @@ fun AiSearchScreen(
                             onQuickPrompt = onQuickPrompt,
                             onRequestSuggestions = onRequestSuggestions,
                             onIntroClick = onIntroClick,
+                            onStartLiveCall = onToggleLiveConversation,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -418,6 +419,7 @@ private fun AiWelcomeHero(
     onQuickPrompt: (String) -> Unit,
     onRequestSuggestions: () -> Unit,
     onIntroClick: () -> Unit,
+    onStartLiveCall: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -483,6 +485,64 @@ private fun AiWelcomeHero(
         }
 
         Spacer(modifier = Modifier.height(12.dp))
+        AiLiveCallPromoCard(onClick = onStartLiveCall)
+
+        Spacer(modifier = Modifier.height(12.dp))
+    }
+}
+
+/** Convite comercial à ligação ao vivo (mesmo ícone do botão da barra de baixo). Tocar no card inicia a ligação. */
+@Composable
+private fun AiLiveCallPromoCard(onClick: () -> Unit) {
+    val shape = RoundedCornerShape(20.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Brush.horizontalGradient(listOf(AiSecondary.copy(alpha = 0.16f), AiPrimary.copy(alpha = 0.14f))))
+            .border(1.dp, Brush.horizontalGradient(listOf(AiSecondary.copy(alpha = 0.55f), AiPrimary.copy(alpha = 0.45f))), shape)
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(AiSecondary),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.GraphicEq,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Converse em tempo real", fontWeight = FontWeight.Bold, color = AiText, fontSize = 14.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "AO VIVO",
+                    color = Color.White,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(AiSecondary)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "Toque no botão de ligação e fale com o KomaAI como num telefonema: sem digitar, sem espera, a resposta vem na hora. Peça, ajuste e finalize só com a sua voz! 🎙️",
+                color = AiTextMuted,
+                fontSize = 12.sp,
+                lineHeight = 16.sp
+            )
+        }
     }
 }
 
