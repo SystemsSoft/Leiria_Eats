@@ -453,9 +453,24 @@ class SearchViewModel(
      * "Exceção" em gemini_sales_service.py.
      */
     fun chooseProductInChat(product: Product, quantity: Int = 1) {
-        if (_uiState.value.isLoading) return
         val quantidade = quantity.coerceAtLeast(1)
-        fetchSearch("Adicionar $quantidade ${product.name} ao meu carrinho.")
+        val pedido = "Adicionar $quantidade ${product.name} ao meu carrinho."
+        // Durante a ligação de voz o pedido vai pela própria ligação: por baixo dos panos é pedir o
+        // produto à IA, com a quantidade escolhida no modal — ela adiciona à sacola e responde falando.
+        if (_uiState.value.isLiveConversationActive) {
+            pedirNaLigacao(pedido)
+            return
+        }
+        if (_uiState.value.isLoading) return
+        fetchSearch(pedido)
+    }
+
+    /** Manda um pedido escrito para a IA DENTRO da ligação de voz (mesma sessão Live, então a resposta
+     * volta em áudio e o carrinho é o mesmo). Corta a fala em andamento: o servidor interrompe a IA. */
+    private fun pedirNaLigacao(pedido: String) {
+        liveAudioPlayer.stop()
+        _uiState.update { it.copy(isLiveAiSpeaking = false, isLiveAiThinking = true) }
+        viewModelScope.launch { runCatching { liveConversationClient.sendText(pedido) } }
     }
 
     /** Envia um prompt pré-definido ao chat da IA (ex.: atalhos rápidos como "Caixa Surpresa"). */

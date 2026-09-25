@@ -2230,8 +2230,7 @@ private fun AiLiveVoicePanel(
                 restaurants = restaurants,
                 cartItems = cartItems,
                 onProductClick = onProductClick,
-                onChooseInChat = onChooseInChat,
-                showAddButton = false
+                onChooseInChat = onChooseInChat
             )
         }
     }
