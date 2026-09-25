@@ -34,6 +34,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -49,6 +53,7 @@ import org.leria.eats.project.data.DeliveryFeeResponse
 import org.leria.eats.project.data.Product
 import org.leria.eats.project.data.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
+import org.leria.eats.project.presentation.components.AiHeroBanner
 import org.leria.eats.project.presentation.components.AiTopBar
 import org.leria.eats.project.presentation.util.StatusBarLightIcons
 import org.leria.eats.project.presentation.util.buildChargedFeesMap
@@ -56,7 +61,11 @@ import org.leria.eats.project.presentation.util.formatCurrency
 import org.leria.eats.project.theme.*
 
 // ─── Aliases locais → paleta central ─────────────────────────────────────────
-private val AiDeepBg    = KomaBg
+// Fundo mentolado da tela de IA (mais claro e esverdeado que o KomaBg do resto do app).
+private val AiDeepBg    = Color(0xFFEAF4EB)
+private val AiHeroBgTop = Color(0xFFF8FCF7)
+private val AiHeadingGreen = Color(0xFF0D5D44)
+private val AiTopBarDark = KomaTopBarGreenStart
 private val AiSurface   = KomaSurface
 private val AiCard      = KomaCard
 private val AiPrimary   = KomaGold
@@ -190,6 +199,11 @@ fun AiSearchScreen(
     // por trás durante a transição.
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
+    // Chat vazio: banner de boas-vindas no topo e o AiWelcomeHero no corpo. Com conversa (ou a Sacola IA
+    // aberta) volta a top bar compacta.
+    val showHero = !uiState.isLiveConversationActive && uiState.chatMessages.isEmpty() &&
+        !uiState.isLoading && !uiState.isAiCartFlow
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -201,19 +215,24 @@ fun AiSearchScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(AiTopBarGradient)
+                    .animateContentSize()
             ) {
-                AiTopBar(
-                    compact = true,
-                    showClearButton = uiState.chatMessages.size > 1,
-                    onClearChat = {
-                        if (uiState.cartItems.isNotEmpty()) {
-                            showClearConfirmDialog = true
-                        } else {
-                            onClearSearch()
-                        }
-                    },
-                    scrollBehavior = scrollBehavior
-                )
+                if (showHero) {
+                    AiHeroBanner()
+                } else {
+                    AiTopBar(
+                        compact = true,
+                        showClearButton = uiState.chatMessages.size > 1,
+                        onClearChat = {
+                            if (uiState.cartItems.isNotEmpty()) {
+                                showClearConfirmDialog = true
+                            } else {
+                                onClearSearch()
+                            }
+                        },
+                        scrollBehavior = scrollBehavior
+                    )
+                }
             }
         },
         bottomBar = {
@@ -281,7 +300,7 @@ fun AiSearchScreen(
                     )
 
                     // Boas-vindas se não houver mensagens e não estiver no fluxo da Sacola IA
-                    if (uiState.chatMessages.isEmpty() && !uiState.isLoading && !uiState.isAiCartFlow) {
+                    if (showHero) {
                         AiWelcomeHero(
                             onQuickPrompt = onQuickPrompt,
                             onRequestSuggestions = onRequestSuggestions,
@@ -424,70 +443,160 @@ private fun AiWelcomeHero(
 ) {
     Column(
         modifier = modifier
+            .background(Brush.verticalGradient(listOf(AiHeroBgTop, AiDeepBg)))
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 20.dp)
+            .padding(vertical = 20.dp)
     ) {
-        Text(text = "Olá! 👋", fontSize = 20.sp)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = "O que você gostaria\nde pedir hoje?",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = AiText,
-            lineHeight = 30.sp
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Fale com o KomaAI e faça seu pedido de forma simples, rápida e do seu jeito.",
-            fontSize = 13.sp,
-            color = AiTextMuted,
-            lineHeight = 18.sp
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-        AiQuickActionsRow(
-            enabled = true,
-            onQuickPrompt = onQuickPrompt,
-            onRequestSuggestions = onRequestSuggestions
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(AiBotBubble)
-                .border(1.dp, AiSecondary.copy(alpha = 0.2f), RoundedCornerShape(20.dp))
-                .clickable(onClick = onIntroClick)
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(AiCard),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("🍽️", fontSize = 20.sp)
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Seu garçom com IA", fontWeight = FontWeight.Bold, color = AiText, fontSize = 14.sp)
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Descreva o que você quer, por áudio ou texto. Eu cuido do resto! ✨",
-                    color = AiTextMuted,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp
-                )
-            }
+        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+            Text(text = "Olá! 👋", fontSize = 20.sp)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = buildAnnotatedString {
+                    append("O que você gostaria\n")
+                    withStyle(SpanStyle(color = AiHeadingGreen)) { append("de pedir hoje?") }
+                },
+                fontSize = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = AiText,
+                lineHeight = 30.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Fale com o KomaAI e faça seu pedido de forma simples, rápida e do seu jeito.",
+                fontSize = 13.sp,
+                color = AiTextMuted,
+                lineHeight = 18.sp
+            )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-        AiLiveCallPromoCard(onClick = onStartLiveCall)
+        Spacer(modifier = Modifier.height(20.dp))
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                AiQuickActionCard(
+                    emoji = "🎁",
+                    title = "Caixa Surpresa",
+                    subtitle = "Deixe a IA te surpreender com opções incríveis!",
+                    iconBackground = Color(0xFFFFE58A),
+                    cardTop = Color(0xFFFCFBEB),
+                    cardBottom = Color(0xFFFFF4D2),
+                    borderColor = Color(0xFFF9E79F),
+                    chevronColor = Color(0xFFE8A317),
+                    onClick = { onQuickPrompt("Quero ver as opções de Caixa Surpresa disponíveis hoje.") },
+                    modifier = Modifier.weight(1.08f).fillMaxHeight()
+                )
+                AiQuickActionCard(
+                    emoji = "💡",
+                    title = "Pedir sugestões",
+                    subtitle = "Sugestões de acordo com seu perfil alimentar!",
+                    iconBackground = Color(0xFFEAF5CF),
+                    cardTop = Color(0xFFEDF9F4),
+                    cardBottom = Color(0xFFE6F5EE),
+                    borderColor = Color(0xFFC4E0D4),
+                    chevronColor = AiSecondary,
+                    onClick = onRequestSuggestions,
+                    modifier = Modifier.weight(1f).fillMaxHeight()
+                )
+            }
 
-        Spacer(modifier = Modifier.height(12.dp))
+            AiWaiterCard(onClick = onIntroClick)
+            AiLiveCallPromoCard(onClick = onStartLiveCall)
+        }
+    }
+}
+
+/** Atalho de um toque da tela inicial (Caixa Surpresa / Pedir sugestões): ícone em emoji, título, subtítulo e seta. */
+@Composable
+private fun AiQuickActionCard(
+    emoji: String,
+    title: String,
+    subtitle: String,
+    iconBackground: Color,
+    cardTop: Color,
+    cardBottom: Color,
+    borderColor: Color,
+    chevronColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(20.dp)
+    Row(
+        modifier = modifier
+            .clip(shape)
+            .background(Brush.verticalGradient(listOf(cardTop, cardBottom)))
+            .border(1.dp, borderColor, shape)
+            .clickable(onClick = onClick)
+            .padding(start = 8.dp, end = 6.dp, top = 9.dp, bottom = 9.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(43.dp).clip(CircleShape).background(iconBackground),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(emoji, fontSize = 24.sp)
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = AiText, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(subtitle, fontSize = 11.sp, lineHeight = 14.sp, color = AiTextMuted)
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = chevronColor,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+/** "Seu garçom com IA": card branco com sombra suave; toque abre a explicação de como a IA funciona. */
+@Composable
+private fun AiWaiterCard(onClick: () -> Unit) {
+    val shape = RoundedCornerShape(20.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 6.dp,
+                shape = shape,
+                ambientColor = AiTopBarDark.copy(alpha = 0.10f),
+                spotColor = AiTopBarDark.copy(alpha = 0.14f)
+            )
+            .clip(shape)
+            .background(AiCard)
+            .clickable(onClick = onClick)
+            .padding(start = 12.dp, end = 10.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(AiBotBubble),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("🍽️", fontSize = 22.sp)
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Seu garçom com IA", fontWeight = FontWeight.Bold, color = AiText, fontSize = 15.sp)
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "Descreva o que você quer, por áudio ou texto. Eu cuido do resto! ✨",
+                color = AiTextMuted,
+                fontSize = 12.sp,
+                lineHeight = 16.sp
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = AiSecondary,
+            modifier = Modifier.size(22.dp)
+        )
     }
 }
 
@@ -495,194 +604,79 @@ private fun AiWelcomeHero(
 @Composable
 private fun AiLiveCallPromoCard(onClick: () -> Unit) {
     val shape = RoundedCornerShape(20.dp)
+    val glowRadius = with(LocalDensity.current) { 190.dp.toPx() }
+    val pulso by rememberInfiniteTransition(label = "aoVivo").animateFloat(
+        initialValue = 0.45f, targetValue = 1f, label = "aoVivoAlpha",
+        animationSpec = infiniteRepeatable(tween(900, easing = EaseInOutSine), RepeatMode.Reverse)
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(Brush.horizontalGradient(listOf(AiSecondary.copy(alpha = 0.16f), AiPrimary.copy(alpha = 0.14f))))
-            .border(1.dp, Brush.horizontalGradient(listOf(AiSecondary.copy(alpha = 0.55f), AiPrimary.copy(alpha = 0.45f))), shape)
+            .background(Brush.linearGradient(listOf(Color(0xFF0B4B3A), Color(0xFF0E5640), Color(0xFF2C6E47))))
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(Color(0xFF9CC24E).copy(alpha = 0.85f), Color.Transparent),
+                    center = Offset.Infinite,
+                    radius = glowRadius
+                )
+            )
+            .border(
+                1.dp,
+                Brush.linearGradient(listOf(Color(0xFF2F8F6B).copy(alpha = 0.75f), Color(0xFFD9E27A).copy(alpha = 0.85f))),
+                shape
+            )
             .clickable(onClick = onClick)
-            .padding(16.dp),
+            .padding(start = 14.dp, end = 10.dp, top = 14.dp, bottom = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(AiSecondary),
+                .background(Color(0xFF0A3D2E).copy(alpha = 0.55f))
+                .border(1.5.dp, Color(0xFF3FA57C), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.GraphicEq,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(26.dp)
             )
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Converse em tempo real", fontWeight = FontWeight.Bold, color = AiText, fontSize = 14.sp)
+                Text("Converse em tempo real", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f, fill = false))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "AO VIVO",
-                    color = Color.White,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                Row(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(AiSecondary)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                )
+                        .clip(RoundedCornerShape(50))
+                        .background(Color(0xFF197B53))
+                        .border(1.dp, Color(0xFF39A578), RoundedCornerShape(50))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(modifier = Modifier.size(7.dp).graphicsLayer { alpha = pulso }.background(Color(0xFF9BEB9A), CircleShape))
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text("AO VIVO", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold)
+                }
             }
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Toque no botão de ligação e fale com o KomaAI como num telefonema: sem digitar, sem espera, a resposta vem na hora. Peça, ajuste e finalize só com a sua voz! 🎙️",
-                color = AiTextMuted,
+                color = Color.White.copy(alpha = 0.85f),
                 fontSize = 12.sp,
-                lineHeight = 16.sp
+                lineHeight = 17.sp
             )
         }
-    }
-}
-
-@Composable
-private fun AiQuickActionsRow(
-    enabled: Boolean,
-    onQuickPrompt: (String) -> Unit,
-    onRequestSuggestions: () -> Unit
-) {
-    var showSurpriseInfoDialog by remember { mutableStateOf(false) }
-    var showSuggestionsInfoDialog by remember { mutableStateOf(false) }
-
-    if (showSurpriseInfoDialog) {
-        AlertDialog(
-            onDismissRequest = { showSurpriseInfoDialog = false },
-            containerColor = AiCard,
-            titleContentColor = AiText,
-            textContentColor = AiTextMuted,
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("🎁 ", fontSize = 20.sp)
-                    Text("Caixa Surpresa", fontWeight = FontWeight.Bold)
-                }
-            },
-            text = {
-                Text("A IA busca, para você, restaurantes que oferecem caixa surpresa disponíveis para agendamento — uma seleção de itens do dia por um preço especial, com data e horário marcados para retirada.")
-            },
-            confirmButton = {
-                TextButton(onClick = { showSurpriseInfoDialog = false }) {
-                    Text("Entendi", color = AiPrimary, fontWeight = FontWeight.Bold)
-                }
-            }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(22.dp)
         )
-    }
-
-    if (showSuggestionsInfoDialog) {
-        AlertDialog(
-            onDismissRequest = { showSuggestionsInfoDialog = false },
-            containerColor = AiCard,
-            titleContentColor = AiText,
-            textContentColor = AiTextMuted,
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("💡 ", fontSize = 20.sp)
-                    Text("Pedir sugestões", fontWeight = FontWeight.Bold)
-                }
-            },
-            text = {
-                Text("Baseada na personalização alimentar do seu perfil, a IA irá buscar as melhores sugestões para você.")
-            },
-            confirmButton = {
-                TextButton(onClick = { showSuggestionsInfoDialog = false }) {
-                    Text("Entendi", color = AiPrimary, fontWeight = FontWeight.Bold)
-                }
-            }
-        )
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        AiQuickActionChip(
-            emoji = "🎁",
-            label = "Caixa Surpresa",
-            enabled = enabled,
-            modifier = Modifier.weight(1f),
-            onClick = { onQuickPrompt("Quero ver as opções de Caixa Surpresa disponíveis hoje.") },
-            onInfoClick = { showSurpriseInfoDialog = true }
-        )
-        AiQuickActionChip(
-            emoji = "💡",
-            label = "Pedir sugestões",
-            enabled = enabled,
-            modifier = Modifier.weight(1f),
-            onClick = onRequestSuggestions,
-            onInfoClick = { showSuggestionsInfoDialog = true }
-        )
-    }
-}
-
-@Composable
-private fun AiQuickActionChip(
-    emoji: String,
-    label: String,
-    enabled: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-    onInfoClick: (() -> Unit)? = null
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(50.dp))
-            .background(AiCard)
-            .border(
-                width = 1.dp,
-                brush = Brush.horizontalGradient(listOf(AiPrimary.copy(alpha = 0.5f), AiSecondary.copy(alpha = 0.3f))),
-                shape = RoundedCornerShape(50.dp)
-            )
-            .clickable(enabled = enabled, onClick = onClick)
-    ) {
-        Row(
-            modifier = Modifier.padding(
-                start = 14.dp,
-                end = if (onInfoClick != null) 34.dp else 14.dp,
-                top = 10.dp,
-                bottom = 10.dp
-            ),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(emoji, fontSize = 14.sp)
-            Text(
-                text = label,
-                fontSize = 14.sp,
-                color = if (enabled) AiText else AiTextMuted,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false)
-            )
-        }
-        if (onInfoClick != null) {
-            IconButton(
-                onClick = onInfoClick,
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 2.dp)
-                    .size(26.dp)
-            ) {
-                Icon(
-                    Icons.Default.Info,
-                    contentDescription = "Saber mais sobre $label",
-                    tint = AiPrimary.copy(alpha = if (enabled) 0.8f else 0.4f),
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
     }
 }
 
@@ -1888,13 +1882,9 @@ private fun AiSemanticInputBar(
                 modifier = Modifier
                     .padding(bottom = 4.dp)
                     .size(48.dp)
+                    .shadow(6.dp, CircleShape, ambientColor = AiTopBarDark.copy(alpha = 0.12f), spotColor = AiTopBarDark.copy(alpha = 0.16f))
                     .clip(CircleShape)
                     .background(AiCard)
-                    .border(
-                        width = 1.dp,
-                        brush = Brush.horizontalGradient(listOf(AiPrimary.copy(alpha = 0.5f), AiSecondary.copy(alpha = 0.3f))),
-                        shape = CircleShape
-                    )
                     .clickable { onToggleNav() },
                 contentAlignment = Alignment.Center
             ) {
@@ -1906,9 +1896,9 @@ private fun AiSemanticInputBar(
                 Icon(
                     imageVector = if (isNavVisible) Icons.Default.Close else Icons.Default.Menu,
                     contentDescription = "Menu",
-                    tint = AiPrimary,
+                    tint = AiSecondary,
                     modifier = Modifier
-                        .size(20.dp)
+                        .size(22.dp)
                         .graphicsLayer { rotationZ = rotation }
                 )
             }
@@ -2042,12 +2032,11 @@ private fun AiSemanticInputBar(
                 modifier = Modifier
                     .padding(bottom = 4.dp)
                     .size(48.dp)
+                    .shadow(8.dp, CircleShape, ambientColor = AiSecondary.copy(alpha = 0.25f), spotColor = AiSecondary.copy(alpha = 0.35f))
                     .clip(CircleShape)
-                    .background(if (isLiveConversationActive) AiSecondary else AiCard)
-                    .border(
-                        width = 1.dp,
-                        brush = Brush.horizontalGradient(listOf(AiPrimary.copy(alpha = 0.5f), AiSecondary.copy(alpha = 0.3f))),
-                        shape = CircleShape
+                    .background(
+                        if (isLiveConversationActive) SolidColor(AiSecondary)
+                        else Brush.verticalGradient(listOf(Color(0xFF1B7A55), Color(0xFF0F5E44)))
                     )
                     .clickable(enabled = !isLoading) { onToggleLiveConversation() },
                 contentAlignment = Alignment.Center
@@ -2055,7 +2044,7 @@ private fun AiSemanticInputBar(
                 Icon(
                     imageVector = if (isLiveConversationActive) Icons.Default.CallEnd else Icons.Default.GraphicEq,
                     contentDescription = if (isLiveConversationActive) "Terminar conversa ao vivo" else "Iniciar conversa ao vivo",
-                    tint = if (isLiveConversationActive) Color.White else AiSecondary,
+                    tint = Color.White,
                     modifier = Modifier.size(20.dp)
                 )
             }
