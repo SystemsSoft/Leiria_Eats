@@ -103,8 +103,8 @@ android {
         applicationId = "org.leria.eats.project"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 13
-        versionName = "2.2"
+        versionCode = 14
+        versionName = "2.3"
     }
     packaging {
         resources {
