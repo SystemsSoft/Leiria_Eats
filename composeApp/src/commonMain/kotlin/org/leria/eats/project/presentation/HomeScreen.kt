@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
 import org.leria.eats.project.domain.model.Product
+import org.leria.eats.project.presentation.state.CatalogState
 import org.leria.eats.project.domain.model.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
 import org.leria.eats.project.presentation.components.AiTopBar
@@ -72,7 +73,9 @@ private val AiScaffoldBg = KomaTopBarGreenEnd
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    uiState: SearchUiState,
+    catalog: CatalogState,
+    cartItems: List<Product>,
+    isLoading: Boolean,
     isListening: Boolean,
     permissionStatus: PermissionStatus,
     onMicClick: () -> Unit,
@@ -98,7 +101,7 @@ fun HomeScreen(
         // cardápio desliza da direita (avançar), voltar para a lista desliza da
         // esquerda — dá a sensação de navegação em pilha (push/pop).
         AnimatedContent(
-            targetState = uiState.selectedRestaurant,
+            targetState = catalog.selectedRestaurant,
             transitionSpec = {
                 if (targetState != null && initialState == null) {
                     (
@@ -123,8 +126,8 @@ fun HomeScreen(
         if (selectedRestaurant != null) {
             RestaurantDetailScreen(
                 restaurant = selectedRestaurant,
-                cartItems = uiState.cartItems,
-                selectedCategory = uiState.selectedCategory,
+                cartItems = cartItems,
+                selectedCategory = catalog.selectedCategory,
                 onCategorySelect = onCategorySelect,
                 onBack = onClearSelection,
                 onBackAndClearCart = onClearSelectionAndCart,
@@ -140,8 +143,8 @@ fun HomeScreen(
             var showCategoriesSheet by remember { mutableStateOf(false) }
             var isProductCategoryMode by remember { mutableStateOf(false) }
 
-            val restaurantCategories = remember(uiState.allRestaurants) {
-                uiState.allRestaurants
+            val restaurantCategories = remember(catalog.allRestaurants) {
+                catalog.allRestaurants
                     .map { it.category }
                     .flatMap { it.split(",").map { s -> s.trim() } }
                     .filter { it.isNotBlank() }
@@ -149,8 +152,8 @@ fun HomeScreen(
                     .sorted()
             }
             
-            val productCategories = remember(uiState.allRestaurants) {
-                uiState.allRestaurants
+            val productCategories = remember(catalog.allRestaurants) {
+                catalog.allRestaurants
                     .flatMap { it.products }
                     .map { it.category }
                     .flatMap { it.split(",").map { s -> s.trim() } }
@@ -159,20 +162,20 @@ fun HomeScreen(
                     .sorted()
             }
 
-            val filteredRestaurants = remember(uiState.allRestaurants, uiState.selectedCategory) {
-                val selected = uiState.selectedCategory
+            val filteredRestaurants = remember(catalog.allRestaurants, catalog.selectedCategory) {
+                val selected = catalog.selectedCategory
                 if (selected == null) {
-                    uiState.allRestaurants
+                    catalog.allRestaurants
                 } else {
-                    uiState.allRestaurants.filter {
+                    catalog.allRestaurants.filter {
                         it.category.split(",").any { it.trim().equals(selected, ignoreCase = true) }
                     }
                 }
             }
             
-            val filteredProducts = remember(uiState.allRestaurants, uiState.selectedCategory) {
-                val selected = uiState.selectedCategory
-                val allProds = uiState.allRestaurants.flatMap { r -> r.products.map { p -> p to r } }
+            val filteredProducts = remember(catalog.allRestaurants, catalog.selectedCategory) {
+                val selected = catalog.selectedCategory
+                val allProds = catalog.allRestaurants.flatMap { r -> r.products.map { p -> p to r } }
                 if (selected == null) {
                     allProds
                 } else {
@@ -217,7 +220,7 @@ fun HomeScreen(
                         .clip(RoundedCornerShape(topStart = 48.dp, topEnd = 24.dp))
                 ) {
                     val listState = when {
-                        uiState.isLoading && uiState.allRestaurants.isEmpty() -> 0
+                        isLoading && catalog.allRestaurants.isEmpty() -> 0
                         isProductCategoryMode -> 1
                         else -> 2
                     }
@@ -237,7 +240,7 @@ fun HomeScreen(
                                 HomeProductList(
                                     products = filteredProducts,
                                     categories = productCategories,
-                                    selectedCategory = uiState.selectedCategory,
+                                    selectedCategory = catalog.selectedCategory,
                                     isProductMode = true,
                                     onModeChange = {
                                         isProductCategoryMode = it
@@ -246,7 +249,7 @@ fun HomeScreen(
                                     onCategorySelect = onCategorySelect,
                                     onViewAllCategoriesClick = { showCategoriesSheet = true },
                                     onProductClick = { product, restaurant ->
-                                        val catToSelect = uiState.selectedCategory ?: product.category.split(",").firstOrNull()?.trim()
+                                        val catToSelect = catalog.selectedCategory ?: product.category.split(",").firstOrNull()?.trim()
                                         onCategorySelect(catToSelect)
                                         onRestaurantClick(restaurant)
                                     }
@@ -256,7 +259,7 @@ fun HomeScreen(
                                 HomeRestaurantList(
                                     restaurants = filteredRestaurants,
                                     categories = restaurantCategories,
-                                    selectedCategory = uiState.selectedCategory,
+                                    selectedCategory = catalog.selectedCategory,
                                     isProductMode = false,
                                     onModeChange = {
                                         isProductCategoryMode = it
@@ -285,7 +288,7 @@ fun HomeScreen(
                 ) {
                     ExpandableCategorySheet(
                         categories = if (isProductCategoryMode) productCategories else restaurantCategories,
-                        selectedCategory = uiState.selectedCategory,
+                        selectedCategory = catalog.selectedCategory,
                         isProductMode = isProductCategoryMode,
                         onModeChange = { 
                             isProductCategoryMode = it

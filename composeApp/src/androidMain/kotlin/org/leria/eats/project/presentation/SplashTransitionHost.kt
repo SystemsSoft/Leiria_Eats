@@ -17,7 +17,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
-import org.leria.eats.project.presentation.viewmodel.SearchViewModel
+import org.leria.eats.project.presentation.viewmodel.ChatViewModel
+import org.leria.eats.project.presentation.viewmodel.ExploreViewModel
+import org.leria.eats.project.presentation.viewmodel.OrdersViewModel
+import org.leria.eats.project.presentation.viewmodel.ProfileViewModel
 
 /**
  * Reproduz [VideoSplashScreen] e, ao terminar, funde para [content]: um flash de brilho
@@ -26,13 +29,16 @@ import org.leria.eats.project.presentation.viewmodel.SearchViewModel
  */
 @Composable
 fun SplashTransitionHost(content: @Composable () -> Unit) {
-    // Obter o SearchViewModel aqui (mesmo sem usá-lo nesta tela) já dispara seu `init` —
-    // que carrega restaurantes/produtos do Explorar — em paralelo com o vídeo de splash,
-    // em vez de só começar depois que o vídeo termina e MainScreenWithAI é composta.
-    // Como o Koin escopa o ViewModel ao mesmo ViewModelStoreOwner (a Activity), a
-    // instância criada aqui é reaproveitada, não duplicada, quando `content()` pedir o
-    // mesmo SearchViewModel mais tarde.
-    koinViewModel<SearchViewModel>()
+    // Obter os ViewModels que carregam dados no `init` aqui (mesmo sem usá-los nesta tela) já
+    // dispara esses carregamentos — restaurantes do Explorar, histórico do chat, perfil e
+    // pedidos — em paralelo com o vídeo de splash, em vez de só começar depois que o vídeo
+    // termina e MainScreenWithAI é composta. Como o Koin escopa os ViewModels ao mesmo
+    // ViewModelStoreOwner (a Activity), as instâncias criadas aqui são reaproveitadas, não
+    // duplicadas, quando `content()` pedir os mesmos ViewModels mais tarde.
+    koinViewModel<ExploreViewModel>()
+    koinViewModel<ChatViewModel>()
+    koinViewModel<ProfileViewModel>()
+    koinViewModel<OrdersViewModel>()
 
     var videoFinished by remember { mutableStateOf(false) }
     val splashAlpha = remember { Animatable(1f) }

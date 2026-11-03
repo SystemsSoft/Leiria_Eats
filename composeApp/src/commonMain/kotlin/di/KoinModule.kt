@@ -5,6 +5,7 @@ import org.koin.core.context.startKoin
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.KoinAppDeclaration
 import org.koin.dsl.bind
@@ -33,7 +34,20 @@ import org.leria.eats.project.domain.usecase.SyncSavedPaymentMethodsUseCase
 import org.leria.eats.project.domain.voice.VoiceAudioInput
 import org.leria.eats.project.domain.voice.VoiceAudioOutput
 import org.leria.eats.project.payment.StripePaymentManager
-import org.leria.eats.project.presentation.viewmodel.SearchViewModel
+import org.leria.eats.project.presentation.state.CartRestaurantLoader
+import org.leria.eats.project.presentation.state.CartStore
+import org.leria.eats.project.presentation.state.CatalogStore
+import org.leria.eats.project.presentation.state.ConversationStore
+import org.leria.eats.project.presentation.state.NavigationStore
+import org.leria.eats.project.presentation.state.OrderEvents
+import org.leria.eats.project.presentation.viewmodel.CartViewModel
+import org.leria.eats.project.presentation.viewmodel.ChatViewModel
+import org.leria.eats.project.presentation.viewmodel.CheckoutViewModel
+import org.leria.eats.project.presentation.viewmodel.ExploreViewModel
+import org.leria.eats.project.presentation.viewmodel.LiveCallViewModel
+import org.leria.eats.project.presentation.viewmodel.MainViewModel
+import org.leria.eats.project.presentation.viewmodel.OrdersViewModel
+import org.leria.eats.project.presentation.viewmodel.ProfileViewModel
 import org.leria.eats.project.voice.GeminiTextToSpeechService
 import org.leria.eats.project.voice.TextToSpeechService
 import org.leria.eats.project.voice.live.LiveAudioPlayer
@@ -79,7 +93,22 @@ val presentationModule = module {
     // IosTextToSpeechService), removidas.
     single<TextToSpeechService> { GeminiTextToSpeechService(get(), get()) }
 
-    viewModelOf(::SearchViewModel)
+    // Estado compartilhado entre as abas (zerado pelo MainViewModel quando a tela principal acaba)
+    singleOf(::NavigationStore)
+    singleOf(::CartStore)
+    singleOf(::CatalogStore)
+    singleOf(::ConversationStore)
+    singleOf(::OrderEvents)
+    factoryOf(::CartRestaurantLoader)
+
+    viewModel { MainViewModel(get(), listOf(get<NavigationStore>(), get<CartStore>(), get<CatalogStore>(), get<ConversationStore>())) }
+    viewModelOf(::ChatViewModel)
+    viewModelOf(::LiveCallViewModel)
+    viewModelOf(::ExploreViewModel)
+    viewModelOf(::CartViewModel)
+    viewModelOf(::CheckoutViewModel)
+    viewModelOf(::OrdersViewModel)
+    viewModelOf(::ProfileViewModel)
 }
 
 fun initKoin(appDeclaration: KoinAppDeclaration = {}) =

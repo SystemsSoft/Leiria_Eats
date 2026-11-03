@@ -40,7 +40,14 @@ import org.leria.eats.project.permissions.PermissionStatus
 import org.leria.eats.project.domain.model.Address
 import org.leria.eats.project.presentation.*
 import org.leria.eats.project.presentation.components.WebView
-import org.leria.eats.project.presentation.viewmodel.SearchViewModel
+import org.leria.eats.project.presentation.viewmodel.CartViewModel
+import org.leria.eats.project.presentation.viewmodel.ChatViewModel
+import org.leria.eats.project.presentation.viewmodel.CheckoutViewModel
+import org.leria.eats.project.presentation.viewmodel.ExploreViewModel
+import org.leria.eats.project.presentation.viewmodel.LiveCallViewModel
+import org.leria.eats.project.presentation.viewmodel.MainViewModel
+import org.leria.eats.project.presentation.viewmodel.OrdersViewModel
+import org.leria.eats.project.presentation.viewmodel.ProfileViewModel
 import org.leria.eats.project.service.LocationService
 import org.leria.eats.project.voice.VoiceRecognizer
 import org.leria.eats.project.voice.VoiceContext
@@ -107,11 +114,30 @@ private val NavBarGradient = Brush.verticalGradient(
 @Composable
 fun MainScreenWithAI(
     permissionManager: PermissionManager,
-    viewModel: SearchViewModel = koinViewModel(),
+    mainViewModel: MainViewModel = koinViewModel(),
+    chatViewModel: ChatViewModel = koinViewModel(),
+    liveCallViewModel: LiveCallViewModel = koinViewModel(),
+    exploreViewModel: ExploreViewModel = koinViewModel(),
+    cartViewModel: CartViewModel = koinViewModel(),
+    checkoutViewModel: CheckoutViewModel = koinViewModel(),
+    ordersViewModel: OrdersViewModel = koinViewModel(),
+    profileViewModel: ProfileViewModel = koinViewModel(),
     locationService: LocationService = koinInject()
 ) {
     val scope = rememberCoroutineScope()
-    val uiState by viewModel.uiState.collectAsState()
+    val navigation by mainViewModel.state.collectAsState()
+    val conversation by chatViewModel.conversation.collectAsState()
+    val chat by chatViewModel.state.collectAsState()
+    val live by liveCallViewModel.state.collectAsState()
+    val catalog by exploreViewModel.catalog.collectAsState()
+    val explore by exploreViewModel.state.collectAsState()
+    val cart by cartViewModel.state.collectAsState()
+    val checkout by checkoutViewModel.state.collectAsState()
+    val orders by ordersViewModel.state.collectAsState()
+    val userProfile by profileViewModel.userProfile.collectAsState()
+    // Indicador de "a carregar" das telas: qualquer operação em curso (catálogo, IA, checkout ou
+    // pedidos), como no tempo em que todas partilhavam um único estado.
+    val isLoading = explore.isLoading || chat.isLoading || checkout.isLoading || orders.isLoading
     val voiceRecognizer = koinInject<VoiceRecognizer>()
     val tts = koinInject<TextToSpeechService>()
     val voiceText by voiceRecognizer.results.collectAsState()
@@ -136,7 +162,7 @@ fun MainScreenWithAI(
                     pendingClearJob?.cancel()
                     pendingClearJob = scope.launch {
                         delay(APP_FECHADO_GRACE_PERIOD_MS)
-                        viewModel.clearSearch()
+                        chatViewModel.clearSearch()
                     }
                 }
                 Lifecycle.Event.ON_START -> {
@@ -155,33 +181,33 @@ fun MainScreenWithAI(
 
     // Voz da IA (TTS): só deve falar quando o usuário usou o microfone (voz) ou
     // está em ligação de voz ativa — nunca em resposta a mensagens digitadas.
-    val shouldUseAiVoice = uiState.lastInputWasVoice || uiState.isLiveConversationActive
+    val shouldUseAiVoice = chat.lastInputWasVoice || live.isActive
 
-    // Toca a fala da IA já pré-sintetizada para o turno por voz (ver SearchViewModel.
+    // Toca a fala da IA já pré-sintetizada para o turno por voz (ver ChatViewModel.
     // fetchSearch: o áudio é sintetizado ANTES da mensagem ser revelada, então aqui é só
     // reprodução local — sem espera de rede — no mesmo instante em que o texto aparece.
     // Depois do pagamento o app vai para "Meus pedidos": encerra a ligação de voz (microfone,
     // áudio e tela de ligação) para que, ao voltar na aba da IA, apareça a tela inicial do chat
     // (AiSearchScreen) e não a ligação antiga.
-    LaunchedEffect(uiState.currentTab) {
-        if (uiState.currentTab == MainTab.ORDERS && uiState.isLiveConversationActive) {
-            viewModel.stopLiveConversation()
+    LaunchedEffect(navigation.currentTab) {
+        if (navigation.currentTab == MainTab.ORDERS && live.isActive) {
+            liveCallViewModel.stopLiveConversation()
         }
     }
 
-    LaunchedEffect(uiState.pendingVoiceAudio) {
-        val audio = uiState.pendingVoiceAudio
+    LaunchedEffect(chat.pendingVoiceAudio) {
+        val audio = chat.pendingVoiceAudio
         if (audio != null) {
             if (!isMuted && shouldUseAiVoice) {
                 tts.playAudio(audio)
             }
-            viewModel.clearPendingVoiceAudio()
+            chatViewModel.clearPendingVoiceAudio()
         }
     }
 
 
-    LaunchedEffect(uiState.orderJustPlaced) {
-        if (uiState.orderJustPlaced && !isMuted) {
+    LaunchedEffect(checkout.orderJustPlaced) {
+        if (checkout.orderJustPlaced && !isMuted) {
             delay(500)
 
             if (shouldUseAiVoice) {
@@ -190,7 +216,7 @@ fun MainScreenWithAI(
             }
 
             delay(1000)
-            viewModel.resetOrderJustPlacedFlag()
+            checkoutViewModel.resetOrderJustPlacedFlag()
         }
     }
 
@@ -198,10 +224,10 @@ fun MainScreenWithAI(
         if (isMuted) tts.stop()
     }
 
-    LaunchedEffect(uiState.cartError) {
-        uiState.cartError?.let {
+    LaunchedEffect(cart.error) {
+        cart.error?.let {
             snackbarHostState.showSnackbar(it)
-            viewModel.clearCartError()
+            cartViewModel.clearCartError()
         }
     }
 
@@ -209,7 +235,7 @@ fun MainScreenWithAI(
     LaunchedEffect(voiceText, voiceContext) {
         // Só atualiza o input se o contexto for de IA ou Home Search
         if (voiceText.isNotEmpty() && (voiceContext == VoiceContext.AI_SEARCH || voiceContext == VoiceContext.HOME_SEARCH)) {
-            viewModel.updateInputFromVoice(voiceText)
+            chatViewModel.updateInputFromVoice(voiceText)
         }
     }
 
@@ -220,9 +246,9 @@ fun MainScreenWithAI(
         if (!isListening && (voiceContext == VoiceContext.AI_SEARCH || voiceContext == VoiceContext.HOME_SEARCH)) {
             val capturedText = voiceText.trim()
             if (capturedText.isNotEmpty()) {
-                viewModel.updateInputFromVoice(capturedText)
+                chatViewModel.updateInputFromVoice(capturedText)
                 delay(300)
-                viewModel.sendSearch()
+                chatViewModel.sendSearch()
             }
         }
     }
@@ -235,7 +261,7 @@ fun MainScreenWithAI(
     // Importante: limpar ANTES de parar o microfone, para que o texto já
     // esteja vazio no instante em que isListening vira false — evitando que
     // o efeito de auto-envio dispare uma busca com um resto de transcrição.
-    LaunchedEffect(uiState.currentTab) {
+    LaunchedEffect(navigation.currentTab) {
         voiceRecognizer.clearResults()
         voiceRecognizer.stopListening()
     }
@@ -245,16 +271,16 @@ fun MainScreenWithAI(
 
 
         AnimatedVisibility(
-            visible = uiState.checkoutUrl != null,
+            visible = checkout.checkoutUrl != null,
             enter = fadeIn() + slideInHorizontally(initialOffsetX = { fullWidth -> fullWidth }),
             exit = fadeOut() + slideOutHorizontally(targetOffsetX = { fullWidth -> fullWidth })
         ) {
-            uiState.checkoutUrl?.let { url ->
+            checkout.checkoutUrl?.let { url ->
                 WebView(
                     modifier = Modifier.fillMaxSize(),
                     url = url,
-                    onSuccess = { orderId -> viewModel.onPaymentResult(isSuccess = true, orderId = orderId) },
-                    onCancel = { viewModel.onPaymentResult(isSuccess = false, orderId = null) },
+                    onSuccess = { orderId -> checkoutViewModel.onPaymentResult(isSuccess = true, orderId = orderId) },
+                    onCancel = { checkoutViewModel.onPaymentResult(isSuccess = false, orderId = null) },
                     onLoadingChanged = { loading -> webViewLoading = loading }
                 )
             }
@@ -267,7 +293,7 @@ fun MainScreenWithAI(
         }
 
         AnimatedVisibility(
-            visible = uiState.isLoading && uiState.checkoutUrl == null && !uiState.isAddressSheetVisible,
+            visible = isLoading && checkout.checkoutUrl == null && !checkout.isAddressSheetVisible,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
@@ -289,7 +315,7 @@ fun MainScreenWithAI(
         }
 
         AnimatedVisibility(
-            visible = uiState.isProcessingAutoPayment,
+            visible = checkout.isProcessingAutoPayment,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
@@ -326,7 +352,7 @@ fun MainScreenWithAI(
 
                     // Optional cancel button
                     TextButton(
-                        onClick = { viewModel.cancelAutoPayment() }
+                        onClick = { checkoutViewModel.cancelAutoPayment() }
                     ) {
                         Text("Voltar", color = MaterialTheme.colorScheme.primary)
                     }
@@ -335,26 +361,26 @@ fun MainScreenWithAI(
         }
 
         AnimatedVisibility(
-            visible = uiState.checkoutUrl == null,
+            visible = checkout.checkoutUrl == null,
             enter = fadeIn() + slideInHorizontally(initialOffsetX = { fullWidth -> -fullWidth }),
             exit = fadeOut() + slideOutHorizontally(targetOffsetX = { fullWidth -> -fullWidth })
         ) {
             // Address sheet and main scaffold when there's no checkout URL
             // Validamos isAddressSheetVisible apenas se não for o fluxo de Sacola IA,
             // já que a AiCartScreen lida com seu próprio seletor de endereço.
-            if (uiState.isAddressSheetVisible && !uiState.isAiCartFlow) {
+            if (checkout.isAddressSheetVisible && !cart.isAiCartFlow) {
                 AddressSelectionBottomSheet(
-                    addresses = uiState.userProfile.addresses,
+                    addresses = userProfile.addresses,
                     onAddressSelected = { address ->
-                        val hasSavedPaymentMethods = uiState.userProfile.savedPaymentMethods.isNotEmpty()
+                        val hasSavedPaymentMethods = userProfile.savedPaymentMethods.isNotEmpty()
                         if (hasSavedPaymentMethods) {
-                            viewModel.showPaymentConfirmForAddress(address)
+                            checkoutViewModel.showPaymentConfirmForAddress(address)
                         } else {
-                            viewModel.showSavePaymentSheetForAddress(address)
+                            checkoutViewModel.showSavePaymentSheetForAddress(address)
                         }
                     },
                     onDismiss = {
-                        viewModel.dismissAddressSheet()
+                        checkoutViewModel.dismissAddressSheet()
                     }
                 )
             }
@@ -362,12 +388,12 @@ fun MainScreenWithAI(
             Scaffold(
                 snackbarHost = { SnackbarHost(snackbarHostState) },
                 bottomBar = {
-                    val isOnboarding = uiState.currentTab == MainTab.PROFILE && uiState.userProfile.name.isBlank()
-                    val showBottomBar = !isOnboarding && if (uiState.currentTab == MainTab.AI) {
-                        uiState.isBottomNavVisible
+                    val isOnboarding = navigation.currentTab == MainTab.PROFILE && userProfile.name.isBlank()
+                    val showBottomBar = !isOnboarding && if (navigation.currentTab == MainTab.AI) {
+                        navigation.isBottomNavVisible
                     } else {
-                        !(uiState.currentTab == MainTab.HOME && uiState.selectedRestaurant != null)
-                                        && uiState.currentTab != MainTab.CART
+                        !(navigation.currentTab == MainTab.HOME && catalog.selectedRestaurant != null)
+                                        && navigation.currentTab != MainTab.CART
                     }
                     
                     AnimatedVisibility(
@@ -423,7 +449,7 @@ fun MainScreenWithAI(
                                     )
 
                                     tabs.forEach { (tab, label, icon) ->
-                                        val isSelected = uiState.currentTab == tab
+                                        val isSelected = navigation.currentTab == tab
                                         
                                         Box(
                                             modifier = Modifier
@@ -432,7 +458,7 @@ fun MainScreenWithAI(
                                                 .clickable(
                                                     interactionSource = remember { MutableInteractionSource() },
                                                     indication = null
-                                                ) { viewModel.onTabSelected(tab) },
+                                                ) { mainViewModel.onTabSelected(tab) },
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Column(
@@ -501,7 +527,7 @@ fun MainScreenWithAI(
                     // arrastar de tela: avançar desliza da direita, voltar desliza da esquerda.
                     val tabOrder = remember { listOf(MainTab.AI, MainTab.HOME, MainTab.ORDERS, MainTab.PROFILE) }
                     AnimatedContent(
-                        targetState = uiState.currentTab,
+                        targetState = navigation.currentTab,
                         transitionSpec = {
                             val indoAdiante = tabOrder.indexOf(targetState) >= tabOrder.indexOf(initialState)
                             val direcao = if (indoAdiante) 1 else -1
@@ -522,8 +548,9 @@ fun MainScreenWithAI(
                         when (currentTab) {
                             MainTab.HOME -> {
                                 HomeScreen(
-                                    // ...existing code...
-                                    uiState = uiState,
+                                    catalog = catalog,
+                                    cartItems = cart.items,
+                                    isLoading = isLoading,
                                     isListening = isListening && voiceContext == VoiceContext.HOME_SEARCH,
                                     permissionStatus = permissionStatus,
                                     onMicClick = {
@@ -533,7 +560,7 @@ fun MainScreenWithAI(
                                             PermissionStatus.GRANTED -> {
                                                 if (isListening) voiceRecognizer.stopListening()
                                                 else {
-                                                    viewModel.onQueryChange("")
+                                                    chatViewModel.onQueryChange("")
                                                     voiceRecognizer.startListening(VoiceContext.HOME_SEARCH)
                                                 }
                                             }
@@ -541,22 +568,29 @@ fun MainScreenWithAI(
                                     },
                                     onSendClick = {
                                         if (isListening) voiceRecognizer.stopListening()
-                                        viewModel.sendSearch()
+                                        chatViewModel.sendSearch()
                                     },
-                                    onTextChange = { viewModel.onQueryChange(it) },
-                                    onRestaurantClick = { restaurant -> viewModel.selectRestaurantOrAddToCart(restaurant) },
-                                    onCategorySelect = { category -> viewModel.selectCategory(category) },
-                                    onClearSelection = { viewModel.clearSelection() },
-                                    onClearSelectionAndCart = { viewModel.clearSelectionAndCart() },
-                                    onAddToCart = { product -> viewModel.addToCart(product) },
-                                    onRemoveFromCart = { product -> viewModel.removeFromCart(product) },
-                                    onViewCart = { viewModel.onTabSelected(MainTab.CART) },
-                                    onClearSearch = { viewModel.clearSearch() }
+                                    onTextChange = { chatViewModel.onQueryChange(it) },
+                                    onRestaurantClick = { restaurant -> exploreViewModel.selectRestaurantOrAddToCart(restaurant) },
+                                    onCategorySelect = { category -> exploreViewModel.selectCategory(category) },
+                                    onClearSelection = { exploreViewModel.clearSelection() },
+                                    onClearSelectionAndCart = { exploreViewModel.clearSelectionAndCart() },
+                                    onAddToCart = { product -> cartViewModel.addToCart(product) },
+                                    onRemoveFromCart = { product -> cartViewModel.removeFromCart(product) },
+                                    onViewCart = { mainViewModel.onTabSelected(MainTab.CART) },
+                                    onClearSearch = { chatViewModel.clearSearch() }
                                 )
                             }
                             MainTab.AI -> {
                                 AiSearchScreen(
-                                    uiState = uiState,
+                                    conversation = conversation,
+                                    live = live,
+                                    cart = cart,
+                                    allRestaurants = catalog.allRestaurants,
+                                    userAddresses = userProfile.addresses,
+                                    isLoading = isLoading,
+                                    isStreaming = chat.isStreaming || live.isStreaming,
+                                    isBottomNavVisible = navigation.isBottomNavVisible,
                                     isListening = isListening && voiceContext == VoiceContext.AI_SEARCH,
                                     permissionStatus = permissionStatus,
                                     onMicClick = {
@@ -569,8 +603,8 @@ fun MainScreenWithAI(
                                                     // Mesma exclusividade de microfone do outro sentido
                                                     // (ver onToggleLiveConversation): não dá pra ter STT e
                                                     // conversa ao vivo usando o hardware ao mesmo tempo.
-                                                    if (uiState.isLiveConversationActive) viewModel.stopLiveConversation()
-                                                    viewModel.onQueryChange("")
+                                                    if (live.isActive) liveCallViewModel.stopLiveConversation()
+                                                    chatViewModel.onQueryChange("")
                                                     voiceRecognizer.startListening(VoiceContext.AI_SEARCH)
                                                 }
                                             }
@@ -578,18 +612,22 @@ fun MainScreenWithAI(
                                     },
                                     onSendClick = {
                                         if (isListening) voiceRecognizer.stopListening()
-                                        if (uiState.isLiveConversationActive) viewModel.stopLiveConversation()
-                                        viewModel.sendSearch()
+                                        if (live.isActive) liveCallViewModel.stopLiveConversation()
+                                        chatViewModel.sendSearch()
                                     },
-                                    onTextChange = { viewModel.onQueryChange(it) },
-                                    onAddToCart = { product -> viewModel.addToCart(product) },
-                                    onRemoveFromCart = { product -> viewModel.removeFromCart(product) },
-                                    onChooseProductInChat = { product, quantity -> viewModel.chooseProductInChat(product, quantity) },
-                                    onQuickPrompt = { prompt -> viewModel.sendQuickPrompt(prompt) },
-                                    onRequestSuggestions = { viewModel.requestPersonalizedSuggestions() },
+                                    onTextChange = { chatViewModel.onQueryChange(it) },
+                                    onAddToCart = { product -> cartViewModel.addToCart(product) },
+                                    onRemoveFromCart = { product -> cartViewModel.removeFromCart(product) },
+                                    onChooseProductInChat = { product, quantity ->
+                                        // Durante a ligação de voz o pedido vai pela própria ligação.
+                                        if (live.isActive) liveCallViewModel.orderInCall(product, quantity)
+                                        else chatViewModel.chooseProductInChat(product, quantity)
+                                    },
+                                    onQuickPrompt = { prompt -> chatViewModel.sendQuickPrompt(prompt) },
+                                    onRequestSuggestions = { chatViewModel.requestPersonalizedSuggestions() },
                                     onToggleLiveConversation = {
-                                        if (uiState.isLiveConversationActive) {
-                                            viewModel.stopLiveConversation()
+                                        if (live.isActive) {
+                                            liveCallViewModel.stopLiveConversation()
                                         } else {
                                             when (permissionStatus) {
                                                 PermissionStatus.IDLE -> permissionManager.askForPermission()
@@ -598,23 +636,23 @@ fun MainScreenWithAI(
                                                     // O microfone (STT) e a conversa ao vivo são mutuamente
                                                     // exclusivos — ambos usam o hardware do microfone.
                                                     if (isListening) voiceRecognizer.stopListening()
-                                                    viewModel.startLiveConversation()
+                                                    liveCallViewModel.startLiveConversation()
                                                 }
                                             }
                                         }
                                     },
-                                    onToggleMicMuted = { viewModel.toggleMicMuted() },
+                                    onToggleMicMuted = { liveCallViewModel.toggleMicMuted() },
                                     onCheckout = { address, deliveryFee, serviceFee, deliveryType, feesMap ->
-                                        viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType, feesMap)
+                                        checkoutViewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType, feesMap)
                                     },
-                                    onViewCart = { viewModel.onTabSelected(MainTab.CART) },
+                                    onViewCart = { mainViewModel.onTabSelected(MainTab.CART) },
                                     onClearSearch = {
-                                        viewModel.clearSearch()
-                                        viewModel.clearCart()
+                                        chatViewModel.clearSearch()
+                                        cartViewModel.clearCart()
                                     },
-                                    onToggleNav = { viewModel.toggleBottomNav() },
+                                    onToggleNav = { mainViewModel.toggleBottomNav() },
                                     onGetDeliveryFee = { custLat, custLon, restLat, restLon, restGid ->
-                                        viewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restGid)
+                                        checkoutViewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restGid)
                                     },
                                     onGetAddressFromMap = { lat, long ->
                                         locationService.getAddressFromCoordinates(lat, long)
@@ -636,118 +674,118 @@ fun MainScreenWithAI(
                                             Me diga, o que você está com vontade de comer hoje?
                                         """.trimIndent()
                                         
-                                        viewModel.addAiMessage(introText)
+                                        chatViewModel.addAiMessage(introText)
                                     }
                                 )
                             }
                             MainTab.CART -> {
-                                val uniqueRestaurantsInCart = uiState.cartItems.map { it.restaurant_gid }.distinct().size
-                                if (uiState.isAiCartFlow || uniqueRestaurantsInCart > 1 || uiState.cartRestaurants.size > 1) {
+                                val uniqueRestaurantsInCart = cart.items.map { it.restaurant_gid }.distinct().size
+                                if (cart.isAiCartFlow || uniqueRestaurantsInCart > 1 || cart.restaurants.size > 1) {
                                     AiCartScreen(
-                                        cartItems = uiState.cartItems,
-                                        cartRestaurants = uiState.cartRestaurants,
-                                        onAddItem = { product -> viewModel.addToCart(product) },
-                                        onRemoveItem = { product -> viewModel.removeFromCart(product) },
+                                        cartItems = cart.items,
+                                        cartRestaurants = cart.restaurants,
+                                        onAddItem = { product -> cartViewModel.addToCart(product) },
+                                        onRemoveItem = { product -> cartViewModel.removeFromCart(product) },
                                         onCheckout = { address, deliveryFee, serviceFee, deliveryType, feesMap ->
-                                            viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType, feesMap)
+                                            checkoutViewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType, feesMap)
                                         },
-                                        userAddresses = uiState.userProfile.addresses,
+                                        userAddresses = userProfile.addresses,
                                         onGetAddressFromMap = { lat, long ->
                                             locationService.getAddressFromCoordinates(lat, long)
                                         },
                                         onGetDeliveryFee = { custLat, custLon, restLat, restLon, restGid ->
-                                            viewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restGid)
+                                            checkoutViewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restGid)
                                         },
                                         onGoToRestaurant = { restaurant ->
-                                            viewModel.selectRestaurant(restaurant)
-                                            viewModel.onTabSelected(MainTab.HOME)
+                                            exploreViewModel.selectRestaurant(restaurant)
+                                            mainViewModel.onTabSelected(MainTab.HOME)
                                         },
-                                        cartAiMessage = uiState.cartAiMessage,
-                                        cartAiMessageSpoken = uiState.cartAiMessageSpoken,
-                                        onDismissAiMessage = { viewModel.clearCartAiMessage() },
+                                        cartAiMessage = cart.aiMessage,
+                                        cartAiMessageSpoken = cart.aiMessageSpoken,
+                                        onDismissAiMessage = { cartViewModel.clearCartAiMessage() },
                                         onSuggestAnotherRestaurant = {
-                                            viewModel.suggestAnotherRestaurant()
+                                            exploreViewModel.suggestAnotherRestaurant()
                                         },
-                                        onMarkAiMessageAsSpoken = { viewModel.markCartAiMessageAsSpoken() },
+                                        onMarkAiMessageAsSpoken = { cartViewModel.markCartAiMessageAsSpoken() },
                                         onClearCart = {
-                                            viewModel.clearSelectionAndCart()
-                                            viewModel.onTabSelected(MainTab.AI)
+                                            exploreViewModel.clearSelectionAndCart()
+                                            mainViewModel.onTabSelected(MainTab.AI)
                                         },
                                         isMuted = isMuted,
-                                        onGoToHome = { viewModel.onTabSelected(MainTab.HOME) }
+                                        onGoToHome = { mainViewModel.onTabSelected(MainTab.HOME) }
                                     )
                                 } else {
                                     CartScreen(
-                                        cartItems = uiState.cartItems,
-                                        restaurantSelected = uiState.selectedRestaurant,
-                                        onAddItem = { product -> viewModel.addToCart(product) },
-                                        onRemoveItem = { product -> viewModel.removeFromCart(product) },
+                                        cartItems = cart.items,
+                                        restaurantSelected = catalog.selectedRestaurant,
+                                        onAddItem = { product -> cartViewModel.addToCart(product) },
+                                        onRemoveItem = { product -> cartViewModel.removeFromCart(product) },
                                         onCheckout = { address, deliveryFee, serviceFee, deliveryType, feesMap ->
-                                            viewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType, feesMap)
+                                            checkoutViewModel.checkoutWithAddress(address, deliveryFee, serviceFee, deliveryType, feesMap)
                                         },
-                                        userAddresses = uiState.userProfile.addresses,
+                                        userAddresses = userProfile.addresses,
                                         onGetAddressFromMap = { lat, long ->
                                             locationService.getAddressFromCoordinates(lat, long)
                                         },
                                         onGetDeliveryFee = { custLat, custLon, restLat, restLon, restGid ->
-                                            viewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restGid)
+                                            checkoutViewModel.getDeliveryFee(custLat, custLon, restLat, restLon, restGid)
                                         },
                                         onGoToRestaurant = { restaurant ->
-                                            viewModel.selectRestaurant(restaurant)
-                                            viewModel.onTabSelected(MainTab.HOME)
+                                            exploreViewModel.selectRestaurant(restaurant)
+                                            mainViewModel.onTabSelected(MainTab.HOME)
                                         },
-                                        cartAiMessage = uiState.cartAiMessage,
-                                        cartAiMessageSpoken = uiState.cartAiMessageSpoken,
-                                        onDismissAiMessage = { viewModel.clearCartAiMessage() },
+                                        cartAiMessage = cart.aiMessage,
+                                        cartAiMessageSpoken = cart.aiMessageSpoken,
+                                        onDismissAiMessage = { cartViewModel.clearCartAiMessage() },
                                         onSuggestAnotherRestaurant = {
-                                            viewModel.suggestAnotherRestaurant()
+                                            exploreViewModel.suggestAnotherRestaurant()
                                         },
                                         onAddMoreFromSame = {
-                                            viewModel.clearCartAiMessage()
-                                            uiState.selectedRestaurant?.let { r ->
-                                                viewModel.selectRestaurant(r)
+                                            cartViewModel.clearCartAiMessage()
+                                            catalog.selectedRestaurant?.let { r ->
+                                                exploreViewModel.selectRestaurant(r)
                                             }
-                                            viewModel.onTabSelected(MainTab.HOME)
+                                            mainViewModel.onTabSelected(MainTab.HOME)
                                         },
-                                        onMarkAiMessageAsSpoken = { viewModel.markCartAiMessageAsSpoken() },
+                                        onMarkAiMessageAsSpoken = { cartViewModel.markCartAiMessageAsSpoken() },
                                         onClearCart = {
-                                            viewModel.clearSelectionAndCart()
-                                            viewModel.onTabSelected(MainTab.AI)
+                                            exploreViewModel.clearSelectionAndCart()
+                                            mainViewModel.onTabSelected(MainTab.AI)
                                         },
                                         isMuted = isMuted,
-                                        onGoToHome = { viewModel.onTabSelected(MainTab.HOME) }
+                                        onGoToHome = { mainViewModel.onTabSelected(MainTab.HOME) }
                                     )
                                 }
                             }
 
                             MainTab.ORDERS -> {
                                 OrdersScreen(
-                                    orders = uiState.orderHistory,
-                                    isLoading = uiState.isLoading,
-                                    selectedOrder = uiState.selectedOrder,
-                                    onRefresh = { viewModel.refreshOrders() },
-                                    onOrderClick = { order -> viewModel.selectOrder(order) },
-                                    onBackToList = { viewModel.clearOrderSelection() },
-                                    isFiltered = uiState.isFilterEnabled,
-                                    onFilterToggle = { viewModel.toggleFilter() },
-                                    orderItemRatings = uiState.orderItemRatings,
+                                    orders = orders.orders,
+                                    isLoading = isLoading,
+                                    selectedOrder = orders.selectedOrder,
+                                    onRefresh = { ordersViewModel.refreshOrders() },
+                                    onOrderClick = { order -> ordersViewModel.selectOrder(order) },
+                                    onBackToList = { ordersViewModel.clearOrderSelection() },
+                                    isFiltered = orders.isFilterEnabled,
+                                    onFilterToggle = { ordersViewModel.toggleFilter() },
+                                    orderItemRatings = orders.orderItemRatings,
                                     onRateItem = { orderId, productGid, restaurantGid, productName, rating ->
-                                        viewModel.rateOrderItem(orderId, productGid, restaurantGid, productName, rating)
+                                        ordersViewModel.rateOrderItem(orderId, productGid, restaurantGid, productName, rating)
                                     },
-                                    onMarkDelivered = { orderId -> viewModel.markOrderAsDelivered(orderId) }
+                                    onMarkDelivered = { orderId -> ordersViewModel.markOrderAsDelivered(orderId) }
                                 )
                             }
 
                             MainTab.PROFILE -> {
                                  // Verificar se o usuário tem perfil
-                                if (uiState.userProfile.name.isEmpty()) {
+                                if (userProfile.name.isEmpty()) {
                                     // Onboarding: usuário novo sem perfil
                                     OnboardingChatScreen(
                                         onComplete = { name: String, email: String, phone: String, address: Address? ->
                                             // Salvar perfil do usuário e redirecionar para a tela de IA
                                             val addresses: List<Address> = if (address != null) listOf(address) else emptyList()
-                                            viewModel.updateUserProfile(name, email, phone, addresses)
-                                            viewModel.onTabSelected(MainTab.AI)
+                                            profileViewModel.updateUserProfile(name, email, phone, addresses)
+                                            mainViewModel.onTabSelected(MainTab.AI)
                                         },
                                         onGetAddressFromMap = { lat: Double, long: Double ->
                                             locationService.getAddressFromCoordinates(lat, long)
@@ -758,10 +796,10 @@ fun MainScreenWithAI(
                                 } else {
                                     // Usuário já tem perfil: tela de edição
                                     ProfileScreen(
-                                        userProfile = uiState.userProfile,
+                                        userProfile = userProfile,
                                         onSave = { name, email, phone, addresses, photoUrl, allergies, lifestyles ->
-                                            viewModel.updateUserProfile(name, email, phone, addresses, photoUrl, allergies, lifestyles)
-                                            viewModel.onTabSelected(MainTab.HOME)
+                                            profileViewModel.updateUserProfile(name, email, phone, addresses, photoUrl, allergies, lifestyles)
+                                            mainViewModel.onTabSelected(MainTab.HOME)
                                         },
                                         onGetLocation = { callbackUpdateAddress ->
                                             if (permissionStatus == PermissionStatus.GRANTED) {
@@ -793,25 +831,25 @@ fun MainScreenWithAI(
         }
 
         // Save Payment Method Sheet
-        if (uiState.showSavePaymentSheet) {
+        if (checkout.showSavePaymentSheet) {
             SavePaymentMethodSheet(
-                onDismiss = { viewModel.dismissSavePaymentSheet() },
+                onDismiss = { checkoutViewModel.dismissSavePaymentSheet() },
                 onConfirm = { savePaymentMethod ->
-                    viewModel.proceedToCheckout(savePaymentMethod)
+                    checkoutViewModel.proceedToCheckout(savePaymentMethod)
                 }
             )
         }
 
         // Confirm Payment with Saved Card Sheet
-        if (uiState.showPaymentConfirmSheet && uiState.userProfile.savedPaymentMethods.isNotEmpty()) {
+        if (checkout.showPaymentConfirmSheet && userProfile.savedPaymentMethods.isNotEmpty()) {
             PaymentConfirmBottomSheet(
-                savedCards = uiState.userProfile.savedPaymentMethods,
-                onDismiss = { viewModel.dismissPaymentConfirmSheet() },
+                savedCards = userProfile.savedPaymentMethods,
+                onDismiss = { checkoutViewModel.dismissPaymentConfirmSheet() },
                 onUseSavedCard = { _ ->
-                    viewModel.onPaymentConfirmResult(useSavedCard = true)
+                    checkoutViewModel.onPaymentConfirmResult(useSavedCard = true)
                 },
                 onUseOtherMethod = {
-                    viewModel.onPaymentConfirmResult(useSavedCard = false)
+                    checkoutViewModel.onPaymentConfirmResult(useSavedCard = false)
                 }
             )
         }

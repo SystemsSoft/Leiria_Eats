@@ -54,6 +54,9 @@ import org.leria.eats.project.domain.model.ChatMessageType
 import org.leria.eats.project.domain.model.DeliveryFeeQuote
 import org.leria.eats.project.domain.model.Product
 import org.leria.eats.project.domain.model.Restaurant
+import org.leria.eats.project.presentation.state.CartState
+import org.leria.eats.project.presentation.state.ConversationState
+import org.leria.eats.project.presentation.viewmodel.LiveCallState
 import org.leria.eats.project.permissions.PermissionStatus
 import org.leria.eats.project.presentation.components.AiHeroBanner
 import org.leria.eats.project.presentation.components.AiTopBar
@@ -87,7 +90,14 @@ private val AiScaffoldBg = KomaTopBarGreenEnd
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiSearchScreen(
-    uiState: SearchUiState,
+    conversation: ConversationState,
+    live: LiveCallState,
+    cart: CartState,
+    allRestaurants: List<Restaurant>,
+    userAddresses: List<Address>,
+    isLoading: Boolean,
+    isStreaming: Boolean,
+    isBottomNavVisible: Boolean,
     isListening: Boolean,
     permissionStatus: PermissionStatus,
     onMicClick: () -> Unit,
@@ -203,14 +213,14 @@ fun AiSearchScreen(
 
     // Chat vazio: banner de boas-vindas no topo e o AiWelcomeHero no corpo. Com conversa (ou a Sacola IA
     // aberta) volta a top bar compacta.
-    val showHero = !uiState.isLiveConversationActive && uiState.chatMessages.isEmpty() &&
-        !uiState.isLoading && !uiState.isAiCartFlow
+    val showHero = !live.isActive && conversation.messages.isEmpty() &&
+        !isLoading && !cart.isAiCartFlow
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            if (uiState.isLiveConversationActive) {
-                AiLiveChatTopBar(onClose = { showLiveExitDialog = true }, isAiSpeaking = uiState.isLiveAiSpeaking, isAiThinking = uiState.isLiveAiThinking, isMicMuted = uiState.isMicMuted)
+            if (live.isActive) {
+                AiLiveChatTopBar(onClose = { showLiveExitDialog = true }, isAiSpeaking = live.isAiSpeaking, isAiThinking = live.isAiThinking, isMicMuted = live.isMicMuted)
                 return@Scaffold
             }
             Column(
@@ -224,9 +234,9 @@ fun AiSearchScreen(
                 } else {
                     AiTopBar(
                         compact = true,
-                        showClearButton = uiState.chatMessages.size > 1,
+                        showClearButton = conversation.messages.size > 1,
                         onClearChat = {
-                            if (uiState.cartItems.isNotEmpty()) {
+                            if (cart.items.isNotEmpty()) {
                                 showClearConfirmDialog = true
                             } else {
                                 onClearSearch()
@@ -238,22 +248,22 @@ fun AiSearchScreen(
             }
         },
         bottomBar = {
-            if (uiState.isLiveConversationActive) {
+            if (live.isActive) {
                 AiLiveChatBottomBar(
                     onExitToKeyboard = onToggleLiveConversation,
-                    isAiSpeaking = uiState.isLiveAiSpeaking,
-                    isAiThinking = uiState.isLiveAiThinking,
-                    isMicMuted = uiState.isMicMuted,
+                    isAiSpeaking = live.isAiSpeaking,
+                    isAiThinking = live.isAiThinking,
+                    isMicMuted = live.isMicMuted,
                     onToggleMicMuted = onToggleMicMuted
                 )
                 return@Scaffold
             }
             AiSemanticInputBar(
-                value = uiState.textInput,
+                value = conversation.textInput,
                 isListening = isListening,
-                isLoading = uiState.isLoading,
-                isNavVisible = uiState.isBottomNavVisible,
-                isLiveConversationActive = uiState.isLiveConversationActive,
+                isLoading = isLoading,
+                isNavVisible = isBottomNavVisible,
+                isLiveConversationActive = live.isActive,
                 onValueChange = onTextChange,
                 onSend = onSendClick,
                 onMic = onMicClick,
@@ -276,14 +286,14 @@ fun AiSearchScreen(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                if (uiState.isLiveConversationActive) {
+                if (live.isActive) {
                     // ── LIGAÇÃO DE VOZ: sem bolhas de texto, só status + produtos ──
                     AiLiveVoicePanel(
-                        isAiSpeaking = uiState.isLiveAiSpeaking,
-                        isAiThinking = uiState.isLiveAiThinking,
-                        suggestedProducts = uiState.liveSuggestedProducts,
-                        restaurants = uiState.allRestaurants,
-                        cartItems = uiState.cartItems,
+                        isAiSpeaking = live.isAiSpeaking,
+                        isAiThinking = live.isAiThinking,
+                        suggestedProducts = live.suggestedProducts,
+                        restaurants = allRestaurants,
+                        cartItems = cart.items,
                         onProductClick = { product -> selectedProduct = product },
                         onChooseInChat = { product -> quantityPickerProduct = product },
                         modifier = Modifier.fillMaxSize()
@@ -291,10 +301,10 @@ fun AiSearchScreen(
                 } else {
                     // ── CHAT DE MENSAGENS ──────────────────────────────────
                     ChatMessagesView(
-                        messages = uiState.chatMessages,
-                        isLoading = uiState.isLoading,
-                        isStreaming = uiState.isStreaming,
-                        cartItems = uiState.cartItems,
+                        messages = conversation.messages,
+                        isLoading = isLoading,
+                        isStreaming = isStreaming,
+                        cartItems = cart.items,
                         onAddToCart = onAddToCart,
                         onProductClick = { product -> selectedProduct = product },
                         onChooseInChat = { product -> quantityPickerProduct = product },
@@ -315,13 +325,13 @@ fun AiSearchScreen(
             }
 
             // ── SACOLA IA ITERATIVA (Abaixo do Chat) ─────────────────────────
-            if (uiState.isAiCartFlow && uiState.cartItems.isNotEmpty()) {
+            if (cart.isAiCartFlow && cart.items.isNotEmpty()) {
                 AiIterativeCartOverlay(
                     isExpanded = isCartExpanded,
                     onToggle = { isCartExpanded = !isCartExpanded },
-                    cartItems = uiState.cartItems,
-                    cartRestaurants = uiState.cartRestaurants,
-                    userAddresses = uiState.userProfile.addresses,
+                    cartItems = cart.items,
+                    cartRestaurants = cart.restaurants,
+                    userAddresses = userAddresses,
                     onRemoveItem = onRemoveFromCart,
                     onCheckout = onCheckout,
                     onGetDeliveryFee = onGetDeliveryFee,
@@ -2228,7 +2238,7 @@ private fun AiLiveChatBottomBar(
         }
         // Silenciar o microfone: a captura continua (precisa ficar ativa pro
         // cancelamento de eco), só o envio pro servidor/IA é que para — ver
-        // SearchViewModel.toggleMicMuted().
+        // LiveCallViewModel.toggleMicMuted().
         IconButton(
             onClick = onToggleMicMuted,
             modifier = Modifier
