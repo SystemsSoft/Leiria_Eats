@@ -12,7 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import org.leria.eats.project.data.Address
+import org.leria.eats.project.domain.model.Address
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

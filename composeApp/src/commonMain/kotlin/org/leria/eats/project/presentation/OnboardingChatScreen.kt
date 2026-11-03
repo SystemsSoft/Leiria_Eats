@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.imePadding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.leria.eats.project.data.Address
+import org.leria.eats.project.domain.model.Address
 import org.leria.eats.project.theme.*
 import org.leria.eats.project.voice.TextToSpeechService
 

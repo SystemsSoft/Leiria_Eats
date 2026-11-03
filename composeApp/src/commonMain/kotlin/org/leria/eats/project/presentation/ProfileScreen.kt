@@ -43,8 +43,8 @@ import io.github.vinceglb.filekit.core.PickerType
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
 import kotlinx.coroutines.launch
-import org.leria.eats.project.data.Address
-import org.leria.eats.project.data.UserProfile
+import org.leria.eats.project.domain.model.Address
+import org.leria.eats.project.domain.model.UserProfile
 import org.leria.eats.project.data.saveImageLocally
 import org.leria.eats.project.theme.*
 

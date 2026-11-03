@@ -48,10 +48,12 @@ import io.kamel.image.asyncPainterResource
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
-import org.leria.eats.project.data.Address
-import org.leria.eats.project.data.DeliveryFeeResponse
-import org.leria.eats.project.data.Product
-import org.leria.eats.project.data.Restaurant
+import org.leria.eats.project.domain.model.Address
+import org.leria.eats.project.domain.model.ChatMessage
+import org.leria.eats.project.domain.model.ChatMessageType
+import org.leria.eats.project.domain.model.DeliveryFeeQuote
+import org.leria.eats.project.domain.model.Product
+import org.leria.eats.project.domain.model.Restaurant
 import org.leria.eats.project.permissions.PermissionStatus
 import org.leria.eats.project.presentation.components.AiHeroBanner
 import org.leria.eats.project.presentation.components.AiTopBar
@@ -103,7 +105,7 @@ fun AiSearchScreen(
     onToggleNav: () -> Unit = {},
     onToggleLiveConversation: () -> Unit = {},
     onToggleMicMuted: () -> Unit = {},
-    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeQuote?)? = null,
     onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null }
 ) {
     var selectedProduct by remember { mutableStateOf<Product?>(null) }
@@ -741,7 +743,7 @@ private fun AiIterativeCartOverlay(
     userAddresses: List<Address>,
     onRemoveItem: (Product) -> Unit,
     onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
-    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeQuote?)? = null,
     onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null },
     modifier: Modifier = Modifier
 ) {
@@ -1288,7 +1290,7 @@ private fun AiCartChatBubble(
     userAddresses: List<Address>,
     onRemoveItem: (Product) -> Unit,
     onCheckout: (Address, Double, Double, String, Map<String, Double>) -> Unit,
-    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeQuote?)? = null,
     onGetAddressFromMap: (Double, Double) -> String? = { _, _ -> null },
     isIntegrated: Boolean = false, // Flag para remover o fundo redundante no modo overlay
     scrollState: ScrollState = rememberScrollState()
@@ -1301,7 +1303,7 @@ private fun AiCartChatBubble(
     var selectedDeliveryType by remember(forcePickupOnly) { mutableStateOf(if (forcePickupOnly) "pickup" else "delivery") }
     val isPickup = selectedDeliveryType == "pickup"
     
-    var deliveryFeesMap by remember { mutableStateOf<Map<String, DeliveryFeeResponse>>(emptyMap()) }
+    var deliveryFeesMap by remember { mutableStateOf<Map<String, DeliveryFeeQuote>>(emptyMap()) }
     var feesLoading by remember { mutableStateOf(false) }
     var feesError by remember { mutableStateOf<String?>(null) }
 

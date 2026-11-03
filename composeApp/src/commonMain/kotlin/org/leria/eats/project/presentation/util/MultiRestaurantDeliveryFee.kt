@@ -1,7 +1,7 @@
 package org.leria.eats.project.presentation.util
 
-import org.leria.eats.project.data.DeliveryFeeResponse
-import org.leria.eats.project.data.Restaurant
+import org.leria.eats.project.domain.model.DeliveryFeeQuote
+import org.leria.eats.project.domain.model.Restaurant
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -45,12 +45,12 @@ fun recolhaExtraFee(distanceKm: Double): Double = when {
  */
 fun buildChargedFeesMap(
     restaurants: List<Restaurant>,
-    deliveryFeesMap: Map<String, DeliveryFeeResponse>
+    deliveryFeesMap: Map<String, DeliveryFeeQuote>
 ): Map<String, Double> {
     if (restaurants.isEmpty()) return emptyMap()
     val firstRestaurant = restaurants.first()
     return buildMap {
-        deliveryFeesMap[firstRestaurant.gid]?.let { put(firstRestaurant.gid, it.delivery_fee) }
+        deliveryFeesMap[firstRestaurant.gid]?.let { put(firstRestaurant.gid, it.deliveryFee) }
         restaurants.drop(1).forEach { restaurant ->
             val firstLat = firstRestaurant.latitude
             val firstLon = firstRestaurant.longitude

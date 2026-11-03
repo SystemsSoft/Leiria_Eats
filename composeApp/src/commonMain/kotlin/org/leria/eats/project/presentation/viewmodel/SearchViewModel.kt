@@ -2,6 +2,7 @@ package org.leria.eats.project.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -9,58 +10,61 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.leria.eats.project.data.Address
-import org.leria.eats.project.data.ChatRepository
-import org.leria.eats.project.data.ChatResponse
-import org.leria.eats.project.data.DeliveryFeeRequest
-import org.leria.eats.project.data.DeliveryFeeResponse
-import org.leria.eats.project.data.LeriaApiClient
-import org.leria.eats.project.data.Order
-import org.leria.eats.project.data.OrderItemRequest
-import org.leria.eats.project.data.OrderRequest
-import org.leria.eats.project.data.Product
-import org.leria.eats.project.data.ProfileRepository
-import org.leria.eats.project.data.RatingItemRequest
-import org.leria.eats.project.data.RatingRequest
-import org.leria.eats.project.data.Restaurant
-import org.leria.eats.project.data.SearchResponse
-import org.leria.eats.project.data.SubOrderRequest
+import org.leria.eats.project.domain.model.Address
+import org.leria.eats.project.domain.model.ChatMessage
+import org.leria.eats.project.domain.model.ChatMessageType
+import org.leria.eats.project.domain.model.ChatReply
+import org.leria.eats.project.domain.model.CheckoutSession
+import org.leria.eats.project.domain.model.DeliveryFeeQuote
+import org.leria.eats.project.domain.model.LiveEvent
+import org.leria.eats.project.domain.model.Order
+import org.leria.eats.project.domain.model.Product
+import org.leria.eats.project.domain.model.Restaurant
+import org.leria.eats.project.domain.repository.AiChatRepository
+import org.leria.eats.project.domain.repository.ChatHistoryRepository
+import org.leria.eats.project.domain.repository.LiveConversationRepository
+import org.leria.eats.project.domain.repository.OrderRepository
+import org.leria.eats.project.domain.repository.ProfileRepository
+import org.leria.eats.project.domain.repository.RestaurantRepository
+import org.leria.eats.project.domain.repository.SpeechRepository
+import org.leria.eats.project.domain.usecase.CartRules
+import org.leria.eats.project.domain.usecase.PlaceOrderResult
+import org.leria.eats.project.domain.usecase.PlaceOrderUseCase
+import org.leria.eats.project.domain.usecase.RateOrderItemUseCase
+import org.leria.eats.project.domain.usecase.SaveUserProfileUseCase
+import org.leria.eats.project.domain.usecase.SyncSavedPaymentMethodsUseCase
+import org.leria.eats.project.domain.usecase.buildAddToCartPrompt
+import org.leria.eats.project.domain.usecase.buildPersonalizedSuggestionsPrompt
+import org.leria.eats.project.domain.usecase.mesclarSugestoesDaLigacao
+import org.leria.eats.project.domain.usecase.prepareTextForSpeech
+import org.leria.eats.project.domain.voice.VoiceAudioInput
+import org.leria.eats.project.domain.voice.VoiceAudioOutput
 import org.leria.eats.project.payment.StripePaymentManager
 import org.leria.eats.project.payment.StripePaymentResult
-import org.leria.eats.project.presentation.ChatMessage
-import org.leria.eats.project.presentation.ChatMessageType
 import org.leria.eats.project.presentation.MainTab
 import org.leria.eats.project.presentation.SearchUiState
-import org.leria.eats.project.util.Ulid
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.Job
-import org.leria.eats.project.voice.live.LiveAudioPlayer
-import org.leria.eats.project.voice.live.LiveAudioRecorder
-import org.leria.eats.project.voice.live.LiveConversationClient
-import org.leria.eats.project.voice.live.LiveEvent
-import org.leria.eats.project.voice.live.mesclarSugestoesDaLigacao
 
+/**
+ * Estado e ações das telas principais (chat da IA, explorar, sacola, pedidos, perfil e ligação de
+ * voz). Depende só de portas do domínio (repositórios, use cases, áudio) — as implementações
+ * (Ktor, DataStore, WebSocket, AudioTrack/AVAudioEngine) são injetadas pelo Koin (di/).
+ */
 class SearchViewModel(
-    private val apiClient: LeriaApiClient,
+    private val restaurantRepository: RestaurantRepository,
+    private val aiChatRepository: AiChatRepository,
+    private val chatHistoryRepository: ChatHistoryRepository,
+    private val orderRepository: OrderRepository,
     private val profileRepository: ProfileRepository,
-    private val chatRepository: ChatRepository,
+    private val speechRepository: SpeechRepository,
+    private val liveConversationRepository: LiveConversationRepository,
+    private val liveAudioRecorder: VoiceAudioInput,
+    private val liveAudioPlayer: VoiceAudioOutput,
     private val stripePaymentManager: StripePaymentManager,
-    private val liveConversationClient: LiveConversationClient,
-    private val liveAudioRecorder: LiveAudioRecorder,
-    private val liveAudioPlayer: LiveAudioPlayer
+    private val placeOrder: PlaceOrderUseCase,
+    private val rateOrderItemUseCase: RateOrderItemUseCase,
+    private val saveUserProfile: SaveUserProfileUseCase,
+    private val syncSavedPaymentMethods: SyncSavedPaymentMethodsUseCase
 ) : ViewModel() {
-
-    /** Gera um código de pedido numérico único com 9 dígitos */
-    private fun generateTrackingCode(): String {
-        return (100000000..999999999).random().toString()
-    }
-
-    /** Gera um identificador único de string (ULID) */
-    private fun generateGid(prefix: String = "ord"): String {
-        return "${prefix}_${Ulid.nextUlid()}"
-    }
 
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
@@ -86,7 +90,7 @@ class SearchViewModel(
     private fun loadAllRestaurantsForHome() {
         viewModelScope.launch {
             try {
-                val restaurants = apiClient.getAllRestaurants()
+                val restaurants = restaurantRepository.getAllRestaurants()
                 if (restaurants.isNotEmpty()) {
                     _uiState.update { it.copy(allRestaurants = restaurants) }
                     initialRestaurantsLoaded = true
@@ -99,7 +103,7 @@ class SearchViewModel(
 
     init {
         viewModelScope.launch {
-            profileRepository.userProfileFlow.collect { profile ->
+            profileRepository.userProfile.collect { profile ->
                 // Check if user is registered (has name and at least one address)
                 val isUserRegistered = profile.name.isNotBlank() && profile.addresses.isNotEmpty()
 
@@ -125,7 +129,7 @@ class SearchViewModel(
             }
         }
         viewModelScope.launch {
-            profileRepository.userProfileFlow.first { it.id.isNotBlank() }
+            profileRepository.userProfile.first { it.id.isNotBlank() }
             refreshOrdersInternal()
         }
         startStatusPolling()
@@ -139,7 +143,7 @@ class SearchViewModel(
 
     private fun observeChatMessages() {
         viewModelScope.launch {
-            chatRepository.chatMessagesFlow.collect { messages ->
+            chatHistoryRepository.messages.collect { messages ->
                 if (messages.isNotEmpty()) {
                     _uiState.update { it.copy(chatMessages = messages) }
                 } else {
@@ -161,7 +165,7 @@ class SearchViewModel(
 
     private fun observeOrderSearchQueries() {
         viewModelScope.launch {
-            profileRepository.orderSearchQueriesFlow.collect { queries ->
+            orderRepository.orderSearchQueries.collect { queries ->
                 _uiState.update { it.copy(orderSearchQueries = queries) }
             }
         }
@@ -169,7 +173,7 @@ class SearchViewModel(
 
     private fun observeOrderItemRatings() {
         viewModelScope.launch {
-            profileRepository.orderItemRatingsFlow.collect { ratings ->
+            orderRepository.orderItemRatings.collect { ratings ->
                 _uiState.update { it.copy(orderItemRatings = ratings) }
             }
         }
@@ -177,7 +181,7 @@ class SearchViewModel(
 
     private fun observeOrderProductGids() {
         viewModelScope.launch {
-            profileRepository.orderProductGidsFlow.collect { productGids ->
+            orderRepository.orderProductGids.collect { productGids ->
                 _uiState.update { it.copy(orderProductGids = productGids) }
             }
         }
@@ -185,7 +189,7 @@ class SearchViewModel(
 
     private fun observeOrderRestaurantGids() {
         viewModelScope.launch {
-            profileRepository.orderRestaurantGidsFlow.collect { restaurantGids ->
+            orderRepository.orderRestaurantGids.collect { restaurantGids ->
                 _uiState.update { it.copy(orderRestaurantGids = restaurantGids) }
             }
         }
@@ -193,38 +197,7 @@ class SearchViewModel(
 
     fun rateOrderItem(orderId: String, productGid: String, restaurantGid: String, productName: String, rating: Int) {
         viewModelScope.launch {
-            // Guarda localmente para atualizar a UI imediatamente
-            profileRepository.saveOrderItemRating(orderId, productName, rating)
-
-            // Resolve productGid — usa o local se a API devolveu vazio
-            val resolvedProductGid = if (productGid.isNotBlank()) productGid
-                else _uiState.value.orderProductGids["$orderId::$productName"] ?: ""
-
-            // Resolve restaurantGid — usa o local se a API devolveu vazio
-            val resolvedRestaurantGid = if (restaurantGid.isNotBlank()) restaurantGid
-                else _uiState.value.orderRestaurantGids[orderId] ?: ""
-
-            if (resolvedProductGid.isBlank()) {
-                println("⚠️ productGid não encontrado para: orderId=$orderId, productName=$productName")
-                return@launch
-            }
-
-            if (resolvedRestaurantGid.isBlank()) {
-                println("⚠️ restaurantGid não encontrado para: orderId=$orderId")
-                return@launch
-            }
-
-            val request = RatingRequest(
-                orderId = orderId,
-                restaurantGid = resolvedRestaurantGid,
-                ratings = listOf(RatingItemRequest(productGid = resolvedProductGid, rating = rating))
-            )
-            val response = apiClient.submitRatings(request)
-            if (response == null || !response.success) {
-                println("⚠️ Falha ao enviar avaliação: orderId=$orderId, productGid=$resolvedProductGid, restaurantGid=$resolvedRestaurantGid")
-            } else {
-                println("✅ Avaliação enviada: orderId=$orderId, productGid=$resolvedProductGid, restaurantGid=$resolvedRestaurantGid, rating=$rating")
-            }
+            rateOrderItemUseCase(orderId, productGid, restaurantGid, productName, rating)
         }
     }
 
@@ -247,7 +220,7 @@ class SearchViewModel(
         if (userId.isBlank()) return
 
         try {
-            val updatedOrders = apiClient.getCustomerOrders(userId)
+            val updatedOrders = orderRepository.getCustomerOrders(userId)
             _uiState.update { it.copy(orderHistory = updatedOrders) }
 
             val selectedGid = _uiState.value.selectedOrder?.gid
@@ -264,9 +237,7 @@ class SearchViewModel(
 
     fun updateUserProfile(name: String, email: String, phone: String, addresses: List<Address>, photoUrl: String? = null, allergies: String = "", lifestyles: String = "") {
         viewModelScope.launch {
-            val currentId = _uiState.value.userProfile.id
-            val newId = if (currentId.isBlank()) "U-${(10000..99999).random()}" else currentId
-            profileRepository.saveProfile(newId, name, email, phone, addresses, photoUrl, allergies, lifestyles)
+            saveUserProfile(_uiState.value.userProfile.id, name, email, phone, addresses, photoUrl, allergies, lifestyles)
         }
     }
 
@@ -286,16 +257,7 @@ class SearchViewModel(
             // Se o restaurante não tem produtos carregados, buscar pela API
             _uiState.update { it.copy(isLoading = true) }
             viewModelScope.launch {
-                val company = apiClient.getCompanyByGid(restaurant.gid)
-                val resolvedRestaurant = if (company != null) Restaurant(
-                    gid = company.gid,
-                    name = company.name,
-                    category = company.category,
-                    image_url = company.imageUrl,
-                    products = company.products,
-                    latitude = company.latitude,
-                    longitude = company.longitude
-                ) else restaurant
+                val resolvedRestaurant = restaurantRepository.getRestaurant(restaurant.gid) ?: restaurant
                 _uiState.update { it.copy(selectedRestaurant = resolvedRestaurant, selectedCategory = null, isLoading = false) }
             }
         } else {
@@ -309,16 +271,7 @@ class SearchViewModel(
             // Modo sugestão: abrir cardápio do restaurante selecionado
             _uiState.update { it.copy(isLoading = true, isSuggestionMode = false) }
             viewModelScope.launch {
-                val company = apiClient.getCompanyByGid(restaurant.gid)
-                val resolvedRestaurant = if (company != null) Restaurant(
-                    gid = company.gid,
-                    name = company.name,
-                    category = company.category,
-                    image_url = company.imageUrl,
-                    products = company.products,
-                    latitude = company.latitude,
-                    longitude = company.longitude
-                ) else restaurant
+                val resolvedRestaurant = restaurantRepository.getRestaurant(restaurant.gid) ?: restaurant
 
                 _uiState.update {
                     it.copy(
@@ -356,7 +309,7 @@ class SearchViewModel(
     }
 
     fun clearSearch() {
-        val sessaoLigacao = if (pedidoMontadoPorLigacao) apiClient.currentSessionId() else null
+        val sessaoLigacao = if (pedidoMontadoPorLigacao) aiChatRepository.currentSessionId() else null
         pedidoMontadoPorLigacao = false
         val currentState = _uiState.value
         viewModelScope.launch {
@@ -364,9 +317,9 @@ class SearchViewModel(
             // Na ligação de voz currentAiSessionId é nulo: usa a sessão da ligação (a mesma do chat).
             (currentState.currentAiSessionId ?: sessaoLigacao)?.let { sessionId ->
                 println("🧹 Reiniciando sessão da IA no servidor: $sessionId")
-                apiClient.restartChatSession(sessionId)
+                aiChatRepository.restartSession(sessionId)
             }
-            chatRepository.clearChat()
+            chatHistoryRepository.clear()
         }
         val greeting = buildGreeting(_uiState.value.userProfile.name)
         _uiState.update {
@@ -425,7 +378,7 @@ class SearchViewModel(
 
     private fun saveChatMessages() {
         viewModelScope.launch {
-            chatRepository.saveChatMessages(_uiState.value.chatMessages)
+            chatHistoryRepository.save(_uiState.value.chatMessages)
         }
     }
 
@@ -454,8 +407,7 @@ class SearchViewModel(
      * "Exceção" em gemini_sales_service.py.
      */
     fun chooseProductInChat(product: Product, quantity: Int = 1) {
-        val quantidade = quantity.coerceAtLeast(1)
-        val pedido = "Adicionar $quantidade ${product.name} ao meu carrinho."
+        val pedido = buildAddToCartPrompt(product, quantity)
         // Durante a ligação de voz o pedido vai pela própria ligação: por baixo dos panos é pedir o
         // produto à IA, com a quantidade escolhida no modal — ela adiciona à sacola e responde falando.
         if (_uiState.value.isLiveConversationActive) {
@@ -471,7 +423,7 @@ class SearchViewModel(
     private fun pedirNaLigacao(pedido: String) {
         liveAudioPlayer.stop()
         _uiState.update { it.copy(isLiveAiSpeaking = false, isLiveAiThinking = true) }
-        viewModelScope.launch { runCatching { liveConversationClient.sendText(pedido) } }
+        viewModelScope.launch { runCatching { liveConversationRepository.sendText(pedido) } }
     }
 
     /** Envia um prompt pré-definido ao chat da IA (ex.: atalhos rápidos como "Caixa Surpresa"). */
@@ -483,44 +435,11 @@ class SearchViewModel(
     /** Pede sugestões à IA considerando a personalização alimentar salva localmente no perfil. */
     fun requestPersonalizedSuggestions() {
         if (_uiState.value.isLoading) return
-        val profile = _uiState.value.userProfile
-        val preferences = buildList {
-            if (profile.allergies.isNotBlank()) add("alergias/intolerâncias: ${profile.allergies}")
-            if (profile.lifestyles.isNotBlank()) add("estilo de vida: ${profile.lifestyles}")
-        }
-        val prompt = if (preferences.isNotEmpty()) {
-            "Pode me dar sugestões do que eu poderia pedir? Considere minha personalização alimentar (${preferences.joinToString("; ")})."
-        } else {
-            "Pode me dar sugestões do que eu poderia pedir?"
-        }
-        fetchSearch(prompt)
+        fetchSearch(buildPersonalizedSuggestionsPrompt(_uiState.value.userProfile))
     }
 
     fun clearPendingVoiceAudio() {
         _uiState.update { it.copy(pendingVoiceAudio = null) }
-    }
-
-    /** Limpa o texto para a síntese de voz (mesmo tratamento usado no chat de texto). */
-    private fun prepareTextForVoice(text: String): String {
-        val processed = text
-            .replace(Regex("""(\d+)[.,]([1-9]\d|0[1-9])\s*€""")) { m -> "${m.groupValues[1]} euros e ${m.groupValues[2]} cêntimos" }
-            .replace(Regex("""(\d+)(?:[.,]00)?\s*€""")) { m -> "${m.groupValues[1]} euros" }
-            .replace(Regex("""\b(\d+)[.,]00\b""")) { m -> "${m.groupValues[1]} euros" }
-
-        return processed
-            .replace("*", "")
-            .replace("_", "")
-            .replace("#", "")
-            .replace("(", " ")
-            .replace(")", " ")
-            .replace(Regex("[\\p{So}\\p{Sm}\\p{Sk}\\p{Sc}]"), "")
-            .replace(Regex("[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]"), "")
-            .replace(Regex("[☀-⟿]"), "")
-            .replace(Regex("[︀-️]"), "")
-            .replace(Regex("\\bx1\\b", RegexOption.IGNORE_CASE), "uma")
-            .replace(Regex("\\bx(\\d+)\\b", RegexOption.IGNORE_CASE), "$1 unidades de")
-            .replace(Regex("\\s{2,}"), " ")
-            .trim()
     }
 
     private fun fetchSearch(resolvedQuery: String) {
@@ -538,12 +457,12 @@ class SearchViewModel(
             try {
                 val currentAiMessageId = "ai_${kotlin.random.Random.nextLong()}"
                 var fullResponseText = ""
-                var lastChunk: ChatResponse? = null
+                var lastChunk: ChatReply? = null
 
                 // Consome o stream da IA
-                apiClient.sendChatMessageStream(resolvedQuery.trim()).collect { chunk ->
+                aiChatRepository.streamMessage(resolvedQuery.trim()).collect { chunk ->
                     lastChunk = chunk
-                    val fragment = chunk.text ?: chunk.response ?: ""
+                    val fragment = chunk.fragment
                     
                     // Limpa tags internas e reduz espaços em branco excessivos
                     val cleanedFragment = fragment.replace("[[CONFIRM_ORDER]]", "")
@@ -571,16 +490,16 @@ class SearchViewModel(
                             val updatedMessage = if (existingIndex != -1) {
                                 messages[existingIndex].copy(
                                     text = displayResponseText,
-                                    restaurants = if (chunk.restaurantResults.isNotEmpty()) chunk.restaurantResults else messages[existingIndex].restaurants,
-                                    products = if (chunk.products.isNotEmpty()) chunk.products else (if (chunk.productResults.isNotEmpty()) chunk.productResults else messages[existingIndex].products)
+                                    restaurants = chunk.restaurants.ifEmpty { messages[existingIndex].restaurants },
+                                    products = chunk.products.ifEmpty { messages[existingIndex].products }
                                 )
                             } else {
                                 ChatMessage(
                                     id = currentAiMessageId,
                                     type = ChatMessageType.AI,
                                     text = displayResponseText,
-                                    restaurants = chunk.restaurantResults,
-                                    products = if (chunk.products.isNotEmpty()) chunk.products else chunk.productResults
+                                    restaurants = chunk.restaurants,
+                                    products = chunk.products
                                 )
                             }
 
@@ -617,9 +536,9 @@ class SearchViewModel(
                     // ficar visível "mudo" à espera da síntese (era essa a causa do atraso
                     // perceptível entre mostrar a mensagem e a IA começar a falar).
                     val textoLimpo = fullResponseText.replace(Regex("\\n{3,}"), "\n\n").trim()
-                    val textoParaFala = prepareTextForVoice(textoLimpo)
+                    val textoParaFala = prepareTextForSpeech(textoLimpo)
                     val audioSintetizado = if (textoParaFala.isNotBlank()) {
-                        runCatching { apiClient.synthesizeSpeech(textoParaFala) }.getOrNull()
+                        runCatching { speechRepository.synthesize(textoParaFala) }.getOrNull()
                     } else null
 
                     _uiState.update { state ->
@@ -656,26 +575,26 @@ class SearchViewModel(
                         )
                     }
 
-                    handleShowCart(finalResponse.copy(response = finalCleanedText))
+                    handleShowCart(finalResponse)
                     _uiState.update { it.copy(isLoading = false) }
                     return@launch
                 }
 
                 // Lógica de "ver todos" ou resultados específicos
-                var aiRestaurantResults: List<Restaurant> = finalResponse.restaurantResults
+                var aiRestaurantResults: List<Restaurant> = finalResponse.restaurants
                 if (resolvedQuery.equals("ver todos", ignoreCase = true)
                     || resolvedQuery.equals("restaurantes", ignoreCase = true)
                     || resolvedQuery.contains("todos os restaurantes", ignoreCase = true)
                 ) {
                     try {
-                        val all = apiClient.getAllRestaurants()
+                        val all = restaurantRepository.getAllRestaurants()
                         if (all.isNotEmpty()) aiRestaurantResults = all
                     } catch (e: Exception) {
                         println("⚠️ Falha ao buscar /restaurants: ${e.message}")
                     }
                 }
 
-                val aiProductResults = if (finalResponse.products.isNotEmpty()) finalResponse.products else finalResponse.productResults
+                val aiProductResults = finalResponse.products
 
                 _uiState.update { state ->
                     // Atualiza o Home se necessário
@@ -722,7 +641,7 @@ class SearchViewModel(
      * Processa a exibição da sacola integrada pela IA.
      * Sincroniza os produtos da IA com o carrinho e permite continuar editando.
      */
-    private fun handleShowCart(chatResponse: ChatResponse) {
+    private fun handleShowCart(chatResponse: ChatReply) {
         val aiCartProducts = chatResponse.cartProducts
         
         // Se a IA enviou uma lista de produtos na sacola, ela representa o estado ATUAL.
@@ -738,38 +657,20 @@ class SearchViewModel(
     }
 
     fun addToCart(product: Product) {
-        val currentCart = _uiState.value.cartItems
-        val existing = currentCart.find { it.gid == product.gid }
-
-        // Exclusividade da Caixa Surpresa — mesma regra aplicada no backend
-        // (HybridAIService._bloqueado_por_caixa_surpresa_exclusiva). Só bloqueia um
-        // produto NOVO (aumentar a quantidade do próprio item já no carrinho continua
-        // permitido). O gate que não pode ser contornado é o do checkout no servidor;
-        // esta checagem aqui é só UX, para o cliente já ver o aviso antes de tentar.
-        if (existing == null && currentCart.isNotEmpty()) {
-            val carrinhoTemCaixaSurpresa = currentCart.any { it.isSurpriseBox }
-            if (carrinhoTemCaixaSurpresa || product.isSurpriseBox) {
-                _uiState.update {
-                    it.copy(
-                        cartError = "Um pedido com Caixa Surpresa é exclusivo — não é possível " +
-                            "adicionar outro produto. Finalize este pedido ou remova o item de " +
-                            "Caixa Surpresa para continuar a comprar."
-                    )
-                }
-                return
+        // Exclusividade da Caixa Surpresa (ver CartRules) — só UX; o gate real é o checkout no servidor.
+        if (CartRules.violatesSurpriseBoxExclusivity(_uiState.value.cartItems, product)) {
+            _uiState.update {
+                it.copy(
+                    cartError = "Um pedido com Caixa Surpresa é exclusivo — não é possível " +
+                        "adicionar outro produto. Finalize este pedido ou remova o item de " +
+                        "Caixa Surpresa para continuar a comprar."
+                )
             }
+            return
         }
 
         _uiState.update { currentState ->
-            val existingInState = currentState.cartItems.find { it.gid == product.gid }
-            val updatedCart = if (existingInState != null) {
-                currentState.cartItems.map {
-                    if (it.gid == product.gid) it.copy(quantity = it.quantity + product.quantity)
-                    else it
-                }
-            } else {
-                currentState.cartItems + product
-            }
+            val updatedCart = CartRules.addProduct(currentState.cartItems, product)
             currentState.copy(
                 cartItems = updatedCart,
                 cartRestaurantGid = product.restaurant_gid,
@@ -782,18 +683,7 @@ class SearchViewModel(
 
     private fun fetchCompanyByGid(gid: String) {
         viewModelScope.launch {
-            val company = apiClient.getCompanyByGid(gid)
-            if (company == null) return@launch
-            
-            val restaurantMetadata = Restaurant(
-                gid = company.gid,
-                name = company.name,
-                category = company.category,
-                image_url = company.imageUrl,
-                products = company.products,
-                latitude = company.latitude,
-                longitude = company.longitude
-            )
+            val restaurantMetadata = restaurantRepository.getRestaurant(gid) ?: return@launch
 
             _uiState.update { state ->
                 val updatedCartRestaurants = if (state.cartRestaurants.none { it.gid == gid }) {
@@ -804,7 +694,7 @@ class SearchViewModel(
 
                 val shouldUpdateRestaurant =
                     state.selectedRestaurant == null ||
-                    state.selectedRestaurant?.gid == company.gid ||
+                    state.selectedRestaurant?.gid == restaurantMetadata.gid ||
                     state.selectedRestaurant?.products?.isEmpty() == true
 
                 state.copy(
@@ -863,15 +753,15 @@ class SearchViewModel(
         }
         viewModelScope.launch {
             try {
-                val response = apiClient.searchRestaurants(suggestionQuery)
+                val response = aiChatRepository.sendMessage(suggestionQuery)
                 val label = if (lastQuery.isNotBlank()) lastQuery else "restaurantes"
                 // Show results on HomeScreen – never auto-add to cart
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         aiReply = "Outras opções que também pode gostar, além de $label",
-                        restaurantResults = response.restaurantResults,
-                        productResults = response.productResults,
+                        restaurantResults = response.restaurants,
+                        productResults = response.products,
                         textInput = ""
                     )
                 }
@@ -884,9 +774,7 @@ class SearchViewModel(
 
     fun removeFromCart(product: Product) {
         _uiState.update { currentState ->
-            val updatedCart = currentState.cartItems
-                .map { if (it.gid == product.gid) it.copy(quantity = it.quantity - 1) else it }
-                .filter { it.quantity > 0 }
+            val updatedCart = CartRules.removeOneUnit(currentState.cartItems, product)
             
             // Atualiza a lista de metadados se um restaurante não tiver mais produtos
             val remainingRestaurantGids = updatedCart.mapNotNull { it.restaurant_gid }.toSet()
@@ -955,17 +843,7 @@ class SearchViewModel(
         restaurantLat: Double,
         restaurantLon: Double,
         restaurantGid: String
-    ): DeliveryFeeResponse {
-        return apiClient.getDeliveryFee(
-            DeliveryFeeRequest(
-                customer_latitude = customerLat,
-                customer_longitude = customerLon,
-                restaurant_latitude = restaurantLat,
-                restaurant_longitude = restaurantLon,
-                restaurant_gid = restaurantGid
-            )
-        )
-    }
+    ): DeliveryFeeQuote = orderRepository.getDeliveryFee(customerLat, customerLon, restaurantLat, restaurantLon, restaurantGid)
 
     fun checkout() {
         val currentState = _uiState.value
@@ -1121,9 +999,8 @@ class SearchViewModel(
         }
 
         val currentState = _uiState.value
-        val itemsByRestaurantGid = currentState.cartItems.groupBy { it.restaurant_gid }
 
-        if (itemsByRestaurantGid.isEmpty()) {
+        if (currentState.cartItems.isEmpty()) {
             _uiState.update { it.copy(isLoading = false, error = "Sua sacola está vazia.") }
             return
         }
@@ -1139,155 +1016,71 @@ class SearchViewModel(
         // chat por texto, então na voz ficava nulo e o carrinho da IA nunca era limpo no servidor.
         // Lido AQUI (antes do launch) porque clearSearch() zera pedidoMontadoPorLigacao logo em seguida.
         val sessaoIa = currentState.currentAiSessionId
-            ?: if (pedidoMontadoPorLigacao) apiClient.currentSessionId() else null
+            ?: if (pedidoMontadoPorLigacao) aiChatRepository.currentSessionId() else null
         viewModelScope.launch {
-            // Se o pedido veio da IA, notifica o servidor para confirmar a sessão
-            sessaoIa?.let { sessionId ->
-                println("🚀 Confirmando sessão da IA no servidor: $sessionId")
-                apiClient.confirmOrderSession(sessionId)
-            }
-
-            val masterGid = generateGid("mst")
-            val trackingCode = generateTrackingCode()
-            val subOrders = mutableListOf<SubOrderRequest>()
-            
-            for ((restaurantGid, products) in itemsByRestaurantGid) {
-                if (restaurantGid == null) continue
-                
-                // 1. Obter metadados do restaurante
-                var restaurant = currentState.cartRestaurants.find { it.gid == restaurantGid }
-                if (restaurant == null) {
-                    val company = apiClient.getCompanyByGid(restaurantGid)
-                    if (company != null) {
-                        restaurant = Restaurant(
-                            gid = company.gid,
-                            name = company.name,
-                            category = company.category,
-                            image_url = company.imageUrl,
-                            products = company.products,
-                            latitude = company.latitude,
-                            longitude = company.longitude
-                        )
-                    }
-                }
-
-                if (restaurant == null) continue
-
-                // 2. Preparar itens do sub-pedido
-                val orderItems = products.map { product ->
-                    OrderItemRequest(
-                        product_gid = product.gid,
-                        quantity = product.quantity,
-                        observation = null,
-                        product_name = product.name,
-                        price = product.price,
-                        image_url = product.image_url,
-                        description = product.description
-                    )
-                }
-
-                val subBaseTime = products.maxOfOrNull { p ->
-                    p.preparationTime.filter { it.isDigit() || it == '.' }.toDoubleOrNull()?.toInt() ?: 0
-                } ?: 0
-
-                val subDeliveryFee = deliveryFeesMap[restaurantGid] ?: (deliveryFee / itemsByRestaurantGid.size)
-
-                subOrders.add(
-                    SubOrderRequest(
-                        gid = generateGid("sub"),
-                        orderGid = masterGid,
-                        restaurantGid = restaurant.gid,
-                        restaurantName = restaurant.name,
-                        restaurantImageUrl = restaurant.image_url,
-                        restaurantCategory = restaurant.category,
-                        items = orderItems,
-                        deliveryFee = subDeliveryFee,
-                        baseTime = subBaseTime
-                    )
-                )
-            }
-
-            if (subOrders.isEmpty()) {
-                _uiState.update { it.copy(isLoading = false, error = "Erro ao processar itens da sacola.") }
-                return@launch
-            }
-
-            // 3. Criar Master Request
-            val masterRequest = OrderRequest(
-                gid = masterGid,
-                user_id = currentState.userProfile.id,
-                user_name = currentState.userProfile.name,
-                user_address = selectedAddress.address,
-                user_phone = currentState.userProfile.phone,
-                save_payment_method = savePaymentMethod,
-                search_query = currentState.lastSearchQuery,
-                tracking_code = trackingCode,
-                deliveryType = deliveryType,
-                deliveryLatitude = selectedAddress.latitude,
-                deliveryLongitude = selectedAddress.longitude,
-                totalDeliveryFee = deliveryFee,
-                totalServiceFee = serviceFee,
-                subOrders = subOrders
-            )
-
-            // 4. Iniciar checkout único
             try {
-                val sessionResponse = apiClient.initiateCheckout(masterRequest)
-                if (sessionResponse != null) {
-                    val orderId = sessionResponse.order_id
-                    if (orderId != null) {
-                        // Guardar mapeamentos para o pedido principal
-                        profileRepository.saveOrderSearchQuery(orderId.toString(), currentState.lastSearchQuery)
-                        
-                        // Para múltiplos restaurantes, o gid do restaurante no nível superior pode ser do primeiro ou nulo
-                        // Aqui usamos o primeiro restaurante como referência para a UI se necessário
-                        subOrders.firstOrNull()?.let { firstSub ->
-                            profileRepository.saveOrderRestaurantGid(orderId.toString(), firstSub.restaurantGid)
-                        }
-                    }
-
-                    if (sessionResponse.auto_paid) {
-                        finalizeOrderState(isSuccess = true, checkoutUrl = null, autoPaid = true)
-                    } else if (sessionResponse.clientSecret != null) {
-                        // Inicializa o SDK com a chave vinda do servidor
-                        val key = sessionResponse.publishableKey 
-                            ?: ""
-                        
-                        println("💳 Iniciando Stripe com chave: ${key.takeLast(10)}")
-                        stripePaymentManager.init(key)
-
-                        // Inicia o SDK nativo da Stripe
-                        stripePaymentManager.presentPaymentSheet(
-                            paymentIntentClientSecret = sessionResponse.clientSecret,
-                            customerId = sessionResponse.customerId,
-                            ephemeralKeySecret = sessionResponse.ephemeralKey,
-                            onResult = { result ->
-                                when (result) {
-                                    is StripePaymentResult.Completed -> {
-                                        finalizeOrderState(isSuccess = true, checkoutUrl = null, autoPaid = false)
-                                    }
-                                    is StripePaymentResult.Canceled -> {
-                                        _uiState.update { it.copy(isLoading = false, error = "Pagamento cancelado.") }
-                                    }
-                                    is StripePaymentResult.Failed -> {
-                                        _uiState.update { it.copy(isLoading = false, error = "Erro no pagamento: ${result.error}") }
-                                    }
-                                }
-                            }
-                        )
-                    } else if (sessionResponse.url != null) {
-                        // Fallback para WebView se necessário
-                        finalizeOrderState(isSuccess = true, checkoutUrl = sessionResponse.url, autoPaid = false)
-                    } else {
+                val result = placeOrder(
+                    cartItems = currentState.cartItems,
+                    cartRestaurants = currentState.cartRestaurants,
+                    profile = currentState.userProfile,
+                    address = selectedAddress,
+                    savePaymentMethod = savePaymentMethod,
+                    deliveryType = deliveryType,
+                    deliveryFee = deliveryFee,
+                    serviceFee = serviceFee,
+                    deliveryFeesMap = deliveryFeesMap,
+                    searchQuery = currentState.lastSearchQuery,
+                    aiSessionId = sessaoIa
+                )
+                when (result) {
+                    is PlaceOrderResult.Started -> continueCheckout(result.session)
+                    PlaceOrderResult.NoValidItems ->
+                        _uiState.update { it.copy(isLoading = false, error = "Erro ao processar itens da sacola.") }
+                    PlaceOrderResult.CheckoutUnavailable ->
                         _uiState.update { it.copy(isLoading = false, error = "Erro ao iniciar sessão de pagamento.") }
-                    }
-                } else {
-                    _uiState.update { it.copy(isLoading = false, error = "Erro ao iniciar sessão de pagamento.") }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 _uiState.update { it.copy(isLoading = false, error = "Erro crítico: ${e.message}") }
             }
+        }
+    }
+
+    /** O servidor aceitou o pedido: segue para pago na hora, PaymentSheet da Stripe ou WebView. */
+    private fun continueCheckout(session: CheckoutSession) {
+        if (session.autoPaid) {
+            finalizeOrderState(isSuccess = true, checkoutUrl = null, autoPaid = true)
+        } else if (session.clientSecret != null) {
+            // Inicializa o SDK com a chave vinda do servidor
+            val key = session.publishableKey ?: ""
+
+            println("💳 Iniciando Stripe com chave: ${key.takeLast(10)}")
+            stripePaymentManager.init(key)
+
+            // Inicia o SDK nativo da Stripe
+            stripePaymentManager.presentPaymentSheet(
+                paymentIntentClientSecret = session.clientSecret,
+                customerId = session.customerId,
+                ephemeralKeySecret = session.ephemeralKey,
+                onResult = { result ->
+                    when (result) {
+                        is StripePaymentResult.Completed -> {
+                            finalizeOrderState(isSuccess = true, checkoutUrl = null, autoPaid = false)
+                        }
+                        is StripePaymentResult.Canceled -> {
+                            _uiState.update { it.copy(isLoading = false, error = "Pagamento cancelado.") }
+                        }
+                        is StripePaymentResult.Failed -> {
+                            _uiState.update { it.copy(isLoading = false, error = "Erro no pagamento: ${result.error}") }
+                        }
+                    }
+                }
+            )
+        } else if (session.url != null) {
+            // Fallback para WebView se necessário
+            finalizeOrderState(isSuccess = true, checkoutUrl = session.url, autoPaid = false)
+        } else {
+            _uiState.update { it.copy(isLoading = false, error = "Erro ao iniciar sessão de pagamento.") }
         }
     }
 
@@ -1348,7 +1141,7 @@ class SearchViewModel(
             // Save search query locally before clearing state
             if (!orderId.isNullOrBlank() && pendingSearchQuery.isNotBlank()) {
                 viewModelScope.launch {
-                    profileRepository.saveOrderSearchQuery(orderId, pendingSearchQuery)
+                    orderRepository.saveOrderSearchQuery(orderId, pendingSearchQuery)
                 }
             }
 
@@ -1356,10 +1149,10 @@ class SearchViewModel(
             if (!orderId.isNullOrBlank() && cartItems.isNotEmpty()) {
                 viewModelScope.launch {
                     val productGidMap = cartItems.map { it.name to it.gid }
-                    profileRepository.saveOrderProductGids(orderId, productGidMap)
+                    orderRepository.saveOrderProductGids(orderId, productGidMap)
                     val restaurantGid = _uiState.value.cartRestaurantGid
                     if (restaurantGid != null) {
-                        profileRepository.saveOrderRestaurantGid(orderId, restaurantGid)
+                        orderRepository.saveOrderRestaurantGid(orderId, restaurantGid)
                     }
                 }
             }
@@ -1390,7 +1183,7 @@ class SearchViewModel(
             // Fetch saved payment methods if user chose to save
             if (shouldFetchMethods && userId.isNotBlank()) {
                 viewModelScope.launch {
-                    fetchSavedPaymentMethods(userId)
+                    syncSavedPaymentMethods(userId)
                 }
             }
 
@@ -1402,97 +1195,6 @@ class SearchViewModel(
                     pendingSavePaymentMethod = false,
                     error = if (orderId == null) "Pagamento cancelado." else "Erro: ID do pedido não encontrado."
                 )
-            }
-        }
-    }
-
-    private fun startPaymentPolling(userId: String, orderId: Int?) {
-        if (orderId == null) {
-            _uiState.update {
-                it.copy(
-                    isProcessingAutoPayment = false,
-                    error = "Erro: ID do pedido não encontrado."
-                )
-            }
-            return
-        }
-
-        viewModelScope.launch {
-            var attempts = 0
-            val maxAttempts = 30 // 30 seconds max (30 * 1 second)
-            var paymentConfirmed = false
-
-            while (attempts < maxAttempts && !paymentConfirmed) {
-                delay(1000) // Wait 1 second between checks
-                attempts++
-
-                try {
-                    // Fetch latest orders to check if payment was confirmed
-                    val updatedOrders = apiClient.getCustomerOrders(userId)
-                    val order = updatedOrders.find { it.id == orderId }
-
-                    if (order != null) {
-                        val successStatuses = listOf("Em Preparo", "Confirmado", "Pago", "estafeta chegou ao seu endereco", "Entregue")
-                        val failureStatuses = listOf("Falhou", "Cancelado", "Recusado")
-
-                        when {
-                            order.status in successStatuses -> {
-                                // Payment confirmed!
-                                paymentConfirmed = true
-
-                                // Fetch saved payment methods if user chose to save
-                                val shouldFetchMethods = _uiState.value.pendingSavePaymentMethod
-                                if (shouldFetchMethods) {
-                                    fetchSavedPaymentMethods(userId)
-                                }
-
-                                _uiState.update {
-                                    it.copy(
-                                        isProcessingAutoPayment = false,
-                                        autoPaymentOrderId = null,
-                                        autoPaymentIntentId = null,
-                                        cartItems = emptyList(),
-                                        cartRestaurantGid = null,
-                                        currentTab = MainTab.ORDERS,
-                                        error = null,
-                                        pendingSavePaymentMethod = false
-                                    )
-                                }
-                                limparChatAposPagamento()
-                                refreshOrders()
-                                return@launch
-                            }
-                            order.status in failureStatuses -> {
-                                // Payment failed!
-                                paymentConfirmed = true // Stop polling
-                                _uiState.update {
-                                    it.copy(
-                                        isProcessingAutoPayment = false,
-                                        autoPaymentOrderId = null,
-                                        autoPaymentIntentId = null,
-                                        error = "Pagamento falhou. Por favor, tente novamente ou use outro cartão."
-                                    )
-                                }
-                                return@launch
-                            }
-                            // Otherwise status is still "Pendente", continue polling
-                        }
-                    }
-                } catch (e: Exception) {
-                    println("Erro ao verificar status do pagamento: ${e.message}")
-                }
-            }
-
-            // Timeout reached
-            if (!paymentConfirmed) {
-                _uiState.update {
-                    it.copy(
-                        isProcessingAutoPayment = false,
-                        autoPaymentOrderId = null,
-                        autoPaymentIntentId = null,
-                        error = "O pagamento está demorando mais do que o esperado. Verifique seus pedidos."
-                    )
-                }
             }
         }
     }
@@ -1519,7 +1221,7 @@ class SearchViewModel(
 
     fun markOrderAsDelivered(orderId: String) {
         viewModelScope.launch {
-            val success = apiClient.updateOrderStatus(orderId, "Entregue")
+            val success = orderRepository.updateOrderStatus(orderId, "Entregue")
             if (success) {
                 refreshOrdersInternal()
             } else {
@@ -1545,40 +1247,14 @@ class SearchViewModel(
         }
     }
 
-    private suspend fun fetchSavedPaymentMethods(userId: String) {
-        try {
-            val response = apiClient.getSavedPaymentMethods(userId)
-            if (response != null && response.hasSavedMethods) {
-                // Save to local repository
-                profileRepository.savePaymentMethods(response.methods)
-                println("✅ Métodos de pagamento salvos: ${response.methods.size}")
-            } else {
-                println("ℹ️ Nenhum método de pagamento encontrado")
-            }
-        } catch (e: Exception) {
-            println("⚠️ Erro ao buscar métodos de pagamento: ${e.message}")
-            // Don't block the flow, just log the error
-        }
-    }
-
     /**
      * Atualiza a sacola da IA substituindo os itens atuais pelos enviados pelo servidor.
      * Usado para permitir edição (remoção/alteração de quantidade) via conversa.
      */
     private fun updateAiCart(products: List<Product>) {
-        val filteredProducts = products.filter { it.quantity > 0 }
+        // Descarta itens zerados e avisa no log se a IA misturou Caixa Surpresa com outros produtos.
+        val filteredProducts = CartRules.sanitizeAiCart(products)
         if (filteredProducts.isEmpty()) return
-
-        // Defesa em profundidade: o backend já garante que cartProducts nunca mistura
-        // um item de Caixa Surpresa com outro produto (ver
-        // HybridAIService._bloqueado_por_caixa_surpresa_exclusiva) — isso aqui não deve
-        // disparar em uso normal. Só avisa no log para facilitar diagnóstico caso a
-        // API alguma vez devolva essa combinação inesperada; não filtra nada sozinho
-        // para não mascarar um estado que precisa ser investigado no servidor.
-        if (filteredProducts.size > 1 && filteredProducts.any { it.isSurpriseBox }) {
-            println("⚠️ [Cart] Sacola da IA veio com item de Caixa Surpresa + outro(s) produto(s) — " +
-                "esperado apenas 1 item exclusivo. products=${filteredProducts.map { it.name }}")
-        }
 
         _uiState.update { currentState ->
             currentState.copy(
@@ -1595,45 +1271,9 @@ class SearchViewModel(
         }
     }
 
-    private fun addProductsToCart(products: List<Product>) {
-        val filteredProducts = products.filter { it.quantity > 0 }
-        if (filteredProducts.isEmpty()) return
-
-        _uiState.update { currentState ->
-            val cartItems = currentState.cartItems.toMutableList()
-            
-            for (product in filteredProducts) {
-                // Tenta encontrar um item existente (mesmo GID ou mesmo Nome + Restaurante)
-                val existingIndex = cartItems.indexOfFirst { 
-                    (it.gid.isNotBlank() && it.gid == product.gid) || 
-                    (it.name == product.name && it.restaurant_gid == product.restaurant_gid)
-                }
-
-                if (existingIndex != -1) {
-                    val existing = cartItems[existingIndex]
-                    cartItems[existingIndex] = existing.copy(quantity = existing.quantity + product.quantity)
-                } else {
-                    cartItems.add(product)
-                }
-            }
-
-            currentState.copy(
-                cartItems = cartItems,
-                cartRestaurantGid = products.firstOrNull()?.restaurant_gid ?: currentState.cartRestaurantGid,
-                isAiCartFlow = true 
-            )
-        }
-
-        // Busca metadados para todos os restaurantes únicos na lista de produtos
-        val uniqueRestaurantGids = products.mapNotNull { it.restaurant_gid }.distinct()
-        uniqueRestaurantGids.forEach { gid ->
-            fetchCompanyByGid(gid)
-        }
-    }
-
     // ── Conversa de voz em tempo real (Gemini Live API) ──────────────────────
     // Modo ADICIONAL ao microfone (STT) e ao campo de texto já existentes — não
-    // substitui nenhum dos dois. Usa a MESMA sessão (LeriaApiClient.currentSessionId)
+    // substitui nenhum dos dois. Usa a MESMA sessão (AiChatRepository.currentSessionId)
     // do chat por texto, então o carrinho/histórico continuam unificados entre os
     // três jeitos de montar um pedido. Ver services/gemini_live_bridge.py no
     // servidor para o protocolo de eventos (transcript/cart_updated/show_cart/
@@ -1664,14 +1304,14 @@ class SearchViewModel(
         liveAudioPlayer.startCall()
         pedidoMontadoPorLigacao = true
 
-        val sessionId = apiClient.currentSessionId()
+        val sessionId = aiChatRepository.currentSessionId()
         val nomeUsuario = _uiState.value.userProfile.name
 
         liveConversationJob = viewModelScope.launch {
             launch {
-                liveConversationClient.events.collect { evento -> handleLiveEvent(evento) }
+                liveConversationRepository.events.collect { evento -> handleLiveEvent(evento) }
             }
-            liveConversationClient.connect(sessionId, nomeUsuario)
+            liveConversationRepository.connect(sessionId, nomeUsuario)
         }
 
         // Começa a mandar áudio do microfone assim que a ligação for aberta —
@@ -1689,7 +1329,7 @@ class SearchViewModel(
                 // caía sozinha se o usuário demorasse a ativar o microfone. O silêncio
                 // também deixa o detector de fala da Gemini fechar uma frase que o
                 // usuário estava dizendo quando silenciou.
-                liveConversationClient.sendAudioChunk(
+                liveConversationRepository.sendAudioChunk(
                     if (_uiState.value.isMicMuted) ByteArray(chunk.size) else chunk
                 )
             }
@@ -1719,7 +1359,7 @@ class SearchViewModel(
                 isMicMuted = false
             )
         }
-        viewModelScope.launch { liveConversationClient.disconnect() }
+        viewModelScope.launch { liveConversationRepository.disconnect() }
     }
 
     /** Ferramenta da IA rodou (sacola/sugestão): se ela ainda não começou a falar, está pensando. */

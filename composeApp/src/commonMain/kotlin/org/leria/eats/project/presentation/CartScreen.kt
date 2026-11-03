@@ -56,11 +56,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
-import org.leria.eats.project.data.Address
-import org.leria.eats.project.data.DeliveryFeeResponse
-import org.leria.eats.project.data.Product
-import org.leria.eats.project.data.Restaurant
-import org.leria.eats.project.data.SavedPaymentMethod
+import org.leria.eats.project.domain.model.Address
+import org.leria.eats.project.domain.model.DeliveryFeeQuote
+import org.leria.eats.project.domain.model.Product
+import org.leria.eats.project.domain.model.Restaurant
+import org.leria.eats.project.domain.model.SavedPaymentMethod
 import org.leria.eats.project.presentation.util.formatCurrency
 import org.leria.eats.project.theme.*
 
@@ -92,7 +92,7 @@ fun CartScreen(
     onMarkAiMessageAsSpoken: () -> Unit = {},
     onClearCart: () -> Unit = {},
     isMuted: Boolean = false,
-    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeQuote?)? = null,
     onGoToHome: (() -> Unit)? = null
 ) {
     val total = cartItems.sumOf { it.price * it.quantity }
@@ -1352,7 +1352,7 @@ fun ServiceFeeBottomSheet(
     onDismiss: () -> Unit,
     onConfirm: (Address, Double, Double, String) -> Unit,
     restaurant: Restaurant? = null,
-    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeQuote?)? = null,
     // Um pedido com item de Caixa Surpresa é exclusivo e só pode ser recolhido no
     // restaurante — mesma regra aplicada no backend (gate em order_routes.py).
     forcePickupOnly: Boolean = false
@@ -1413,8 +1413,8 @@ fun ServiceFeeBottomSheet(
                     restaurant.gid
                 )
                 if (result != null) {
-                    deliveryFee = result.delivery_fee
-                    deliveryDistanceKm = result.distance_km
+                    deliveryFee = result.deliveryFee
+                    deliveryDistanceKm = result.distanceKm
                 } else {
                     deliveryFeeError = "Não foi possível calcular a taxa de entrega."
                 }

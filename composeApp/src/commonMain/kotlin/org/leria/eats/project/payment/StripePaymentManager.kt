@@ -1,7 +1,5 @@
 package org.leria.eats.project.payment
 
-import org.leria.eats.project.data.PaymentIntentResponse
-
 /**
  * Interface para gerenciar pagamentos via SDK nativo da Stripe.
  */

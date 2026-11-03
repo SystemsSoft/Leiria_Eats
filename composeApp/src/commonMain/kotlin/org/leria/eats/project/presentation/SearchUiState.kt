@@ -1,11 +1,11 @@
 package org.leria.eats.project.presentation
 
-import kotlinx.serialization.Serializable
-import org.leria.eats.project.data.Address
-import org.leria.eats.project.data.Order
-import org.leria.eats.project.data.Product
-import org.leria.eats.project.data.Restaurant
-import org.leria.eats.project.data.UserProfile
+import org.leria.eats.project.domain.model.Address
+import org.leria.eats.project.domain.model.ChatMessage
+import org.leria.eats.project.domain.model.Order
+import org.leria.eats.project.domain.model.Product
+import org.leria.eats.project.domain.model.Restaurant
+import org.leria.eats.project.domain.model.UserProfile
 
 enum class MainTab {
     HOME,
@@ -14,21 +14,6 @@ enum class MainTab {
     ORDERS,
     PROFILE
 }
-
-@Serializable
-enum class ChatMessageType {
-    USER,
-    AI
-}
-
-@Serializable
-data class ChatMessage(
-    val id: String,
-    val type: ChatMessageType,
-    val text: String,
-    val restaurants: List<Restaurant> = emptyList(),
-    val products: List<Product> = emptyList()
-)
 
 data class SearchUiState(
     val isLoading: Boolean = false,

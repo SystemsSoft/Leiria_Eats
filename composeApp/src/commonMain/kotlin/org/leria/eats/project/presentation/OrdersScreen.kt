@@ -25,8 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
-import org.leria.eats.project.data.Order
-import org.leria.eats.project.data.SubOrder
+import org.leria.eats.project.domain.model.Order
+import org.leria.eats.project.domain.model.SubOrder
 import org.leria.eats.project.presentation.components.QRCodeView
 import org.leria.eats.project.presentation.util.formatCurrency
 import org.leria.eats.project.theme.*

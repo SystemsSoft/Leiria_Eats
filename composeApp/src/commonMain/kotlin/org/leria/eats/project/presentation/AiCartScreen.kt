@@ -31,10 +31,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
-import org.leria.eats.project.data.Address
-import org.leria.eats.project.data.DeliveryFeeResponse
-import org.leria.eats.project.data.Product
-import org.leria.eats.project.data.Restaurant
+import org.leria.eats.project.domain.model.Address
+import org.leria.eats.project.domain.model.DeliveryFeeQuote
+import org.leria.eats.project.domain.model.Product
+import org.leria.eats.project.domain.model.Restaurant
 import org.leria.eats.project.presentation.util.buildChargedFeesMap
 import org.leria.eats.project.presentation.util.formatCurrency
 import org.leria.eats.project.presentation.util.haversineDistanceKm
@@ -69,7 +69,7 @@ fun AiCartScreen(
     onMarkAiMessageAsSpoken: () -> Unit = {},
     onClearCart: () -> Unit = {},
     isMuted: Boolean = false,
-    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeQuote?)? = null,
     onGoToHome: (() -> Unit)? = null
 ) {
     val total = cartItems.sumOf { it.price * it.quantity }
@@ -85,7 +85,7 @@ fun AiCartScreen(
     // Usa o endereço padrão do usuário como referência; o valor final e autoritativo é
     // recalculado no bottom sheet de checkout com o endereço realmente selecionado.
     var previewFeesLoading by remember { mutableStateOf(false) }
-    var previewDeliveryFeesMap by remember { mutableStateOf<Map<String, DeliveryFeeResponse>>(emptyMap()) }
+    var previewDeliveryFeesMap by remember { mutableStateOf<Map<String, DeliveryFeeQuote>>(emptyMap()) }
 
     LaunchedEffect(cartRestaurants, userAddresses) {
         val addr = userAddresses.firstOrNull()
@@ -466,7 +466,7 @@ fun AiServiceFeeBottomSheet(
     onDismiss: () -> Unit,
     onConfirm: (Address, Double, Double, String, Map<String, Double>) -> Unit,
     restaurants: List<Restaurant>,
-    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeResponse?)? = null,
+    onGetDeliveryFee: (suspend (Double, Double, Double, Double, String) -> DeliveryFeeQuote?)? = null,
     onRemoveRestaurant: (String) -> Unit = {},
     // Um pedido com item de Caixa Surpresa é exclusivo e só pode ser recolhido no
     // restaurante — mesma regra aplicada no backend (gate em order_routes.py) e em
@@ -505,7 +505,7 @@ fun AiServiceFeeBottomSheet(
     }
 
     // Delivery fees state: map of restaurant gid to its fee details
-    var deliveryFeesMap by remember { mutableStateOf<Map<String, DeliveryFeeResponse>>(emptyMap()) }
+    var deliveryFeesMap by remember { mutableStateOf<Map<String, DeliveryFeeQuote>>(emptyMap()) }
     var feesLoading by remember { mutableStateOf(false) }
     var feesError by remember { mutableStateOf<String?>(null) }
     

@@ -21,6 +21,6 @@ actual val platformModule = module {
 
     single<VoiceRecognizer> { AndroidVoiceRecognizer(context = get()) }
 
-    // TextToSpeechService: ver sharedModule (GeminiTextToSpeechService) — mesma
+    // TextToSpeechService: ver presentationModule (GeminiTextToSpeechService) — mesma
     // voz da ligação ao vivo em todas as plataformas, sem implementação nativa.
 }

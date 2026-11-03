@@ -37,7 +37,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.leria.eats.project.permissions.PermissionManager
 import org.leria.eats.project.permissions.PermissionStatus
-import org.leria.eats.project.data.Address
+import org.leria.eats.project.domain.model.Address
 import org.leria.eats.project.presentation.*
 import org.leria.eats.project.presentation.components.WebView
 import org.leria.eats.project.presentation.viewmodel.SearchViewModel

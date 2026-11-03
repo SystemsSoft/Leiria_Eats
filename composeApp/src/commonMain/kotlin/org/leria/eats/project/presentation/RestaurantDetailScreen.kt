@@ -38,8 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.kamel.image.KamelImage
 import io.kamel.image.asyncPainterResource
-import org.leria.eats.project.data.Product
-import org.leria.eats.project.data.Restaurant
+import org.leria.eats.project.domain.model.Product
+import org.leria.eats.project.domain.model.Restaurant
 import org.leria.eats.project.presentation.util.formatCurrency
 import org.leria.eats.project.theme.*
 

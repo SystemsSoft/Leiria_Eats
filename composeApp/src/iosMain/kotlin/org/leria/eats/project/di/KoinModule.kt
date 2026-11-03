@@ -13,6 +13,6 @@ actual val platformModule = module {
     single<LocationService> { IosLocationService() }
     single<VoiceRecognizer> { IosVoiceRecognizer() }
 
-    // TextToSpeechService: ver sharedModule (GeminiTextToSpeechService) — mesma
+    // TextToSpeechService: ver presentationModule (GeminiTextToSpeechService) — mesma
     // voz da ligação ao vivo em todas as plataformas, sem implementação nativa.
 }
