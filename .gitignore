@@ -17,3 +17,12 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+
+# Cache local do Gradle (GRADLE_USER_HOME dentro do projeto)
+gradle/.tmp/
+gradle/android/
+gradle/caches/
+gradle/daemon/
+gradle/kotlin-profile/
+gradle/native/
+gradle/wrapper/dists/
