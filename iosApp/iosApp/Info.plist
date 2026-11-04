@@ -5,13 +5,27 @@
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
 
+    <!-- Só usa HTTPS padrão: dispensa a pergunta de exportação de criptografia a cada envio -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+
+    <!-- Esquema usado pela Stripe para voltar ao app após pagamentos com redirecionamento (ex.: MB WAY) -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>org.leria.eats.project</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>komaai</string>
+            </array>
+        </dict>
+    </array>
+
      <key>NSSpeechRecognitionUsageDescription</key>
      <string>Precisamos processar sua voz para transcrever o pedido.</string>
 
      <key>NSLocationWhenInUseUsageDescription</key>
-     <string>Precisamos da sua localização para preencher o endereço de entrega.</string>
-
-     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
      <string>Precisamos da sua localização para preencher o endereço de entrega.</string>
 
     <key>NSMicrophoneUsageDescription</key>
